@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Activity, Bell, Bot, Building2, ChevronRight, CircleDollarSign, ClipboardCheck, Clock3, FileClock, Gauge, Landmark, LayoutDashboard, Megaphone, Menu, Network, Search, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
+import { useCommandData } from './hooks/useCommandData';
 
 const sections = [
   ['Executive Overview', LayoutDashboard], ['Decisions & Approvals', ClipboardCheck], ['Communications', Bell],
@@ -51,11 +52,13 @@ function Workspace({name}:{name:string}){
 export default function App(){
   const [active,setActive]=useState('Executive Overview');
   const [open,setOpen]=useState(false);
+  const command=useCommandData();
+  const portfolio=command.systems.length?command.systems.map(s=>[s.system_name,s.lifecycle_state,`${s.progress_percent}%`]):[['VisionWeaver','Staging preparation','72%'],['CEO Dashboard','Foundation active','18%'],['LandWeaver','Specification ready','35%'],['GrantOS','Reconciliation','44%']];
   return <div className="app-shell">
     <aside className={open?'sidebar open':'sidebar'}>
       <div className="brand"><div className="brand-mark">EC</div><div><b>ESTIBAN</b><span>CEO COMMAND</span></div><button className="close" onClick={()=>setOpen(false)}><X/></button></div>
       <nav>{sections.map(([name,Icon])=><button key={name} className={active===name?'active':''} onClick={()=>{setActive(name);setOpen(false)}}><Icon/><span>{name}</span></button>)}</nav>
-      <div className="system-state"><span className="pulse"/><div><b>Command fabric online</b><small>4 systems reporting</small></div></div>
+      <div className="system-state"><span className={command.connected&&!command.error?'pulse':'pulse warning'}/><div><b>{command.connected&&!command.error?'Command fabric online':'Demonstration read model'}</b><small>{command.systems.length||4} systems reporting</small></div></div>
     </aside>
     <main>
       <header><button className="menu" onClick={()=>setOpen(true)}><Menu/></button><div><p>CEO COMMAND CENTER</p><h1>{active}</h1></div><label className="search"><Search/><input aria-label="Search enterprise" placeholder="Search systems, decisions, people…"/></label><button className="icon-button"><Bell/><i>3</i></button><div className="profile"><span>EA</span><div><b>The Architect</b><small>Executive authority</small></div></div></header>
@@ -64,7 +67,7 @@ export default function App(){
         <div className="metrics"><Metric label="Enterprise health" value="88%" detail="+4% from last checkpoint" tone="green"/><Metric label="Decisions waiting" value="03" detail="2 require action today" tone="amber"/><Metric label="Active systems" value="04 / 17" detail="13 in build or recovery" tone="cyan"/><Metric label="Resource efficiency" value="76%" detail="AI usage within guardrails" tone="purple"/></div>
         <div className="grid">
           <section className="panel decisions"><div className="panel-title"><div><span className="eyebrow">ACTION QUEUE</span><h3>Decisions & approvals</h3></div><button>View all</button></div>{decisions.map(d=><div className="decision" key={d.title}><span className={`priority ${d.level.toLowerCase()}`}>{d.level}</span><div><b>{d.title}</b><small>{d.owner} · Due {d.due}</small></div><button aria-label={`Review ${d.title}`}><ChevronRight/></button></div>)}</section>
-          <section className="panel health"><div className="panel-title"><div><span className="eyebrow">LIVE READ MODELS</span><h3>System portfolio</h3></div><span className="live"><i/>Live</span></div>{[['VisionWeaver','Staging preparation','72%'],['CEO Dashboard','Foundation active','18%'],['LandWeaver','Specification ready','35%'],['GrantOS','Reconciliation','44%']].map(([n,s,p])=><div className="health-row" key={n}><div><b>{n}</b><small>{s}</small></div><div className="bar"><i style={{width:p}}/></div><strong>{p}</strong></div>)}</section>
+          <section className="panel health"><div className="panel-title"><div><span className="eyebrow">{command.loading?'CONNECTING':'LIVE READ MODELS'}</span><h3>System portfolio</h3></div><span className="live"><i/>{command.connected?'Supabase':'Demo'}</span></div>{portfolio.map(([n,s,p])=><div className="health-row" key={n}><div><b>{n}</b><small>{s}</small></div><div className="bar"><i style={{width:p}}/></div><strong>{p}</strong></div>)}</section>
           <section className="panel timeline"><div className="panel-title"><div><span className="eyebrow">GOVERNED ACTIVITY</span><h3>Audit pulse</h3></div><Clock3/></div>{['PR #6 architecture approved','CEO Dashboard build sequence activated','VisionWeaver security gate retained'].map((x,i)=><div className="event" key={x}><i/><div><b>{x}</b><small>{i===0?'Today · Executive authority':'Today · System orchestration'}</small></div></div>)}</section>
         </div></>:<Workspace name={active}/>} 
       </section>
