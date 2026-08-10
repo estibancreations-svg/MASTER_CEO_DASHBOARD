@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Activity, Bell, Bot, Building2, ChevronRight, CircleDollarSign, ClipboardCheck, Clock3, FileClock, Gauge, Landmark, LayoutDashboard, Megaphone, Menu, Network, Search, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
 import { useCommandData } from './hooks/useCommandData';
+import LandWeaverWorkspace from './components/LandWeaverWorkspace';
 
 const sections = [
   ['Executive Overview', LayoutDashboard], ['Decisions & Approvals', ClipboardCheck], ['Communications', Bell],
@@ -62,7 +63,7 @@ export default function App(){
     </aside>
     <main>
       <header><button className="menu" onClick={()=>setOpen(true)}><Menu/></button><div><p>CEO COMMAND CENTER</p><h1>{active}</h1></div><label className="search"><Search/><input aria-label="Search enterprise" placeholder="Search systems, decisions, people…"/></label><button className="icon-button"><Bell/><i>3</i></button><div className="profile"><span>EA</span><div><b>The Architect</b><small>Executive authority</small></div></div></header>
-      <section className="content">{active==='Executive Overview'?<>
+      <section className="content">{active==='Property Intelligence'?<LandWeaverWorkspace/>:active==='Executive Overview'?<>
         <div className="briefing"><div><span className="eyebrow">MONDAY, AUGUST 10 · EXECUTIVE BRIEFING</span><h2>Good morning. Three decisions require your attention.</h2><p>System health is stable. VisionWeaver is closest to staging; CEO Dashboard implementation is now active.</p></div><button>Open daily briefing <ChevronRight/></button></div>
         <div className="metrics"><Metric label="Enterprise health" value="88%" detail="+4% from last checkpoint" tone="green"/><Metric label="Decisions waiting" value="03" detail="2 require action today" tone="amber"/><Metric label="Active systems" value="04 / 17" detail="13 in build or recovery" tone="cyan"/><Metric label="Resource efficiency" value="76%" detail="AI usage within guardrails" tone="purple"/></div>
         <div className="grid">

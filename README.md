@@ -32,3 +32,7 @@ npm run build
 ```
 
 See [`docs/architecture/CONNECTION-REGISTRY.md`](docs/architecture/CONNECTION-REGISTRY.md) and [`docs/QC-GATE.md`](docs/QC-GATE.md).
+
+## Attached systems
+
+- **LandWeaver (`SYS-LAND-001`)** — The Property Intelligence surface now opens the connected 15-view acquisition workspace backed by Supabase. It supports governed property intake, evidence classification, hazard/utility/zoning/financial/comparable assessment records, diligence tasks, executive decisions, realtime updates, provenance and explicit professional-certification boundaries.
