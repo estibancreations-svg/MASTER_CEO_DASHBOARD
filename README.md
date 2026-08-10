@@ -36,3 +36,5 @@ See [`docs/architecture/CONNECTION-REGISTRY.md`](docs/architecture/CONNECTION-RE
 ## Attached systems
 
 - **LandWeaver (`SYS-LAND-001`)** — The Property Intelligence surface now opens the connected 15-view acquisition workspace backed by Supabase. It supports governed property intake, evidence classification, hazard/utility/zoning/financial/comparable assessment records, diligence tasks, executive decisions, realtime updates, provenance and explicit professional-certification boundaries.
+  - Southeast launch bundle: Tampa, Orlando, Plantation, Sanford; Atlanta, Decatur, Augusta, Savannah, Norcross; Mobile, Gulf Shores, Orange Beach, Foley, Daphne and Fairhope.
+  - The API Settings view separates public, manual, credentialed and licensed sources. Demonstration properties are synthetic and cannot be mistaken for verified records.
