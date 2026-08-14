@@ -36,6 +36,7 @@ export function useCommandData(){
     return()=>{alive=false;client.removeChannel(channel)};
   },[identity.organizationId]);
   const createModuleRecord=async(moduleKey:string,input:{name:string;category:string;status_value:string;activity:string})=>{
+    if(identity.isBuilder||!identity.user)return{error:'Builder mode is read-only. Record changes remain protected.'};
     if(!supabase)return{error:'Supabase is unavailable'};
     const{error}=await supabase.from('ceo_module_records').insert({organization_id:identity.organizationId,module_key:moduleKey,...input,created_by:identity.user.id});
     return{error:error?.message||null};
