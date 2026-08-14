@@ -5,3 +5,4 @@
 .identity-signout{border:1px solid #e6e8f1;background:#fff;color:#69728a;border-radius:6px;padding:6px 8px;font-size:9px;font-weight:700;cursor:pointer}
 .module-create{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:8px;margin:0 0 12px}.module-create input{min-width:0;border:1px solid var(--line);border-radius:7px;padding:9px;font-size:10px}.module-create button{border:0;border-radius:7px;background:#7655ff;color:#fff;padding:9px 12px;font-weight:700}.module-create small{grid-column:1/-1;color:#cc426e}.module-empty{text-align:center;color:#929aaf;padding:26px;font-size:11px}
 @media(max-width:760px){.module-create{grid-template-columns:1fr 1fr}.module-create button{grid-column:1/-1}}
+.system-open{border:1px solid #ded9ff;background:#f6f3ff;color:#6546ee;border-radius:6px;padding:5px 9px;font-size:9px;font-weight:800;cursor:pointer}
