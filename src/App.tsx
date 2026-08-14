@@ -4,6 +4,7 @@ import { useCommandData } from './hooks/useCommandData';
 import LandWeaverWorkspace from './components/LandWeaverWorkspace';
 import VisionWeaverWorkspace from './components/VisionWeaverWorkspace';
 import GrantOSWorkspace from './components/GrantOSWorkspace';
+import ThelmaWorkspace from './components/ThelmaWorkspace';
 import MasterDashboard from './components/MasterDashboard';
 
 const sections = [
@@ -80,8 +81,8 @@ export function CSuiteDashboard(){
 }
 
 export default function App(){
-  const [surface,setSurface]=useState<'master'|'suite'|'land'|'vision'|'grant'>('master');
-  if(surface==='master')return <MasterDashboard onOpenSuite={()=>setSurface('suite')} onOpenLandWeaver={()=>setSurface('land')} onOpenVisionWeaver={()=>setSurface('vision')} onOpenGrantOS={()=>setSurface('grant')}/>;
-  const workspace=surface==='land'?<LandWeaverWorkspace/>:surface==='vision'?<VisionWeaverWorkspace/>:<GrantOSWorkspace/>;
+  const [surface,setSurface]=useState<'master'|'suite'|'land'|'vision'|'grant'|'thelma'>('master');
+  if(surface==='master')return <MasterDashboard onOpenSuite={()=>setSurface('suite')} onOpenLandWeaver={()=>setSurface('land')} onOpenVisionWeaver={()=>setSurface('vision')} onOpenGrantOS={()=>setSurface('grant')} onOpenThelma={()=>setSurface('thelma')}/>;
+  const workspace=surface==='land'?<LandWeaverWorkspace/>:surface==='vision'?<VisionWeaverWorkspace/>:surface==='grant'?<GrantOSWorkspace/>:<ThelmaWorkspace/>;
   return <><button className="return-master" onClick={()=>setSurface('master')}><LayoutDashboard/> Master Dashboard</button>{surface==='suite'?<CSuiteDashboard/>:<div className="app-shell"><main><section className="content">{workspace}</section></main></div>}</>;
 }
