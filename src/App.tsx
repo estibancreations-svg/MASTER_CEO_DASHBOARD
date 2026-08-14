@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Activity, Bell, Bot, Building2, ChevronRight, CircleDollarSign, ClipboardCheck, Clock3, FileClock, Gauge, Landmark, LayoutDashboard, Megaphone, Menu, Network, Search, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
 import { useCommandData } from './hooks/useCommandData';
 import LandWeaverWorkspace from './components/LandWeaverWorkspace';
+import VisionWeaverWorkspace from './components/VisionWeaverWorkspace';
 import MasterDashboard from './components/MasterDashboard';
 
 const sections = [
@@ -78,7 +79,7 @@ export function CSuiteDashboard(){
 }
 
 export default function App(){
-  const [surface,setSurface]=useState<'master'|'suite'|'land'>('master');
-  if(surface==='master')return <MasterDashboard onOpenSuite={()=>setSurface('suite')} onOpenLandWeaver={()=>setSurface('land')}/>;
-  return <><button className="return-master" onClick={()=>setSurface('master')}><LayoutDashboard/> Master Dashboard</button>{surface==='suite'?<CSuiteDashboard/>:<div className="app-shell"><main><section className="content"><LandWeaverWorkspace/></section></main></div>}</>;
+  const [surface,setSurface]=useState<'master'|'suite'|'land'|'vision'>('master');
+  if(surface==='master')return <MasterDashboard onOpenSuite={()=>setSurface('suite')} onOpenLandWeaver={()=>setSurface('land')} onOpenVisionWeaver={()=>setSurface('vision')}/>;
+  return <><button className="return-master" onClick={()=>setSurface('master')}><LayoutDashboard/> Master Dashboard</button>{surface==='suite'?<CSuiteDashboard/>:<div className="app-shell"><main><section className="content">{surface==='land'?<LandWeaverWorkspace/>:<VisionWeaverWorkspace/>}</section></main></div>}</>;
 }
