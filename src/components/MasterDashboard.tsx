@@ -2,6 +2,7 @@ import {useMemo,useState} from'react';
 import{Activity,Award,BarChart3,Bell,Bot,Boxes,ChevronDown,ChevronRight,CircleDollarSign,CircleHelp,FileText,Gauge,GraduationCap,LayoutDashboard,Library,ListChecks,Menu,MessageSquare,Package,Plug,Search,Settings,ShieldCheck,Sparkles,Target,TrendingUp,Users,Video,Workflow,X}from'lucide-react';
 import type{LucideIcon}from'lucide-react';
 import{useCommandData}from'../hooks/useCommandData';
+import{useIdentity}from'../auth/IdentityContext';
 
 type Module={name:string;icon:LucideIcon;group:string;description:string};
 const modules:Module[]=[
@@ -61,7 +62,7 @@ const rows:Record<string,string[][]>={
 const tones=['violet','blue','green','amber'];
 
 export default function MasterDashboard({onOpenSuite}:{onOpenSuite:()=>void}){
- const[active,setActive]=useState('Dashboard'),[navOpen,setNavOpen]=useState(false),command=useCommandData();
+ const[active,setActive]=useState('Dashboard'),[navOpen,setNavOpen]=useState(false),command=useCommandData(),identity=useIdentity();
  const selected=modules.find(x=>x.name===active)!;
  const groups=useMemo(()=>Array.from(new Set(modules.map(x=>x.group))),[]);
  const systems=command.systems.length?command.systems.slice(0,4):[
@@ -70,7 +71,7 @@ export default function MasterDashboard({onOpenSuite}:{onOpenSuite:()=>void}){
   <div className="master-brand"><span>EC</span><div><b>ESTIBAN CREATIONS</b><small>MASTER DASHBOARD</small></div><button onClick={()=>setNavOpen(false)}><X/></button></div>
   <nav>{groups.map(group=><section key={group}><label>{group}</label>{modules.filter(x=>x.group===group).map(({name,icon:Icon})=><button className={active===name?'active':''} onClick={()=>{setActive(name);setNavOpen(false)}} key={name}><Icon/><span>{name}</span></button>)}</section>)}</nav>
   <button className="suite-switch" onClick={onOpenSuite}><Gauge/><span>C-Suite Command</span><ChevronRight/></button>
- </aside><main className="master-main"><header className="master-header"><button className="master-menu" onClick={()=>setNavOpen(true)}><Menu/></button><div><p>MASTER OPERATING SYSTEM</p><h1>{active}</h1></div><label><Search/><input aria-label="Search dashboard" placeholder="Search dashboard…"/></label><button className="master-alert"><Bell/><i>3</i></button><div className="master-user"><span>EA</span><div><b>Estiban</b><small>Architect</small></div><ChevronDown/></div></header>
+ </aside><main className="master-main"><header className="master-header"><button className="master-menu" onClick={()=>setNavOpen(true)}><Menu/></button><div><p>{identity.organizationName.toUpperCase()} · MASTER OPERATING SYSTEM</p><h1>{active}</h1></div><label><Search/><input aria-label="Search dashboard" placeholder="Search dashboard…"/></label><button className="master-alert"><Bell/><i>3</i></button><div className="master-user"><span>{identity.role==='architect'?'EA':'EC'}</span><div><b>{identity.user.email}</b><small>{identity.role.replaceAll('_',' ')}</small></div><button className="identity-signout" onClick={identity.signOut}>Sign out</button><ChevronDown/></div></header>
   <section className="master-content"><div className="master-heading"><div><p>{selected.description}</p><small>Last synchronized just now · {command.connected&&!command.error?'Live Supabase data':'Read model available'}</small></div><button><Sparkles/> Ask THELMA</button></div>
   {active==='Dashboard'?<Dashboard systems={systems} onOpenSuite={onOpenSuite}/>:<ModulePage module={selected} data={rows[active]||[]}/>}</section>
  </main></div>
