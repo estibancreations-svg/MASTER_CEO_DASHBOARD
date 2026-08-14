@@ -5,6 +5,7 @@ import AuthGate from './components/AuthGate';
 import './styles.css';
 import './workspace.css';
 import './vision.css';
+import './grantos.css';
 import './auth.css';
 import './master.css';
 createRoot(document.getElementById('root')!).render(<StrictMode><AuthGate><App /></AuthGate></StrictMode>);
