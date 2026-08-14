@@ -3,6 +3,7 @@ import { Activity, Bell, Bot, Building2, ChevronRight, CircleDollarSign, Clipboa
 import { useCommandData } from './hooks/useCommandData';
 import LandWeaverWorkspace from './components/LandWeaverWorkspace';
 import VisionWeaverWorkspace from './components/VisionWeaverWorkspace';
+import GrantOSWorkspace from './components/GrantOSWorkspace';
 import MasterDashboard from './components/MasterDashboard';
 
 const sections = [
@@ -79,7 +80,8 @@ export function CSuiteDashboard(){
 }
 
 export default function App(){
-  const [surface,setSurface]=useState<'master'|'suite'|'land'|'vision'>('master');
-  if(surface==='master')return <MasterDashboard onOpenSuite={()=>setSurface('suite')} onOpenLandWeaver={()=>setSurface('land')} onOpenVisionWeaver={()=>setSurface('vision')}/>;
-  return <><button className="return-master" onClick={()=>setSurface('master')}><LayoutDashboard/> Master Dashboard</button>{surface==='suite'?<CSuiteDashboard/>:<div className="app-shell"><main><section className="content">{surface==='land'?<LandWeaverWorkspace/>:<VisionWeaverWorkspace/>}</section></main></div>}</>;
+  const [surface,setSurface]=useState<'master'|'suite'|'land'|'vision'|'grant'>('master');
+  if(surface==='master')return <MasterDashboard onOpenSuite={()=>setSurface('suite')} onOpenLandWeaver={()=>setSurface('land')} onOpenVisionWeaver={()=>setSurface('vision')} onOpenGrantOS={()=>setSurface('grant')}/>;
+  const workspace=surface==='land'?<LandWeaverWorkspace/>:surface==='vision'?<VisionWeaverWorkspace/>:<GrantOSWorkspace/>;
+  return <><button className="return-master" onClick={()=>setSurface('master')}><LayoutDashboard/> Master Dashboard</button>{surface==='suite'?<CSuiteDashboard/>:<div className="app-shell"><main><section className="content">{workspace}</section></main></div>}</>;
 }
