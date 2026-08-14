@@ -78,8 +78,7 @@ export function CSuiteDashboard(){
 }
 
 export default function App(){
-  const [surface,setSurface]=useState<'master'|'suite'>('master');
-  return surface==='master'
-    ? <MasterDashboard onOpenSuite={()=>setSurface('suite')}/>
-    : <><button className="return-master" onClick={()=>setSurface('master')}><LayoutDashboard/> Master Dashboard</button><CSuiteDashboard/></>;
+  const [surface,setSurface]=useState<'master'|'suite'|'land'>('master');
+  if(surface==='master')return <MasterDashboard onOpenSuite={()=>setSurface('suite')} onOpenLandWeaver={()=>setSurface('land')}/>;
+  return <><button className="return-master" onClick={()=>setSurface('master')}><LayoutDashboard/> Master Dashboard</button>{surface==='suite'?<CSuiteDashboard/>:<div className="app-shell"><main><section className="content"><LandWeaverWorkspace/></section></main></div>}</>;
 }
