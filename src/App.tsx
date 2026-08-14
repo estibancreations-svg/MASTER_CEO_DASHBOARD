@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Activity, Bell, Bot, Building2, ChevronRight, CircleDollarSign, ClipboardCheck, Clock3, FileClock, Gauge, Landmark, LayoutDashboard, Megaphone, Menu, Network, Search, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
 import { useCommandData } from './hooks/useCommandData';
 import LandWeaverWorkspace from './components/LandWeaverWorkspace';
+import MasterDashboard from './components/MasterDashboard';
 
 const sections = [
   ['Executive Overview', LayoutDashboard], ['Decisions & Approvals', ClipboardCheck], ['Communications', Bell],
@@ -50,7 +51,7 @@ function Workspace({name}:{name:string}){
   <div className="workspace-grid"><section className="panel"><div className="panel-title"><div><span className="eyebrow">PRIORITY READ MODEL</span><h3>{name}</h3></div><span className="live"><i/>Current</span></div>{model.queue.map(([title,owner,state])=><div className="work-row" key={title}><div><b>{title}</b><small>{owner}</small></div><span>{state}</span><button><ChevronRight/></button></div>)}</section><section className="panel"><div className="panel-title"><div><span className="eyebrow">GOVERNED CONTROLS</span><h3>Executive actions</h3></div><ShieldCheck/></div><div className="control-grid">{model.controls.map(x=><button key={x}>{x}<ChevronRight/></button>)}</div><div className="provenance"><b>Authority boundary</b><p>Actions create an approval request or delegated command. Source-system writes require explicit authority and an audit event.</p></div></section></div></>;
 }
 
-export default function App(){
+export function CSuiteDashboard(){
   const [active,setActive]=useState('Executive Overview');
   const [open,setOpen]=useState(false);
   const command=useCommandData();
@@ -74,4 +75,11 @@ export default function App(){
       </section>
     </main>
   </div>
+}
+
+export default function App(){
+  const [surface,setSurface]=useState<'master'|'suite'>('master');
+  return surface==='master'
+    ? <MasterDashboard onOpenSuite={()=>setSurface('suite')}/>
+    : <><button className="return-master" onClick={()=>setSurface('master')}><LayoutDashboard/> Master Dashboard</button><CSuiteDashboard/></>;
 }
