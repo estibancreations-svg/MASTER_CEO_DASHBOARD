@@ -7,8 +7,19 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 // rendering". If this crashes mid-flight the job row is untouched and
 // the next tick resumes exactly where it left off.
 
+function namedSupabaseKey(jsonEnv, legacyEnv) {
+  try {
+    const named = JSON.parse(Deno.env.get(jsonEnv) || '{}');
+    if (named.default) return named.default;
+  } catch (_) {
+    // Fall through to the legacy key during the 2026 migration window.
+  }
+  return Deno.env.get(legacyEnv);
+}
+
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const SERVICE_KEY = namedSupabaseKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY');
+if (!SUPABASE_URL || !SERVICE_KEY) throw new Error('Supabase server credentials are unavailable');
 
 const DEADLINE_MS = 100000;
 const started = Date.now();
