@@ -32,6 +32,10 @@
 
 /* Mobile touch-target certification */
 @media(max-width:760px){
+  .master-shell .master-menu,
+  .master-shell .master-alert,
+  .master-shell .master-brand button,
+  .master-shell .notification-drawer button,
   .master-shell .system-open,
   .master-shell .card-title button,
   .master-shell .master-heading button,
