@@ -46,6 +46,9 @@
   .master-shell .suite-switch,
   .master-shell .module-create button,
   .master-shell .thelma-modal button{min-height:44px}
+  .master-shell .master-menu,
+  .master-shell .master-alert,
+  .master-shell .master-brand button,
   .master-shell .master-row>button,
   .master-shell .module-row>button,
   .master-shell .modal-close{min-width:44px}
