@@ -28,5 +28,8 @@
 
 - Supabase accepted both function deployments as ACTIVE.
 - The VisionWeaver cron job remains active, runs every minute, uses POST, resolves the named secret from Vault, and sends an Authorization header.
-- Unsigned request tests and post-deployment cron evidence are recorded in the final batch verification.
+- Unsigned VisionWeaver health request returned HTTP 401.
+- OAuth callback without valid parameters returned HTTP 400.
+- Dashboard read request without a JWT returned HTTP 401 at the platform boundary.
+- Post-deployment VisionWeaver cron HTTP responses returned 200 with no timeouts.
 - Provider generation remains disabled because provider credentials are still placeholders.
