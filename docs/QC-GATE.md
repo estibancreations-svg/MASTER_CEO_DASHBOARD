@@ -1,24 +1,38 @@
 # Architect Accountability and Quality Gate
 
-## Challenge questions
+## Current release status — 2026-08-15
 
-| Question | Result | Evidence |
-|---|---|---|
-| Is this what The Architect asked for? | PASS | Deployable CEO command product, 17 executive surfaces, responsive shell and connected backend read models. |
-| Does it work? | PASS | TypeScript validation and production compilation pass. Supabase migration and secure Edge Function deployment succeeded. |
-| Are the connections correct? | PASS WITH GATES | Supabase and Drive are connected. THELMA, n8n, VisionWeaver, MAP, LandWeaver and GrantOS are registered behind independent contracts. |
-| Is this the best implementation available from recovered evidence? | PASS | Reconciles the early training tabs, newer executive page families, repository boards and canonical Drive package. |
-| Can quality be increased by at least 30 percent? | PASS | Replaced a static shell with authenticated realtime data, RLS, executive role enforcement, audit schema and failure isolation. |
-| Are prototypes represented as production? | PASS | Demonstration fallback is labeled; connected state appears only when Supabase is configured and authorized. |
-| Are secrets protected? | PASS WITH REMEDIATION | No service-role/provider secrets are committed. A historical recovered credential must be rotated separately. |
-| Would The Architect consider the requested first product complete? | PASS FOR CONNECTED MVP | Product is runnable and connected. Remaining systems activate through their own governed run periods. |
+**Status: QC HARDENING IN PROGRESS — not production-certified.**
 
-## Release gates
+The application is deployed and its internal data structures are operational. Builder mode intentionally bypasses login and uses seeded interface records. External provider execution and protected production writes remain disabled until identity is restored and each connector passes activation testing.
 
-- `npm run lint`
-- `npm run build`
-- Authentication required when Supabase configuration is present
-- CEO/Architect authorization enforced by RLS and `dashboard-data` Edge Function
-- Missing integrations show degraded/demo state without false live claims
-- Source-system identity preserved
-- Responsive desktop, tablet and mobile layouts present
+## Verified in this batch
+
+- Production URL returns HTTP 200.
+- Latest Vercel production deployment is READY.
+- No Vercel runtime errors were reported in the seven-day inspection window.
+- GitHub main contains merged work through PR #17.
+- Supabase is ACTIVE_HEALTHY.
+- Public application tables report RLS enabled.
+- Builder data is explicitly labeled as seeded—not live business performance.
+- Document title, accessible icon labels, dialog naming, visible keyboard focus, reduced-motion handling, and narrow-screen overflow safeguards are included.
+
+## Remaining release gates
+
+- [ ] Restore required authentication and organization membership enforcement.
+- [ ] Re-test Architect, delegated, denied, expired-session, and sign-out paths.
+- [ ] Enable or document the Supabase leaked-password protection decision.
+- [ ] Require JWT verification or an equivalent signed boundary for every externally callable Edge Function.
+- [ ] Run authenticated create, lifecycle-transition, audit, and realtime tests.
+- [ ] Activate providers one at a time with server-side secrets and synthetic preview data.
+- [ ] Verify VisionWeaver project → scene → render → review.
+- [ ] Verify GrantOS discovery → evidence → authorization → submission.
+- [ ] Verify LandWeaver intake → diligence → financial review → approval.
+- [ ] Verify THELMA request → model routing → sourced response → cost record.
+- [ ] Verify EC Fabric job → retry → dead letter → human override.
+- [ ] Complete iPad, iPhone, Android, desktop, keyboard, focus, contrast, empty, degraded, failure, retry, backup, and rollback tests.
+- [ ] Reconcile runtime status and connection registry after each provider activation.
+
+## Promotion rule
+
+A deployed interface is not a production-certified operating system. Promotion requires evidence across browser → application → API → database/provider → response → audit trail. Seeded, staged, registered, degraded, connected, and production states must remain visibly distinct.
