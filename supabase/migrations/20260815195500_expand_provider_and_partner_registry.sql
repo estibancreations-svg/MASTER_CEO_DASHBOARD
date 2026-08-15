@@ -83,3 +83,35 @@ begin
     end if;
   end loop;
 end $$;
+
+
+with integrations(integration_key,display_name,owning_system,connection_type,endpoint_class,status,capabilities,required_secrets,provenance) as (
+  values
+  ('openai','OpenAI','SYS-THELMA-001','ai_provider','server_only','planned',array['model_routing','reasoning','vision','image'],array['OPENAI_API_KEY'],'{"source":"API activation inventory","verified_api":true}'::jsonb),
+  ('xai-grok','Grok / xAI','SYS-THELMA-001','ai_provider','server_only','planned',array['model_routing','reasoning'],array['XAI_API_KEY'],'{"source":"API activation inventory","verified_api":true}'::jsonb),
+  ('deepseek','DeepSeek','SYS-THELMA-001','ai_provider','server_only','planned',array['model_routing','reasoning'],array['DEEPSEEK_API_KEY'],'{"source":"API activation inventory","verified_api":true}'::jsonb),
+  ('anthropic-claude','Claude / Anthropic','SYS-THELMA-001','ai_provider','server_only','planned',array['model_routing','reasoning','vision'],array['ANTHROPIC_API_KEY'],'{"source":"existing VisionWeaver notes","verified_api":true}'::jsonb),
+  ('paperclip','Paperclip','SYS-THELMA-001','optional_orchestration','server_only','planned',array['agent_orchestration'],array['PAPERCLIP_API_TOKEN'],'{"source":"system notes","self_hosted_optional":true}'::jsonb),
+  ('slack','Slack','SYS-THELMA-001','communications','server_only','planned',array['messages','events','interactive_actions'],array['SLACK_BOT_TOKEN','SLACK_SIGNING_SECRET','SLACK_APP_TOKEN'],'{"source":"system notes","verified_api":true}'::jsonb),
+  ('honcho','Honcho','SYS-THELMA-001','memory_provider','server_only','planned',array['memory','context'],array['HONCHO_API_KEY'],'{"source":"system notes","verified_api":true}'::jsonb),
+  ('telegram','Telegram','SYS-THELMA-001','communications','server_only','planned',array['bot_messages','webhooks'],array['TELEGRAM_BOT_TOKEN','TELEGRAM_WEBHOOK_SECRET'],'{"source":"system notes","verified_api":true}'::jsonb),
+  ('n8n-self-hosted','n8n (Optional Self-Hosted)','SYS-THELMA-001','optional_orchestration','server_only','planned',array['workflow_bridge','webhooks'],array['N8N_API_KEY','N8N_WEBHOOK_SECRET'],'{"source":"system notes","self_hosted_optional":true,"owned_fabric_primary":true}'::jsonb),
+  ('kling','Kling AI','SYS-VISION-001','creative_provider','server_only','planned',array['video_generation'],array['KLING_ACCESS_KEY','KLING_SECRET_KEY'],'{"source":"system notes; interpreted from King","verified_api":true}'::jsonb),
+  ('elevenlabs','ElevenLabs','SYS-VISION-001','voice_provider','server_only','planned',array['text_to_speech','speech_to_text'],array['ELEVENLABS_API_KEY'],'{"source":"system notes","verified_api":true}'::jsonb),
+  ('higgsfield','Higgsfield AI','SYS-VISION-001','creative_provider','server_only','planned',array['image_generation','video_generation'],array['HIGGSFIELD_API_KEY','HIGGSFIELD_API_SECRET'],'{"source":"system notes","verified_api":true}'::jsonb),
+  ('allstate','Allstate','SYS-THELMA-001','insurance_partner','partner_only','planned',array['quotes','policy_service'],array['ALLSTATE_CLIENT_ID','ALLSTATE_CLIENT_SECRET'],'{"source":"THELMA notes","partner_access_required":true,"public_api_asserted":false}'::jsonb),
+  ('the-general','The General','SYS-THELMA-001','insurance_partner','partner_only','planned',array['quotes','policy_service'],array['THE_GENERAL_CLIENT_ID','THE_GENERAL_CLIENT_SECRET'],'{"source":"THELMA notes","partner_access_required":true,"public_api_asserted":false}'::jsonb),
+  ('progressive','Progressive','SYS-THELMA-001','insurance_partner','partner_only','planned',array['quotes','policy_service'],array['PROGRESSIVE_CLIENT_ID','PROGRESSIVE_CLIENT_SECRET'],'{"source":"THELMA notes","partner_access_required":true,"public_api_asserted":false}'::jsonb),
+  ('state-farm','State Farm','SYS-THELMA-001','insurance_partner','partner_only','planned',array['quotes','policy_service'],array['STATE_FARM_CLIENT_ID','STATE_FARM_CLIENT_SECRET'],'{"source":"THELMA notes","partner_access_required":true,"public_api_asserted":false}'::jsonb)
+)
+insert into public.ceo_integrations (
+  organization_id,integration_key,display_name,owning_system,connection_type,
+  endpoint_class,status,capabilities,required_secrets,provenance
+)
+select '20e10428-4443-4324-b36a-e68d64ec26ed'::uuid, integrations.* from integrations
+on conflict (organization_id,integration_key) do update set
+  display_name=excluded.display_name, owning_system=excluded.owning_system,
+  connection_type=excluded.connection_type, endpoint_class=excluded.endpoint_class,
+  status=excluded.status, capabilities=excluded.capabilities,
+  required_secrets=excluded.required_secrets, provenance=excluded.provenance,
+  updated_at=now();
