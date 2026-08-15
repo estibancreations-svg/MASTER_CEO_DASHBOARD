@@ -27,3 +27,15 @@ The CEO Dashboard consumes normalized read models and governed actions. It does 
 - EC Fabric transitions are enforced in PostgreSQL; invalid jumps and silent retry resets are rejected.
 - Missing integrations degrade independently and must not take down the command shell.
 - A connector cannot be labeled production until a traced end-to-end provider transaction and rollback test pass.
+
+
+## Provider and partner registry expansion — 2026-08-15
+
+The EC connector registry now contains 19 additional governed entries:
+
+- 10 staged connections: OpenAI, Grok/xAI, DeepSeek, Claude/Anthropic, Kling AI, Slack, Honcho, Telegram, ElevenLabs and Higgsfield AI.
+- 2 optional/deferred self-hosted connections: Paperclip and n8n.
+- 4 partner-access-required insurer templates: Allstate, The General, Progressive and State Farm.
+- 3 reusable blank templates: insurance provider, gas station/fuel provider and general external service.
+
+Credential metadata stores secret **names only**. Secret values remain in Supabase Vault. No new entry is labeled connected or production. The insurer entries do not claim that a public API exists; activation requires approved partner credentials and terms. n8n remains an optional bridge or migration adapter, and the owned EC Integration Fabric remains the primary workflow authority.

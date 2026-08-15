@@ -115,3 +115,39 @@ For each key you already possess:
 8. Report only the provider names completed—never the values.
 
 Once the names are confirmed as replaced, run the provider health and low-cost certification batch one provider at a time.
+
+
+## Expanded provider and partner registry — 2026-08-15
+
+All entries below are registered but remain **staged**, **deferred**, or **partner access required** until a real credential and a governed health test pass.
+
+| Connection | Get or manage credentials | Vault slot(s) | State |
+|---|---|---|---|
+| OpenAI | [OpenAI API keys](https://platform.openai.com/api-keys) | `OPENAI_API_KEY` | Staged direct THELMA route |
+| Grok / xAI | [xAI Console](https://console.x.ai/) | `XAI_API_KEY` | Staged direct THELMA route |
+| DeepSeek | [DeepSeek API keys](https://platform.deepseek.com/api_keys) | `DEEPSEEK_API_KEY` | Staged direct THELMA route |
+| Claude / Anthropic | [Anthropic Console](https://console.anthropic.com/settings/keys) | `ANTHROPIC_API_KEY` | Staged; reuses the existing Anthropic slot |
+| Paperclip | [Paperclip documentation](https://paperclip.ing/docs) or the administration screen on the self-hosted deployment | `PAPERCLIP_API_TOKEN` | Optional/self-hosted agent orchestration |
+| Kling AI | [Kling API documentation](https://kling.ai/document-api/apiReference/commonInfo) | `KLING_ACCESS_KEY`, `KLING_SECRET_KEY` | Staged VisionWeaver provider; “King” was interpreted as Kling |
+| Slack | [Slack apps](https://api.slack.com/apps) | `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, optional `SLACK_APP_TOKEN` | Staged communication channel |
+| Honcho | [Honcho application](https://app.honcho.dev/) | `HONCHO_API_KEY` | Staged memory/context provider |
+| Telegram | Create/manage the bot with [BotFather](https://t.me/BotFather) | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | Staged communication channel |
+| ElevenLabs | [ElevenLabs API keys](https://elevenlabs.io/app/settings/api-keys) | `ELEVENLABS_API_KEY` | Staged voice provider |
+| Higgsfield AI | [Higgsfield Cloud](https://cloud.higgsfield.ai/) | `HIGGSFIELD_API_KEY`, `HIGGSFIELD_API_SECRET` | Staged VisionWeaver provider |
+| n8n self-hosted | In the self-hosted n8n UI: Settings → n8n API; create the webhook secret internally | `N8N_API_KEY`, `N8N_WEBHOOK_SECRET` | Optional bridge only; EC Integration Fabric remains primary |
+
+### Partner-only connection templates
+
+Allstate, The General, Progressive, and State Farm have been registered as **partner access required**. Their client ID and client secret slots exist, but no public production API is asserted. Only enter credentials issued under an approved agency, vendor, affiliate, fleet, fuel, or enterprise agreement.
+
+| Template | Vault slot(s) |
+|---|---|
+| Allstate | `ALLSTATE_CLIENT_ID`, `ALLSTATE_CLIENT_SECRET` |
+| The General | `THE_GENERAL_CLIENT_ID`, `THE_GENERAL_CLIENT_SECRET` |
+| Progressive | `PROGRESSIVE_CLIENT_ID`, `PROGRESSIVE_CLIENT_SECRET` |
+| State Farm | `STATE_FARM_CLIENT_ID`, `STATE_FARM_CLIENT_SECRET` |
+| Insurance provider blank | Add provider-specific names only after partner documentation is approved |
+| Gas station / fuel provider blank | Add provider-specific names only after partner documentation is approved |
+| General external service blank | Reusable governed template for future services |
+
+Do not place any of these values in Vercel `VITE_` variables or browser code. Replace only the exact placeholders in **Supabase project `yqealeekngxooyoemfba` → Database → Vault**.
