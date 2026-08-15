@@ -25,12 +25,15 @@ export function useCommandData(){
   const[moduleActivity,setModuleActivity]=useState<ModuleActivity[]>([]);
   const[loading,setLoading]=useState(Boolean(supabase));
   const[error,setError]=useState<string|null>(null);
+  const[refreshKey,setRefreshKey]=useState(0);
   useEffect(()=>{
     const client=supabase;
     if(identity.isBuilder){setModuleRecords(BUILDER_RECORDS);setLoading(false);return}
     if(!client)return;
     let alive=true;
     const load=async()=>{
+      setError(null);
+      setLoading(true);
       const[s,i,m,a]=await Promise.all([
         client.from('ceo_system_status').select('*').eq('organization_id',identity.organizationId).order('progress_percent',{ascending:false}),
         client.from('ceo_integrations').select('integration_key,display_name,owning_system,connection_type,status,capabilities,updated_at').eq('organization_id',identity.organizationId).order('display_name'),
@@ -49,7 +52,7 @@ export function useCommandData(){
       .on('postgres_changes',{event:'*',schema:'public',table:'ceo_module_records'},load)
       .on('postgres_changes',{event:'*',schema:'public',table:'ceo_module_activity'},load).subscribe();
     return()=>{alive=false;client.removeChannel(channel)};
-  },[identity.organizationId]);
+  },[identity.organizationId,identity.isBuilder,refreshKey]);
   const createModuleRecord=async(moduleKey:string,input:{name:string;category:string;status_value:string;activity:string})=>{
     if(identity.isBuilder||!identity.user)return{error:'Builder mode is read-only. Record changes remain protected.'};
     if(!supabase)return{error:'Supabase is unavailable'};
@@ -71,5 +74,6 @@ export function useCommandData(){
     const{error}=await supabase.from('ceo_governed_actions').insert({organization_id:identity.organizationId,actor_id:identity.user.id,action_type:'REQUEST_EXECUTIVE_BRIEFING',target_system:'THELMA',risk_level:'low',authorization_state:'ASK',execution_status:'queued',payload_reference:{topic,module_key:moduleKey,requested_from:'master_dashboard'}});
     return{error:error?.message||null,preview:false};
   };
-  return{systems,integrations,moduleRecords,moduleActivity,createModuleRecord,transitionModuleRecord,requestBriefing,loading,error,connected:Boolean(supabase)};
+  const retry=()=>{if(!identity.isBuilder){setError(null);setLoading(true);setRefreshKey(value=>value+1)}};
+  return{systems,integrations,moduleRecords,moduleActivity,createModuleRecord,transitionModuleRecord,requestBriefing,retry,loading,error,connected:Boolean(supabase)};
 }
