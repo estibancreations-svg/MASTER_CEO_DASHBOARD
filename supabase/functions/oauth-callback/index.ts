@@ -89,7 +89,8 @@ Deno.serve(async (req: Request) => {
     ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
     : null;
 
-  // 5. Upsert the connection. The flow state was consumed before exchange.\n  await supabase.from("social_connections").upsert(
+  // 5. Upsert the connection. The flow state was consumed before exchange.
+  await supabase.from("social_connections").upsert(
     {
       platform,
       auth_method: "oauth2",
@@ -104,7 +105,8 @@ Deno.serve(async (req: Request) => {
     { onConflict: "platform,account_id" },
   );
 
-  // 6. Bounce back to dashboard\n  return new Response(null, {
+  // 6. Bounce back to dashboard
+  return new Response(null, {
     status: 302,
     headers: { Location: `${new URL(flow.redirect_uri).origin}?connected=${platform}` },
   });
