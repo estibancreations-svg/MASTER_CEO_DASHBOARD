@@ -39,3 +39,14 @@ The EC connector registry now contains 19 additional governed entries:
 - 3 reusable blank templates: insurance provider, gas station/fuel provider and general external service.
 
 Credential metadata stores secret **names only**. Secret values remain in Supabase Vault. No new entry is labeled connected or production. The insurer entries do not claim that a public API exists; activation requires approved partner credentials and terms. n8n remains an optional bridge or migration adapter, and the owned EC Integration Fabric remains the primary workflow authority.
+
+
+## Edge Function boundary registry — 2026-08-15
+
+| Function | Exposure | Enforced boundary |
+|---|---|---|
+| `dashboard-data` | Authenticated executive read endpoint | Supabase JWT verification, `auth.getUser()`, and `app_metadata.role` limited to CEO/Architect |
+| `visionweaver-orchestrator` | Internal cron/worker endpoint | Vault-resolved bearer secret, constant-time comparison, POST-only execution, signed GET health route |
+| `oauth-callback` | Public OAuth redirect endpoint | GET-only, platform-bound expiring state, atomic one-time consumption, PKCE verifier, secure token storage |
+
+The two `verify_jwt = false` functions are not anonymous action endpoints: each implements a protocol-appropriate custom boundary. Function configuration is committed in `supabase/config.toml`.

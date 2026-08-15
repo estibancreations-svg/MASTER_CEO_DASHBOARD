@@ -23,7 +23,7 @@ The application is deployed and its provider-independent workflows are certified
 - [ ] Restore required authentication and organization membership enforcement.
 - [ ] Re-test Architect, delegated, denied, expired-session, and sign-out paths.
 - [ ] Enable or document the Supabase leaked-password protection decision.
-- [ ] Require JWT verification or an equivalent signed boundary for every externally callable Edge Function.
+- [x] Require JWT verification or an equivalent signed boundary for every externally callable Edge Function.
 - [ ] Run authenticated create, lifecycle-transition, audit, and realtime tests.
 - [ ] Activate providers one at a time with server-side secrets and synthetic preview data.
 - [x] Verify VisionWeaver internal project → scene → review → completion state path.
@@ -39,3 +39,12 @@ The application is deployed and its provider-independent workflows are certified
 ## Promotion rule
 
 A deployed interface is not a production-certified operating system. Promotion requires evidence across browser → application → API → database/provider → response → audit trail. Seeded, staged, registered, degraded, connected, and production states must remain visibly distinct.
+
+
+### Edge Function boundary certification — 2026-08-15
+
+- `dashboard-data`: platform JWT verification plus server-side user validation, executive `app_metadata.role` authorization, canonical production-origin CORS, and current publishable/secret-key compatibility.
+- `visionweaver-orchestrator`: Vault-backed bearer secret, constant-time digest comparison, method restriction and signed health route.
+- `oauth-callback`: public by protocol, bounded by platform binding, expiring one-time state, atomic consume-before-exchange, method restriction and secure token-storage checks.
+
+Builder-mode login remains intentionally deferred; this completed gate certifies endpoint boundaries, not full authenticated application launch.
