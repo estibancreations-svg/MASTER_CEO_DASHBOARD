@@ -52,7 +52,12 @@ insert into public.ec_connectors (
   capabilities,credential_mode,required_secrets,docs_url,endpoint_url,
   credential_status,is_template,notes
 )
-select '20e10428-4443-4324-b36a-e68d64ec26ed'::uuid, rows.* from rows
+select
+  '20e10428-4443-4324-b36a-e68d64ec26ed'::uuid,
+  connector_key,display_name,category,connection_state,transport,
+  to_jsonb(capabilities),credential_mode,required_secrets,docs_url,endpoint_url,
+  credential_status,is_template,notes
+from rows
 on conflict (organization_id,connector_key) do update set
   display_name=excluded.display_name, category=excluded.category,
   connection_state=excluded.connection_state, transport=excluded.transport,
@@ -108,7 +113,11 @@ insert into public.ceo_integrations (
   organization_id,integration_key,display_name,owning_system,connection_type,
   endpoint_class,status,capabilities,required_secrets,provenance
 )
-select '20e10428-4443-4324-b36a-e68d64ec26ed'::uuid, integrations.* from integrations
+select
+  '20e10428-4443-4324-b36a-e68d64ec26ed'::uuid,
+  integration_key,display_name,owning_system,connection_type,endpoint_class,status,
+  to_jsonb(capabilities),required_secrets,provenance
+from integrations
 on conflict (organization_id,integration_key) do update set
   display_name=excluded.display_name, owning_system=excluded.owning_system,
   connection_type=excluded.connection_type, endpoint_class=excluded.endpoint_class,
