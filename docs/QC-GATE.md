@@ -43,7 +43,7 @@ A deployed interface is not a production-certified operating system. Promotion r
 
 ### Edge Function boundary certification — 2026-08-15
 
-- `dashboard-data`: platform JWT verification plus server-side user validation and executive `app_metadata.role` authorization.
+- `dashboard-data`: platform JWT verification plus server-side user validation, executive `app_metadata.role` authorization, canonical production-origin CORS, and current publishable/secret-key compatibility.
 - `visionweaver-orchestrator`: Vault-backed bearer secret, constant-time digest comparison, method restriction and signed health route.
 - `oauth-callback`: public by protocol, bounded by platform binding, expiring one-time state, atomic consume-before-exchange, method restriction and secure token-storage checks.
 
