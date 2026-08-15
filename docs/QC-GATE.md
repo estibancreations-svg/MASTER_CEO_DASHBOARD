@@ -10,13 +10,16 @@ The application is deployed and its provider-independent workflows are certified
 
 - Production URL returns HTTP 200 and the latest Vercel production deployment is READY.
 - No Vercel runtime errors were reported in the inspected window.
-- GitHub main contains merged work through PR #20 before this hardening branch.
+- GitHub main contains merged work through PR #24 before this certification branch.
 - Supabase is ACTIVE_HEALTHY and public application tables report RLS enabled.
 - Builder data is explicitly labeled as seeded—not live business performance.
 - Document metadata, accessible icon labels, dialog naming, keyboard focus, reduced-motion handling, and narrow-screen safeguards are included.
 - Rollback-safe internal workflow certification passed for LandWeaver, VisionWeaver, GrantOS, THELMA, EC Integration Fabric, and CMGIO; zero synthetic rows persisted.
 - All six attached production workspaces launch and render their governed builder boundaries.
 - EC Fabric now enforces valid job transitions, authorization, retry exhaustion, dead-letter evidence, ASK-based human requeue, automatic event history, and append-only audit records at the database boundary.
+- Exact iPhone, Android, iPad, and desktop viewport checks show no page-level horizontal overflow; attached workspaces now use the full content column.
+- Mobile primary and icon actions meet the 44 px touch-target baseline; keyboard focus remains visible and inspected contrast samples meet WCAG AA.
+- Builder degradation, empty-state, loading, failure, retry, bounded-retry, dead-letter, and rollback-readiness paths are present and distinguishable.
 
 ## Remaining release gates
 
@@ -33,7 +36,8 @@ The application is deployed and its provider-independent workflows are certified
 - [x] Verify EC Fabric job → retry → dead letter → human override, with immutable evidence.
 - [x] Verify CMGIO internal campaign → asset QC → signal action → completion path.
 - [ ] Verify THELMA request → live model routing → sourced response → cost record.
-- [ ] Complete iPad, iPhone, Android, desktop, keyboard, focus, contrast, empty, degraded, failure, retry, backup, and rollback tests.
+- [x] Complete iPad, iPhone, Android, desktop viewport, keyboard, focus, contrast, empty, degraded, failure, retry, and rollback-readiness tests.
+- [ ] Complete the database backup/restore drill and physical-device spot check before production certification.
 - [ ] Reconcile runtime status and connection registry after each provider activation.
 
 ## Promotion rule
