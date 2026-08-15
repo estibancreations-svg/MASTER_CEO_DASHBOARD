@@ -7,9 +7,9 @@
 
 | Function | Version | JWT mode | Boundary |
 |---|---:|---:|---|
-| `dashboard-data` | 2 | Required | JWT + user lookup + CEO/Architect app-metadata role |
-| `visionweaver-orchestrator` | 8 | Custom | Vault bearer secret + constant-time comparison + method restriction |
-| `oauth-callback` | 3 | Custom | Expiring single-use OAuth state + atomic claim + PKCE |
+| `dashboard-data` | 3 | Required | JWT + user lookup + CEO/Architect app-metadata role |
+| `visionweaver-orchestrator` | 9 | Custom | Vault bearer secret + constant-time comparison + method restriction |
+| `oauth-callback` | 4 | Custom | Expiring single-use OAuth state + atomic claim + PKCE |
 
 ## Changes
 
@@ -23,6 +23,8 @@
 - Fails closed when Vault token storage or the social-connection write fails.
 - Added authoritative per-function JWT configuration to source control.
 - Added the previously deployed `dashboard-data` and VisionWeaver function sources to the repository.
+- Corrected the dashboard CORS default to `https://master-ceo-dashboard.vercel.app`.
+- Added dual support for current publishable/secret-key environment variables with a safe legacy-key fallback.
 
 ## Verification
 
