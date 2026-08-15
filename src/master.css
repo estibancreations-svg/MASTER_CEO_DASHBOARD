@@ -29,3 +29,27 @@
 .data-state b,.data-state span{display:block}.data-state span{margin-top:3px;color:#727c92}.data-state.loading{border-color:#cfdcff;background:#f5f8ff}.data-state.error{border-color:#efb6c8;background:#fff5f8;color:#8f2850}.data-state.error button{border:1px solid #cf6689;border-radius:7px;background:#fff;color:#9d3158;padding:8px 11px;font-weight:800;white-space:nowrap}
 .card-title button:disabled,.module-row select:disabled{cursor:not-allowed;opacity:.58;background:#f1f2f5;color:#7e879b;border-color:#e1e3e9}
 @media(max-width:480px){.data-state{align-items:flex-start;flex-direction:column}.data-state.error button{width:100%}}
+
+/* Mobile touch-target certification */
+@media(max-width:760px){
+  .master-shell .master-menu,
+  .master-shell .master-alert,
+  .master-shell .master-brand button,
+  .master-shell .notification-drawer button,
+  .master-shell .system-open,
+  .master-shell .card-title button,
+  .master-shell .master-heading button,
+  .master-shell .master-row>button,
+  .master-shell .module-row>button,
+  .master-shell .data-state button,
+  .master-shell .identity-signout,
+  .master-shell .suite-switch,
+  .master-shell .module-create button,
+  .master-shell .thelma-modal button{min-height:44px}
+  .master-shell .master-menu,
+  .master-shell .master-alert,
+  .master-shell .master-brand button,
+  .master-shell .master-row>button,
+  .master-shell .module-row>button,
+  .master-shell .modal-close{min-width:44px}
+}
