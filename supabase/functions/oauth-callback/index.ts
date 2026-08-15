@@ -35,7 +35,13 @@ Deno.serve(async (req: Request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  let serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  try {
+    const namedKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}");
+    serviceKey = namedKeys.default ?? serviceKey;
+  } catch (_) {
+    // Fall back during the 2026 legacy-key migration window.
+  }
   if (!supabaseUrl || !serviceKey) {
     return Response.json({ error: "Callback service unavailable" }, {
       status: 503,
