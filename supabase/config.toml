@@ -1,0 +1,11 @@
+[functions.dashboard-data]
+verify_jwt = true
+
+[functions.visionweaver-orchestrator]
+# Internal cron caller authenticates with a Vault-backed bearer secret.
+verify_jwt = false
+
+[functions.oauth-callback]
+# OAuth providers cannot supply a Supabase JWT; the handler validates an
+# expiring, platform-bound, one-time state token and PKCE verifier.
+verify_jwt = false
