@@ -65,5 +65,11 @@ export function useCommandData(){
     const{error:activityError}=await supabase.from('ceo_module_activity').insert({organization_id:identity.organizationId,module_record_id:record.id,module_key:record.module_key,event_type:'state_changed',from_state:record.record_state,to_state:toState,note:note||null,actor_id:identity.user.id});
     return{error:activityError?.message||null};
   };
-  return{systems,integrations,moduleRecords,moduleActivity,createModuleRecord,transitionModuleRecord,loading,error,connected:Boolean(supabase)};
+  const requestBriefing=async(topic:string,moduleKey:string)=>{
+    if(identity.isBuilder||!identity.user)return{error:null,preview:true};
+    if(!supabase)return{error:'Supabase is unavailable',preview:false};
+    const{error}=await supabase.from('ceo_governed_actions').insert({organization_id:identity.organizationId,actor_id:identity.user.id,action_type:'REQUEST_EXECUTIVE_BRIEFING',target_system:'THELMA',risk_level:'low',authorization_state:'ASK',execution_status:'queued',payload_reference:{topic,module_key:moduleKey,requested_from:'master_dashboard'}});
+    return{error:error?.message||null,preview:false};
+  };
+  return{systems,integrations,moduleRecords,moduleActivity,createModuleRecord,transitionModuleRecord,requestBriefing,loading,error,connected:Boolean(supabase)};
 }
