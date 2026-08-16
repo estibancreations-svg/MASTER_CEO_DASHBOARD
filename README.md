@@ -1,20 +1,29 @@
 # MASTER_CEO_DASHBOARD
 
-## Architecture Authority
+Governed Estiban Creations executive command shell and attached-system workspace.
 
-This system is governed by the Master Systems Buildout schema:
+## Architecture authority
 
-- Schema ID: `MSB-SCHEMA-001`
-- Local reference: [`docs/architecture/SYSTEM-BUILD-SCHEMA-REFERENCE.md`](docs/architecture/SYSTEM-BUILD-SCHEMA-REFERENCE.md)
+- Schema: `MSB-SCHEMA-001`
+- Local implementation: [Enterprise Build Specification](docs/architecture/MASTER-CEO-DASHBOARD-ENTERPRISE-BUILD-SPECIFICATION.md)
+- Schema checkpoint: [System Build Schema Reference](docs/architecture/SYSTEM-BUILD-SCHEMA-REFERENCE.md)
 - Canonical standard: `estibancreations-svg/Master-System-Buildout/01-ARCHITECTURE/System-Build-Schema/SYSTEM-BUILD-SCHEMA-STANDARD-v1.0.md`
 
-Agents and developers must retrieve the canonical standard before creating or revising system specifications. The CEO Dashboard build must also cross-reference the C-Suite System of Record and CEO AI Executive Office definition.
+## Current operational truth
 
-## Connected MVP
+The application is deployed as a responsive builder release.
 
-The repository now contains the runnable CEO Command Center application with all 17 governed executive surfaces, responsive layouts, Supabase authentication, realtime executive read models, integration status, and explicit source-system authority boundaries.
+- 25 governed dashboard modules are present.
+- VisionWeaver, LandWeaver, GrantOS, THELMA, CMGIO/MAP and EC Integration Fabric open as attached workspaces.
+- Provider-independent workflows are internally certified.
+- Builder mode intentionally bypasses login and uses clearly labeled seeded interface records.
+- Protected browser writes and external provider execution remain disabled.
+- Authentication is launch-configurable and ready for its test matrix.
+- Provider and partner Vault slots are prepared; credentials are installed later and certified one connector at a time.
+- Recovery policies, evidence ledgers and guarded local backup/restore scripts are present.
+- The release is not production-certified until the remaining external gates in [QC-GATE.md](docs/QC-GATE.md) pass.
 
-### Run locally
+## Run locally
 
 ```bash
 npm install
@@ -22,29 +31,38 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the deployment environment. Never place service-role or provider credentials in browser variables.
+Browser-safe configuration:
 
-### Validate
+```dotenv
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+VITE_BUILDER_MODE=true
+```
+
+Never place service-role keys, database passwords or provider credentials in `VITE_` variables.
+
+Set `VITE_BUILDER_MODE=false` only after organization membership, role, denied, expired-session and sign-out tests pass.
+
+## Validate
 
 ```bash
 npm run lint
 npm run build
 ```
 
-See [`docs/architecture/CONNECTION-REGISTRY.md`](docs/architecture/CONNECTION-REGISTRY.md) and [`docs/QC-GATE.md`](docs/QC-GATE.md).
+## Operations
+
+- [Connection Registry](docs/architecture/CONNECTION-REGISTRY.md)
+- [Provider Key Installation Matrix](docs/provider-activation/KEY-INSTALLATION-MATRIX.md)
+- [Backup and Restore Runbook](docs/operations/BACKUP-RESTORE-RUNBOOK.md)
+- [Physical Device Sign-off](docs/operations/PHYSICAL-DEVICE-SIGNOFF.md)
+- [Quality Gate](docs/QC-GATE.md)
 
 ## Attached systems
 
-- **LandWeaver (`SYS-LAND-001`)** — The Property Intelligence surface now opens the connected 15-view acquisition workspace backed by Supabase. It supports governed property intake, evidence classification, hazard/utility/zoning/financial/comparable assessment records, diligence tasks, executive decisions, realtime updates, provenance and explicit professional-certification boundaries.
-  - Southeast launch bundle: Tampa, Orlando, Plantation, Sanford; Atlanta, Decatur, Augusta, Savannah, Norcross; Mobile, Gulf Shores, Orange Beach, Foley, Daphne and Fairhope.
-  - The API Settings view separates public, manual, credentialed and licensed sources. Demonstration properties are synthetic and cannot be mistaken for verified records.
-
-## Alignment checkpoint — 2026-08-12
-
-**Timestamp:** `2026-08-12T15:13:35-04:00`
-
-- Design/specification PR #1 merged to `main` as `d7502147`.
-- Connected MVP/LandWeaver PR #2 merged to `main` as `bd597b03`.
-- Canonical governance and migration record: [Master-System-Buildout closeout](https://github.com/estibancreations-svg/Master-System-Buildout/blob/main/07-DOCUMENTATION/Status-Reports/2026-08-12_REPOSITORY-MIGRATION-PR-AND-SYSTEM-ALIGNMENT-CLOSEOUT.md).
-- CEO Dashboard and LandWeaver retain separate System IDs and authority boundaries even though the LandWeaver workspace is attached here.
-- The Vercel deployment error remains deferred for review; merge completion does not certify a successful production deployment.
+- **VisionWeaver (`SYS-VISION-001`)** — durable production, scenes, rendering state, QC and provenance.
+- **LandWeaver (`SYS-LAND-001`)** — governed property intake, assessment, diligence, financial review and approval.
+- **GrantOS (`SYS-GRANT-001`)** — opportunities, evidence requirements, budgets and application workflow.
+- **THELMA (`SYS-THELMA-001`)** — requests, authorization, commands, runs, incidents and resolution.
+- **CMGIO/MAP (`SYS-ADS-001`)** — campaigns, assets, signals, authorization and optimization.
+- **EC Integration Fabric** — owned connectors, queues, workflows, retries, dead letters and audit; n8n is optional.
