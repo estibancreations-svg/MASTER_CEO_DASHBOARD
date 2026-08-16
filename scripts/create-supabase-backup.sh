@@ -37,7 +37,7 @@ printf 'created_at=%s\nsource_project=%s\n' "$stamp" "yqealeekngxooyoemfba" >> "
 
 tar -C "$work_dir" -czf "$work_dir/$artifact.tar.gz" roles.sql schema.sql data.sql history_schema.sql history_data.sql manifest.txt
 age -r "$BACKUP_AGE_RECIPIENT" -o "$encrypted_path" "$work_dir/$artifact.tar.gz"
-sha256sum "$encrypted_path" > "$encrypted_path.sha256"
+(cd "$output_dir" && sha256sum "$(basename "$encrypted_path")" > "$(basename "$encrypted_path").sha256")
 chmod 600 "$encrypted_path" "$encrypted_path.sha256"
 
 echo "Encrypted backup created:"
