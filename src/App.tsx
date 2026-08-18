@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Activity, Bell, Bot, Building2, ChevronRight, CircleDollarSign, ClipboardCheck, Clock3, FileClock, Gauge, Landmark, LayoutDashboard, Megaphone, Menu, Network, Search, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react';
 import { useCommandData } from './hooks/useCommandData';
 import LandWeaverWorkspace from './components/LandWeaverWorkspace';
@@ -8,6 +8,7 @@ import ThelmaWorkspace from './components/ThelmaWorkspace';
 import CmgioWorkspace from './components/CmgioWorkspace';
 import IntegrationFabricWorkspace from './components/IntegrationFabricWorkspace';
 import MasterDashboard from './components/MasterDashboard';
+import { parseDashboardRoute, routeForModule, routeForSuitePage, routeForSystem } from './routing';
 
 const sections = [
   ['Executive Overview', LayoutDashboard], ['Decisions & Approvals', ClipboardCheck], ['Communications', Bell],
@@ -56,15 +57,17 @@ function Workspace({name}:{name:string}){
   <div className="workspace-grid"><section className="panel"><div className="panel-title"><div><span className="eyebrow">PRIORITY READ MODEL</span><h3>{name}</h3></div><span className="live"><i/>Current</span></div>{model.queue.map(([title,owner,state])=><div className="work-row" key={title}><div><b>{title}</b><small>{owner}</small></div><span>{state}</span><button><ChevronRight/></button></div>)}</section><section className="panel"><div className="panel-title"><div><span className="eyebrow">GOVERNED CONTROLS</span><h3>Executive actions</h3></div><ShieldCheck/></div><div className="control-grid">{model.controls.map(x=><button key={x}>{x}<ChevronRight/></button>)}</div><div className="provenance"><b>Authority boundary</b><p>Actions create an approval request or delegated command. Source-system writes require explicit authority and an audit event.</p></div></section></div></>;
 }
 
-export function CSuiteDashboard(){
-  const [active,setActive]=useState('Executive Overview');
+export function CSuiteDashboard({initialActive='Executive Overview',onNavigate}:{initialActive?:string;onNavigate?:(page:string)=>void}){
+  const [active,setActive]=useState(initialActive);
+  useEffect(()=>setActive(initialActive),[initialActive]);
+  const selectPage=(page:string)=>{setActive(page);onNavigate?.(page)};
   const [open,setOpen]=useState(false);
   const command=useCommandData();
   const portfolio=command.systems.length?command.systems.map(s=>[s.system_name,s.lifecycle_state,`${s.progress_percent}%`]):[['VisionWeaver','Staging preparation','72%'],['CEO Dashboard','Foundation active','18%'],['LandWeaver','Specification ready','35%'],['GrantOS','Reconciliation','44%']];
   return <div className="app-shell">
     <aside className={open?'sidebar open':'sidebar'}>
       <div className="brand"><div className="brand-mark">EC</div><div><b>ESTIBAN</b><span>CEO COMMAND</span></div><button className="close" onClick={()=>setOpen(false)}><X/></button></div>
-      <nav>{sections.map(([name,Icon])=><button key={name} className={active===name?'active':''} onClick={()=>{setActive(name);setOpen(false)}}><Icon/><span>{name}</span></button>)}</nav>
+      <nav>{sections.map(([name,Icon])=><button key={name} className={active===name?'active':''} onClick={()=>{selectPage(name);setOpen(false)}}><Icon/><span>{name}</span></button>)}</nav>
       <div className="system-state"><span className={command.connected&&!command.error?'pulse':'pulse warning'}/><div><b>{command.connected&&!command.error?'Command fabric online':'Demonstration read model'}</b><small>{command.systems.length||4} systems reporting</small></div></div>
     </aside>
     <main>
@@ -83,8 +86,33 @@ export function CSuiteDashboard(){
 }
 
 export default function App(){
-  const [surface,setSurface]=useState<'master'|'suite'|'land'|'vision'|'grant'|'thelma'|'cmgio'|'fabric'>('master');
-  if(surface==='master')return <MasterDashboard onOpenSuite={()=>setSurface('suite')} onOpenLandWeaver={()=>setSurface('land')} onOpenVisionWeaver={()=>setSurface('vision')} onOpenGrantOS={()=>setSurface('grant')} onOpenThelma={()=>setSurface('thelma')} onOpenCmgio={()=>setSurface('cmgio')} onOpenFabric={()=>setSurface('fabric')}/>;
-  const workspace=surface==='land'?<LandWeaverWorkspace/>:surface==='vision'?<VisionWeaverWorkspace/>:surface==='grant'?<GrantOSWorkspace/>:surface==='thelma'?<ThelmaWorkspace/>:surface==='cmgio'?<CmgioWorkspace/>:<IntegrationFabricWorkspace/>;
-  return <><button className="return-master" onClick={()=>setSurface('master')}><LayoutDashboard/> Master Dashboard</button>{surface==='suite'?<CSuiteDashboard/>:<div className="app-shell workspace-only"><main><section className="content">{workspace}</section></main></div>}</>;
+  const[route,setRoute]=useState(()=>parseDashboardRoute(window.location.pathname));
+  useEffect(()=>{
+    const handlePopState=()=>setRoute(parseDashboardRoute(window.location.pathname));
+    window.addEventListener('popstate',handlePopState);
+    return()=>window.removeEventListener('popstate',handlePopState);
+  },[]);
+  useEffect(()=>{
+    const label=route.page||route.surface.replaceAll('-',' ');
+    document.title=`${label} · Master CEO Dashboard`;
+  },[route]);
+  const navigate=(path:string)=>{
+    if(window.location.pathname!==path)window.history.pushState({},'',path);
+    setRoute(parseDashboardRoute(path));
+    window.scrollTo({top:0,behavior:'auto'});
+  };
+  if(route.surface==='master')return <MasterDashboard
+    initialActive={route.page||'Dashboard'}
+    onNavigateModule={name=>navigate(routeForModule(name))}
+    onOpenSuite={()=>navigate(routeForSuitePage('Executive Overview'))}
+    onOpenLandWeaver={()=>navigate(routeForSystem('land'))}
+    onOpenVisionWeaver={()=>navigate(routeForSystem('vision'))}
+    onOpenGrantOS={()=>navigate(routeForSystem('grant'))}
+    onOpenThelma={()=>navigate(routeForSystem('thelma'))}
+    onOpenCmgio={()=>navigate(routeForSystem('cmgio'))}
+    onOpenFabric={()=>navigate(routeForSystem('fabric'))}
+  />;
+  if(route.surface==='suite')return <><button className="return-master" onClick={()=>navigate('/dashboard')}><LayoutDashboard/> Master Dashboard</button><CSuiteDashboard initialActive={route.page||'Executive Overview'} onNavigate={page=>navigate(routeForSuitePage(page))}/></>;
+  const workspace=route.surface==='land'?<LandWeaverWorkspace/>:route.surface==='vision'?<VisionWeaverWorkspace/>:route.surface==='grant'?<GrantOSWorkspace/>:route.surface==='thelma'?<ThelmaWorkspace/>:route.surface==='cmgio'?<CmgioWorkspace/>:<IntegrationFabricWorkspace/>;
+  return <><button className="return-master" onClick={()=>navigate('/dashboard')}><LayoutDashboard/> Master Dashboard</button><div className="app-shell workspace-only"><main><section className="content">{workspace}</section></main></div></>;
 }

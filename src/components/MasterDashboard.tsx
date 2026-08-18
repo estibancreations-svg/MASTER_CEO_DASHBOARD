@@ -1,5 +1,5 @@
-import {FormEvent,useMemo,useState} from'react';
-import{Activity,Award,BarChart3,Bell,Bot,Boxes,ChevronDown,ChevronRight,CircleDollarSign,CircleHelp,FileText,Gauge,GraduationCap,LayoutDashboard,Library,ListChecks,Menu,MessageSquare,Package,Plug,Search,Settings,ShieldCheck,Sparkles,Target,TrendingUp,Users,Video,Workflow,X}from'lucide-react';
+import {FormEvent,useEffect,useMemo,useState} from'react';
+import{Activity,Award,BarChart3,Bell,Bot,Boxes,ChevronDown,ChevronRight,CircleDollarSign,CircleHelp,FileText,FolderOpen,Gauge,GraduationCap,LayoutDashboard,Library,ListChecks,Menu,MessageSquare,Package,Plug,Search,Settings,ShieldCheck,Sparkles,Target,TrendingUp,Users,Video,Workflow,X}from'lucide-react';
 import type{LucideIcon}from'lucide-react';
 import{useCommandData}from'../hooks/useCommandData';
 import type{ModuleActivity,ModuleRecord}from'../hooks/useCommandData';
@@ -21,6 +21,8 @@ const modules:Module[]=[
  ['System Audit',ShieldCheck,'Governance','Security, compliance and system evidence'],
  ['Certificates',Award,'Governance','Credentials, completions and verification'],
  ['Settings',Settings,'Governance','Workspace, permissions and preferences'],
+ ['Documents',FileText,'Workspace','Governed specifications, reports and approved references'],
+ ['Files',FolderOpen,'Workspace','Governed files, folders, source locations and permissions'],
  ['Team Overview',Users,'Operations','Capacity, roles, goals and performance'],
  ['Video Storyboard',Video,'Creative','Scenes, scripts, media and production status'],
  ['Social Analytics',BarChart3,'Growth','Reach, engagement, conversion and ROI'],
@@ -36,15 +38,16 @@ const modules:Module[]=[
 
 const tones=['violet','blue','green','amber'];
 
-export default function MasterDashboard({onOpenSuite,onOpenLandWeaver,onOpenVisionWeaver,onOpenGrantOS,onOpenThelma,onOpenCmgio,onOpenFabric}:{onOpenSuite:()=>void;onOpenLandWeaver:()=>void;onOpenVisionWeaver:()=>void;onOpenGrantOS:()=>void;onOpenThelma:()=>void;onOpenCmgio:()=>void;onOpenFabric:()=>void}){
- const[active,setActive]=useState('Dashboard'),[navOpen,setNavOpen]=useState(false),[query,setQuery]=useState(''),[alertsOpen,setAlertsOpen]=useState(false),[thelmaOpen,setThelmaOpen]=useState(false),[briefing,setBriefing]=useState(''),[briefingState,setBriefingState]=useState(''),command=useCommandData(),identity=useIdentity();
- const selected=modules.find(x=>x.name===active)!;
+export default function MasterDashboard({initialActive,onNavigateModule,onOpenSuite,onOpenLandWeaver,onOpenVisionWeaver,onOpenGrantOS,onOpenThelma,onOpenCmgio,onOpenFabric}:{initialActive:string;onNavigateModule:(name:string)=>void;onOpenSuite:()=>void;onOpenLandWeaver:()=>void;onOpenVisionWeaver:()=>void;onOpenGrantOS:()=>void;onOpenThelma:()=>void;onOpenCmgio:()=>void;onOpenFabric:()=>void}){
+ const[active,setActive]=useState(initialActive),[navOpen,setNavOpen]=useState(false),[query,setQuery]=useState(''),[alertsOpen,setAlertsOpen]=useState(false),[thelmaOpen,setThelmaOpen]=useState(false),[briefing,setBriefing]=useState(''),[briefingState,setBriefingState]=useState(''),command=useCommandData(),identity=useIdentity();
+ const selected=modules.find(x=>x.name===active)??modules[0];
  const groups=useMemo(()=>Array.from(new Set(modules.map(x=>x.group))),[]);
+ useEffect(()=>{if(modules.some(module=>module.name===initialActive))setActive(initialActive)},[initialActive]);
  const systems=command.systems.length?command.systems.slice(0,10):[
   {system_name:'VisionWeaver',progress_percent:100,lifecycle_state:'Production'},{system_name:'CEO Dashboard',progress_percent:100,lifecycle_state:'Active'},{system_name:'LandWeaver',progress_percent:92,lifecycle_state:'MVP'},{system_name:'GrantOS',progress_percent:82,lifecycle_state:'MVP'},{system_name:'THELMA / EC Fabric',progress_percent:94,lifecycle_state:'MVP'},{system_name:'CMGIO / MAP',progress_percent:86,lifecycle_state:'MVP'},{system_name:'EC Integration Fabric',progress_percent:90,lifecycle_state:'MVP'}];
  const searchResults=useMemo(()=>{const q=query.trim().toLowerCase();if(!q)return[];return[...modules.filter(m=>`${m.name} ${m.group} ${m.description}`.toLowerCase().includes(q)).map(m=>({label:m.name,detail:m.description,module:m.name})),...command.moduleRecords.filter(r=>`${r.name} ${r.category} ${r.status_value} ${r.module_key}`.toLowerCase().includes(q)).map(r=>({label:r.name,detail:`${r.module_key} · ${r.category}`,module:r.module_key}))].slice(0,8)},[query,command.moduleRecords]);
  const notifications=useMemo(()=>[...command.moduleRecords.filter(r=>r.record_state==='review').map(r=>({title:r.name,detail:`${r.module_key} requires review`,module:r.module_key,tone:'amber'})),...command.systems.filter(s=>s.blocker_count>0).map(s=>({title:s.system_name,detail:`${s.blocker_count} blocker${s.blocker_count===1?'':'s'} reported`,module:'Dashboard',tone:'red'}))].slice(0,10),[command.moduleRecords,command.systems]);
- const openModule=(name:string)=>{if(name==='API Integration'){onOpenFabric();return}setActive(name);setQuery('');setAlertsOpen(false)};
+ const openModule=(name:string)=>{if(name==='API Integration'){onOpenFabric();return}setActive(name);onNavigateModule(name);setQuery('');setAlertsOpen(false)};
  const submitBriefing=async(e:FormEvent)=>{e.preventDefault();setBriefingState('Submitting…');const result=await command.requestBriefing(briefing,active);setBriefingState(result.error?result.error:result.preview?'Preview request prepared. Live submission activates after sign-in.':'Request queued with THELMA.');if(!result.error)setBriefing('')};
  return <div className="master-shell"><aside className={navOpen?'master-nav open':'master-nav'}>
   <div className="master-brand"><span>EC</span><div><b>ESTIBAN CREATIONS</b><small>MASTER DASHBOARD</small></div><button type="button" aria-label="Close navigation" onClick={()=>setNavOpen(false)}><X aria-hidden="true"/></button></div>

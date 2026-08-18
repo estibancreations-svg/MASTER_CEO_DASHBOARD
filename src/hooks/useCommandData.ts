@@ -11,7 +11,7 @@ const BUILDER_RECORDS:ModuleRecord[]=[
  ['Content Engine','Reunion launch campaign','In review','12 assets'],['Social Media','Instagram','Connected','18.4K'],['Trends','Florida land opportunities','High','Rising'],
  ['Communications','Board briefing packet','Executive Office','Priority'],['CRM','Avery Holdings','Property investor','Qualified'],['Products','CEO Command Center','Software','Active'],
  ['Finance','Operating revenue','Income','$54,230'],['System Audit','Authentication policy','Security','Passed'],['Certificates','AI Governance','The Architect','Verified'],
- ['Settings','Executive preferences','Workspace','Configured'],['Team Overview','Executive Office','2 members','Healthy'],['Video Storyboard','The Matriarch’s Debt','12 scenes','Pre-production'],
+ ['Settings','Executive preferences','Workspace','Configured'],['Documents','CEO Dashboard canonical recovery package','Governance','Current'],['Files','MASTER SYSTEM RECOVERY STAGING','Google Drive','Connected'],['Team Overview','Executive Office','2 members','Healthy'],['Video Storyboard','The Matriarch’s Debt','12 scenes','Pre-production'],
  ['Social Analytics','Total reach','All channels','184,220'],['Lead Scoring Rules','Budget fit','Financial','25 points'],['API Integration','Supabase','Data & Auth','Connected'],
  ['Revenue Report','Software & systems','Current month','$28,400'],['Agent Logs','THELMA daily orchestration','Completed','Today'],['Media Library','Brand library','128 assets','Shared'],
  ['Multi-Account Posting','Reunion campaign','4 channels','Scheduled'],['Trend Signal Alerts','Florida property velocity','Property','High'],['Help Center','Launch the CEO Dashboard','Getting started','Open']
