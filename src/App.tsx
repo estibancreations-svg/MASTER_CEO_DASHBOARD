@@ -50,8 +50,11 @@ function Metric({label,value,detail,tone}:{label:string,value:string,detail:stri
 }
 
 function Workspace({name}:{name:string}){
-  const model=pages[name]; if(!model) return null;
+  const model=pages[name];
+  const [notice,setNotice]=useState('');
   const tones=['cyan','green','amber','purple'] as const;
+  const act=(label:string)=>setNotice(`${label} is ready. Sign in with the required authority to submit a governed write; this preview will not fail silently.`);
+  if(!model) return null;
   return <>{notice&&<div className="data-state loading" role="status"><b>Action acknowledged</b><span>{notice}</span><button type="button" onClick={()=>setNotice('')}>Dismiss</button></div>}<div className="briefing workspace-hero"><div><span className="eyebrow">EXECUTIVE DECISION SURFACE</span><h2>{model.question}</h2><p>Read model refreshed just now · Governed actions are recorded in Audit & History.</p></div><button onClick={()=>act('THELMA briefing request')}>Request THELMA briefing <ChevronRight/></button></div>
   <div className="metrics">{model.metrics.map((m,i)=><Metric key={m[0]} label={m[0]} value={m[1]} detail={m[2]} tone={tones[i]}/>)}</div>
   <div className="workspace-grid"><section className="panel"><div className="panel-title"><div><span className="eyebrow">PRIORITY READ MODEL</span><h3>{name}</h3></div><span className="live"><i/>Current</span></div>{model.queue.map(([title,owner,state])=><div className="work-row" key={title}><div><b>{title}</b><small>{owner}</small></div><span>{state}</span><button type="button" aria-label={`Open ${title}`} onClick={()=>act(`Open ${title}`)}><ChevronRight/></button></div>)}</section><section className="panel"><div className="panel-title"><div><span className="eyebrow">GOVERNED CONTROLS</span><h3>Executive actions</h3></div><ShieldCheck/></div><div className="control-grid">{model.controls.map(x=><button type="button" key={x} onClick={()=>act(x)}>{x}<ChevronRight/></button>)}</div><div className="provenance"><b>Authority boundary</b><p>Actions create an approval request or delegated command. Source-system writes require explicit authority and an audit event.</p></div></section></div></>;
@@ -74,7 +77,7 @@ export function CSuiteDashboard({initialActive='Executive Overview',onNavigate}:
     </aside>
     <main>
       <header><button className="menu" onClick={()=>setOpen(true)}><Menu/></button><div><p>CEO COMMAND CENTER</p><h1>{active}</h1></div><label className="search"><Search/><input aria-label="Search enterprise" placeholder="Search systems, decisions, people…"/></label><button className="icon-button" aria-label="Open executive notifications" onClick={()=>setNotice(notice?'':'Three executive notifications are available in Decisions & Approvals.')}><Bell/><i>3</i></button><div className="profile"><span>EA</span><div><b>The Architect</b><small>Executive authority</small></div></div></header>
-      <section className="content">{active==='Property Intelligence'?<LandWeaverWorkspace/>:active==='Executive Overview'?<>
+      <section className="content">{notice&&<div className="data-state loading" role="status"><b>Executive notifications</b><span>{notice}</span><button type="button" onClick={()=>setNotice('')}>Dismiss</button></div>}{active==='Property Intelligence'?<LandWeaverWorkspace/>:active==='Executive Overview'?<>
         <div className="briefing"><div><span className="eyebrow">MONDAY, AUGUST 10 · EXECUTIVE BRIEFING</span><h2>Good morning. Three decisions require your attention.</h2><p>System health is stable. VisionWeaver is closest to staging; CEO Dashboard implementation is now active.</p></div><button onClick={()=>selectPage('Decisions & Approvals')}>Open daily briefing <ChevronRight/></button></div>
         <div className="metrics"><Metric label="Enterprise health" value="88%" detail="+4% from last checkpoint" tone="green"/><Metric label="Decisions waiting" value="03" detail="2 require action today" tone="amber"/><Metric label="Active systems" value="04 / 17" detail="13 in build or recovery" tone="cyan"/><Metric label="Resource efficiency" value="76%" detail="AI usage within guardrails" tone="purple"/></div>
         <div className="grid">
