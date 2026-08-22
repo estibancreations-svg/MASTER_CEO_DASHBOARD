@@ -26,3 +26,8 @@
 .vw-generation-grid a,.vw-generation-grid button{display:inline-flex;align-items:center;justify-content:center;gap:7px;margin-top:auto;padding:9px 11px;border-radius:9px;text-decoration:none}
 .vw-generation-grid a svg,.vw-generation-grid button svg{width:15px}
 @media(max-width:760px){.vw-production-bar{align-items:flex-start;flex-wrap:wrap;margin:12px 12px 0}.vw-production-bar>div{flex-basis:calc(100% - 50px)}.vw-production-bar button{flex:1}.vw-generation-grid{grid-template-columns:1fr}}
+
+.vw-lesson-steps{display:grid;gap:10px;margin:6px 0 8px;padding:0;list-style:none;counter-reset:lesson}
+.vw-lesson-steps li{display:grid;grid-template-columns:1fr;gap:3px;padding:12px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.035);counter-increment:lesson}
+.vw-lesson-steps li b:before{content:counter(lesson) ". ";color:var(--accent)}
+.vw-lesson-steps li span{color:var(--muted);font-size:13px;line-height:1.5}
