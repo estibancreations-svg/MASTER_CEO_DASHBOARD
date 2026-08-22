@@ -113,6 +113,46 @@ async function isCron(req: Request) {
   for (let index = 0; index < left.length; index += 1) mismatch |= left[index] ^ right[index];
   return mismatch === 0;
 }
+let healthCache: { expires: number; value: any } | null = null;
+async function providerHealth() {
+  if (healthCache && healthCache.expires > Date.now()) return healthCache.value;
+  const [anthropicKey, runwayKey] = await Promise.all([secret('ANTHROPIC_API_KEY'), secret('RUNWAY_API_KEY')]);
+  let anthropicVerified = false;
+  let runwayVerified = false;
+  if (anthropicKey) {
+    try {
+      const result = await fetch('https://api.anthropic.com/v1/models?limit=1', {
+        headers: { 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' }
+      });
+      anthropicVerified = result.ok;
+    } catch (_) {}
+  }
+  if (runwayKey) {
+    try {
+      const result = await fetch(RUNWAY_BASE + '/tasks/00000000-0000-0000-0000-000000000000', {
+        headers: { authorization: 'Bearer ' + runwayKey, 'X-Runway-Version': RUNWAY_VERSION }
+      });
+      runwayVerified = result.status !== 401 && result.status !== 403;
+    } catch (_) {}
+  }
+  const value = {
+    providers: {
+      anthropic: { configured: Boolean(anthropicKey), verified: anthropicVerified },
+      runway: { configured: Boolean(runwayKey), verified: runwayVerified }
+    },
+    readiness: {
+      planning: anthropicVerified,
+      image: runwayVerified,
+      video: runwayVerified,
+      audio: runwayVerified,
+      book: anthropicVerified,
+      movie: anthropicVerified && runwayVerified
+    }
+  };
+  healthCache = { expires: Date.now() + 300000, value };
+  return value;
+}
+
 function models() {
   return {
     image: { provider: 'runway', model: 'gen4_image_turbo', operation: 'text_to_image' },
@@ -343,13 +383,13 @@ Deno.serve(async (req: Request) => {
   try {
     const url = new URL(req.url);
     if (req.method === 'GET' && url.pathname.endsWith('/health')) {
-      const [anthropic, runway] = await Promise.all([secret('ANTHROPIC_API_KEY'), secret('RUNWAY_API_KEY')]);
+      const health = await providerHealth();
       return response(req, {
         ok: true,
         service: 'visionweaver-studio',
-        version: 1,
+        version: 3,
         capabilities: models(),
-        readiness: { planning: Boolean(anthropic), image: Boolean(runway), video: Boolean(runway), audio: Boolean(runway), book: Boolean(anthropic), movie: Boolean(anthropic && runway) }
+        ...health
       });
     }
     if (req.method !== 'POST') return response(req, { ok: false, error: 'method_not_allowed' }, 405);
