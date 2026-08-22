@@ -212,10 +212,21 @@ async function submitGeneration(generation: any) {
       ? 'You are VisionWeaver Author. Return only valid JSON. Build an original, editable book production package. Do not include markdown fences.'
       : 'You are VisionWeaver Film Architect. Return only valid JSON. Build an original, shootable movie pre-production package. Do not include markdown fences.';
     const instruction = isBook
-      ? 'Create JSON with title, logline, audience, tone, outline (array of chapter, title, summary), sample_chapter, cover_prompt, audiobook_direction, publishing_checklist.'
-      : 'Create JSON with title, logline, genre, audience, characters, three_act_outline, screenplay_treatment, shots (array of shot, prompt, duration_seconds), audio_plan, poster_prompt, trailer_prompt, delivery_checklist.';
+      ? 'Create JSON with title, logline, audience, tone, outline (8 concise chapter objects with chapter, title, summary), sample_chapter (700 words maximum), cover_prompt, audiobook_direction, publishing_checklist. Keep the entire response under 3500 tokens.'
+      : 'Create JSON with title, logline, genre, audience, characters, three_act_outline, screenplay_treatment, shots (12 concise objects with shot, prompt, duration_seconds), audio_plan, poster_prompt, trailer_prompt, delivery_checklist. Keep the entire response under 3500 tokens.';
     await db.from('vw_generations').update({ status: 'processing', submitted_at: new Date().toISOString(), attempts: generation.attempts + 1 }).eq('id', generation.id);
-    const result = cleanJson(await claude(system, generation.prompt + '\n\n' + instruction));
+    const draft = await claude(system, generation.prompt + '\n\n' + instruction, 6000);
+    let result;
+    try {
+      result = cleanJson(draft);
+    } catch (_) {
+      const repaired = await claude(
+        'Repair the supplied material into one complete, concise, valid JSON object. Preserve the requested production fields. Return only JSON, under 3500 tokens.',
+        draft.slice(0, 42000),
+        6000
+      );
+      result = cleanJson(repaired);
+    }
     await db.from('vw_generations').update({
       status: 'complete',
       result,
@@ -387,7 +398,7 @@ Deno.serve(async (req: Request) => {
       return response(req, {
         ok: true,
         service: 'visionweaver-studio',
-        version: 3,
+        version: 4,
         capabilities: models(),
         ...health
       });
