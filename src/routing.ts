@@ -37,6 +37,7 @@ const systemPaths:Record<Exclude<DashboardSurface,'master'|'suite'>,string>={
 export function parseDashboardRoute(pathname:string):DashboardRoute{
   const clean=(pathname.split('?')[0].replace(/\/+$/,'')||'/').toLowerCase();
   if(clean==='/'||clean==='/dashboard')return{surface:'master',page:'Dashboard'};
+  if(clean==='/visionweaver')return{surface:'vision'};
   const parts=clean.split('/').filter(Boolean);
   if(parts[0]==='modules'){
     const page=modulesBySlug.get(parts[1]||'');

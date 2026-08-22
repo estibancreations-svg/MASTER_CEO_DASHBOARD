@@ -14,6 +14,8 @@ if (!SUPABASE_URL || !SERVICE_KEY) throw new Error('Supabase server credentials 
 const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 const RUNWAY_BASE = 'https://api.dev.runwayml.com/v1';
 const RUNWAY_VERSION = '2024-11-06';
+const KLING_DEFAULT_BASE = 'https://api-singapore.klingai.com';
+const ELEVENLABS_BASE = 'https://api.elevenlabs.io/v1';
 const ALLOWED_ORIGINS = new Set([
   'https://master-ceo-dashboard.vercel.app',
   'http://localhost:5173',
@@ -23,8 +25,9 @@ const MEDIA = new Set(['image', 'video', 'audio', 'book', 'movie']);
 
 function cors(req: Request) {
   const origin = req.headers.get('origin') || '';
+  const isProjectDeployment = /^https:\/\/master-ceo-dashboard(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(origin);
   return {
-    'access-control-allow-origin': ALLOWED_ORIGINS.has(origin) ? origin : 'https://master-ceo-dashboard.vercel.app',
+    'access-control-allow-origin': ALLOWED_ORIGINS.has(origin) || isProjectDeployment ? origin : 'https://master-ceo-dashboard.vercel.app',
     'access-control-allow-headers': 'authorization, apikey, content-type, x-client-info',
     'access-control-allow-methods': 'GET, POST, OPTIONS',
     'vary': 'Origin',
@@ -37,7 +40,8 @@ function response(req: Request, body: unknown, status = 200) {
 async function secret(name: string) {
   const { data, error } = await db.rpc('get_secret', { secret_name: name });
   if (error || !data || data === 'PLACEHOLDER_REPLACE_ME') return null;
-  return String(data);
+  const value = String(data).trim();
+  return value && value !== 'PLACEHOLDER_REPLACE_ME' ? value : null;
 }
 async function setting(key: string, fallback: string) {
   const { data } = await db.from('system_settings').select('value').eq('key', key).maybeSingle();
@@ -84,6 +88,61 @@ async function runway(path: string, init: RequestInit = {}) {
   if (!result.ok) throw new Error('Runway ' + result.status + ': ' + text.slice(0, 400));
   return text ? JSON.parse(text) : {};
 }
+function base64Url(value: string | Uint8Array) {
+  const bytes = typeof value === 'string' ? new TextEncoder().encode(value) : value;
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+async function klingToken() {
+  const [accessKey, secretKey] = await Promise.all([secret('KLING_ACCESS_KEY'), secret('KLING_SECRET_KEY')]);
+  if (!accessKey || !secretKey) throw new Error('Kling is not configured');
+  const now = Math.floor(Date.now() / 1000);
+  const encoder = new TextEncoder();
+  const header = base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = base64Url(JSON.stringify({ iss: accessKey, exp: now + 1800, nbf: now - 5 }));
+  const input = `${header}.${payload}`;
+  const key = await crypto.subtle.importKey('raw', encoder.encode(secretKey), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(input));
+  return `${input}.${base64Url(new Uint8Array(signature))}`;
+}
+async function klingBase() {
+  return (await setting('kling_api_base', KLING_DEFAULT_BASE)).replace(/\/+$/, '');
+}
+async function kling(path: string, init: RequestInit = {}) {
+  const token = await klingToken();
+  const result = await fetch(await klingBase() + path, {
+    ...init,
+    headers: {
+      authorization: 'Bearer ' + token,
+      ...(init.body ? { 'content-type': 'application/json' } : {}),
+      ...(init.headers || {})
+    }
+  });
+  const text = await result.text();
+  let json: any = {};
+  try { json = text ? JSON.parse(text) : {}; } catch (_) {}
+  if (!result.ok || (typeof json.code === 'number' && json.code !== 0)) {
+    throw new Error('Kling ' + result.status + ': ' + String(json.message || json.error || text).slice(0, 400));
+  }
+  return json.data || json;
+}
+async function elevenLabsSound(prompt: string, duration: number) {
+  const key = await secret('ELEVENLABS_API_KEY');
+  if (!key) throw new Error('ElevenLabs is not configured');
+  const result = await fetch(ELEVENLABS_BASE + '/sound-generation?output_format=mp3_44100_128', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'xi-api-key': key },
+    body: JSON.stringify({
+      text: prompt.slice(0, 1000),
+      duration_seconds: Math.max(0.5, Math.min(30, duration)),
+      prompt_influence: 0.4,
+      model_id: 'eleven_text_to_sound_v2'
+    })
+  });
+  if (!result.ok) throw new Error('ElevenLabs ' + result.status + ': ' + (await result.text()).slice(0, 400));
+  return result.blob();
+}
 async function currentUser(req: Request) {
   const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   if (!token) return null;
@@ -116,14 +175,24 @@ async function isCron(req: Request) {
 let healthCache: { expires: number; value: any } | null = null;
 async function providerHealth() {
   if (healthCache && healthCache.expires > Date.now()) return healthCache.value;
-  const [anthropicKey, runwayKey] = await Promise.all([secret('ANTHROPIC_API_KEY'), secret('RUNWAY_API_KEY')]);
+  const [anthropicKey, runwayKey, klingAccess, klingSecret, elevenLabsKey] = await Promise.all([
+    secret('ANTHROPIC_API_KEY'), secret('RUNWAY_API_KEY'), secret('KLING_ACCESS_KEY'),
+    secret('KLING_SECRET_KEY'), secret('ELEVENLABS_API_KEY')
+  ]);
   let anthropicVerified = false;
   let runwayVerified = false;
+  let klingVerified = false;
+  let elevenLabsVerified = false;
+  let anthropicStatus: number | null = null;
+  let runwayStatus: number | null = null;
+  let klingStatus: number | null = null;
+  let elevenLabsStatus: number | null = null;
   if (anthropicKey) {
     try {
       const result = await fetch('https://api.anthropic.com/v1/models?limit=1', {
         headers: { 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' }
       });
+      anthropicStatus = result.status;
       anthropicVerified = result.ok;
     } catch (_) {}
   }
@@ -132,35 +201,85 @@ async function providerHealth() {
       const result = await fetch(RUNWAY_BASE + '/tasks/00000000-0000-0000-0000-000000000000', {
         headers: { authorization: 'Bearer ' + runwayKey, 'X-Runway-Version': RUNWAY_VERSION }
       });
+      runwayStatus = result.status;
       runwayVerified = result.status !== 401 && result.status !== 403;
     } catch (_) {}
   }
+  if (klingAccess && klingSecret) {
+    try {
+      const token = await klingToken();
+      const result = await fetch(await klingBase() + '/v1/videos/text2video/00000000-0000-0000-0000-000000000000', {
+        headers: { authorization: 'Bearer ' + token }
+      });
+      klingStatus = result.status;
+      const body = await result.json().catch(() => ({}));
+      klingVerified = result.status !== 401 && result.status !== 403 && !(typeof body.code === 'number' && [1001, 1002, 1003, 1004].includes(body.code));
+    } catch (_) {}
+  }
+  if (elevenLabsKey) {
+    try {
+      const result = await fetch(ELEVENLABS_BASE + '/models', { headers: { 'xi-api-key': elevenLabsKey } });
+      elevenLabsStatus = result.status;
+      await result.body?.cancel();
+      elevenLabsVerified = result.ok;
+    } catch (_) {}
+  }
+  const imageReady = runwayVerified || klingVerified;
+  const videoReady = runwayVerified || klingVerified;
+  const audioReady = elevenLabsVerified || runwayVerified;
   const value = {
     providers: {
-      anthropic: { configured: Boolean(anthropicKey), verified: anthropicVerified },
-      runway: { configured: Boolean(runwayKey), verified: runwayVerified }
+      anthropic: { configured: Boolean(anthropicKey), verified: anthropicVerified, status: anthropicStatus },
+      runway: { configured: Boolean(runwayKey), verified: runwayVerified, status: runwayStatus },
+      kling: { configured: Boolean(klingAccess && klingSecret), verified: klingVerified, status: klingStatus },
+      elevenlabs: { configured: Boolean(elevenLabsKey), verified: elevenLabsVerified, status: elevenLabsStatus }
     },
     readiness: {
       planning: anthropicVerified,
-      image: runwayVerified,
-      video: runwayVerified,
-      audio: runwayVerified,
+      image: imageReady,
+      video: videoReady,
+      audio: audioReady,
       book: anthropicVerified,
-      movie: anthropicVerified && runwayVerified
+      movie: anthropicVerified && videoReady
     }
   };
-  healthCache = { expires: Date.now() + 300000, value };
+  healthCache = { expires: Date.now() + 30000, value };
   return value;
 }
 
 function models() {
   return {
-    image: { provider: 'runway', model: 'gen4_image_turbo', operation: 'text_to_image' },
-    video: { provider: 'runway', model: 'gen4.5', operation: 'text_to_video' },
-    audio: { provider: 'runway', model: 'eleven_text_to_sound_v2', operation: 'sound_effect' },
+    image: { provider: 'automatic', model: 'Runway Gen-4 Image Turbo / Kling 2.0 fallback', operation: 'text_to_image' },
+    video: { provider: 'automatic', model: 'Runway Gen-4.5 / Kling 2.6 fallback', operation: 'text_to_video' },
+    audio: { provider: 'automatic', model: 'ElevenLabs Sound Effects / Runway fallback', operation: 'sound_effect' },
     book: { provider: 'anthropic', model: 'claude-sonnet-4-6', operation: 'author_package' },
-    movie: { provider: 'anthropic+runway', model: 'claude-sonnet-4-6 + gen4.5', operation: 'movie_package' }
+    movie: { provider: 'automatic', model: 'Claude Sonnet 4.6 + verified video provider', operation: 'movie_package' }
   };
+}
+async function routeFor(mediaType: string) {
+  const health = await providerHealth();
+  if (mediaType === 'book') return { provider: 'anthropic', model: 'claude-sonnet-4-6', operation: 'author_package' };
+  if (mediaType === 'movie') {
+    const videoProvider = health.providers.runway.verified ? 'runway' : health.providers.kling.verified ? 'kling' : 'unavailable';
+    if (!health.providers.anthropic.verified) throw new Error('No verified planning provider is available');
+    return { provider: `anthropic+${videoProvider}`, model: `claude-sonnet-4-6 + ${videoProvider}`, operation: 'movie_package' };
+  }
+  if (mediaType === 'audio') {
+    if (health.providers.elevenlabs.verified) return { provider: 'elevenlabs', model: 'eleven_text_to_sound_v2', operation: 'sound_effect' };
+    if (health.providers.runway.verified) return { provider: 'runway', model: 'eleven_text_to_sound_v2', operation: 'sound_effect' };
+    throw new Error('No verified audio provider is available');
+  }
+  if (health.providers.runway.verified) {
+    return mediaType === 'image'
+      ? { provider: 'runway', model: 'gen4_image_turbo', operation: 'text_to_image' }
+      : { provider: 'runway', model: 'gen4.5', operation: 'text_to_video' };
+  }
+  if (health.providers.kling.verified) {
+    return mediaType === 'image'
+      ? { provider: 'kling', model: await setting('kling_image_model', 'kling-v2'), operation: 'text_to_image' }
+      : { provider: 'kling', model: await setting('kling_video_model', 'kling-v2-6'), operation: 'text_to_video' };
+  }
+  throw new Error(`No verified ${mediaType} provider is available`);
 }
 async function createProject(user: any, body: any) {
   const mediaType = String(body.media_type || '').toLowerCase();
@@ -168,7 +287,7 @@ async function createProject(user: any, body: any) {
   if (!MEDIA.has(mediaType)) throw new Error('Unsupported media type');
   if (prompt.length < 8) throw new Error('Prompt must be at least 8 characters');
   const title = String(body.title || (mediaType[0].toUpperCase() + mediaType.slice(1) + ' project')).slice(0, 160);
-  const route: any = models()[mediaType as keyof ReturnType<typeof models>];
+  const route = await routeFor(mediaType);
   const params = body.parameters && typeof body.parameters === 'object' ? body.parameters : {};
   const { data: project, error: projectError } = await db.from('vw_projects').insert({
     owner_id: user.id,
@@ -243,6 +362,47 @@ async function submitGeneration(generation: any) {
   }
 
   const parameters = generation.parameters || {};
+  if (generation.provider === 'elevenlabs') {
+    await db.from('vw_generations').update({ status: 'processing', attempts: generation.attempts + 1, submitted_at: new Date().toISOString() }).eq('id', generation.id);
+    const blob = await elevenLabsSound(generation.prompt, Number(parameters.duration) || 8);
+    const path = generation.owner_id + '/' + generation.project_id + '/' + generation.id + '-0.mp3';
+    const { error: uploadError } = await db.storage.from('visionweaver-outputs').upload(path, blob, { contentType: 'audio/mpeg', upsert: true });
+    if (uploadError) throw new Error('Audio storage: ' + uploadError.message);
+    await db.from('vw_generations').update({
+      status: 'complete', storage_paths: [path], result: { provider_status: 'SUCCEEDED', output_count: 1 },
+      completed_at: new Date().toISOString(), error: null
+    }).eq('id', generation.id);
+    await db.from('vw_projects').update({ status: 'complete', outputs: { generation_id: generation.id, storage_paths: [path] }, error: null }).eq('id', generation.project_id);
+    await db.from('vw_assets').insert({
+      project_id: generation.project_id, generation_id: generation.id, owner_id: generation.owner_id,
+      kind: 'audio', title: 'audio output 1', storage_path: path, metadata: { provider: generation.provider, model: generation.model }
+    });
+    return;
+  }
+  if (generation.provider === 'kling') {
+    const isImage = generation.media_type === 'image';
+    const ratioMap: Record<string, string> = {
+      '1360:768': '16:9', '1280:720': '16:9', '768:1360': '9:16', '720:1280': '9:16',
+      '1024:1024': '1:1', '1080:1350': '3:4'
+    };
+    const payload = isImage ? {
+      model_name: generation.model || await setting('kling_image_model', 'kling-v2'), prompt: generation.prompt.slice(0, 1000),
+      aspect_ratio: ratioMap[parameters.ratio] || '16:9', n: 1
+    } : {
+      model_name: generation.model || await setting('kling_video_model', 'kling-v2-6'), prompt: generation.prompt.slice(0, 1000),
+      mode: String(parameters.quality || '').toLowerCase() === 'high' ? 'pro' : 'std',
+      duration: String(Math.max(5, Math.min(10, Number(parameters.duration) || 5))),
+      aspect_ratio: ratioMap[parameters.ratio] || '16:9'
+    };
+    await db.from('vw_generations').update({ status: 'submitting', attempts: generation.attempts + 1 }).eq('id', generation.id);
+    const task = await kling(isImage ? '/v1/images/generations' : '/v1/videos/text2video', { method: 'POST', body: JSON.stringify(payload) });
+    if (!task.task_id) throw new Error('Kling returned no task id');
+    await db.from('vw_generations').update({
+      status: 'processing', external_id: task.task_id, model: payload.model_name,
+      submitted_at: new Date().toISOString(), error: null
+    }).eq('id', generation.id);
+    return;
+  }
   let path = '';
   let payload: any = {};
   if (generation.media_type === 'image') {
@@ -299,16 +459,31 @@ async function mirrorOutputs(generation: any, urls: string[]) {
 }
 async function pollGeneration(generation: any) {
   if (!generation.external_id || !['image', 'video', 'audio'].includes(generation.media_type)) return;
-  const task = await runway('/tasks/' + encodeURIComponent(generation.external_id));
+  let task: any;
+  let status = '';
+  let urls: string[] = [];
+  if (generation.provider === 'kling') {
+    task = await kling(
+      generation.media_type === 'image'
+        ? '/v1/images/generations/' + encodeURIComponent(generation.external_id)
+        : '/v1/videos/text2video/' + encodeURIComponent(generation.external_id)
+    );
+    status = String(task.task_status || '').toUpperCase();
+    const outputs = generation.media_type === 'image' ? task.task_result?.images : task.task_result?.videos;
+    urls = Array.isArray(outputs) ? outputs.map((item: any) => item.url).filter((item: unknown) => typeof item === 'string') : [];
+  } else {
+    task = await runway('/tasks/' + encodeURIComponent(generation.external_id));
+    status = String(task.status || '').toUpperCase();
+    urls = Array.isArray(task.output) ? task.output.filter((item: unknown) => typeof item === 'string') : [];
+  }
   const polls = generation.poll_count + 1;
-  if (task.status === 'SUCCEEDED') {
-    const urls = Array.isArray(task.output) ? task.output.filter((item: unknown) => typeof item === 'string') : [];
+  if (status === 'SUCCEEDED' || status === 'SUCCEED') {
     const paths = await mirrorOutputs(generation, urls);
     await db.from('vw_generations').update({
       status: 'complete',
       output_urls: urls,
       storage_paths: paths,
-      result: { provider_status: task.status, output_count: urls.length },
+      result: { provider_status: status, output_count: urls.length },
       poll_count: polls,
       completed_at: new Date().toISOString(),
       error: null
@@ -330,8 +505,8 @@ async function pollGeneration(generation: any) {
         metadata: { provider: generation.provider, model: generation.model }
       });
     }
-  } else if (task.status === 'FAILED' || task.status === 'CANCELLED') {
-    const error = String(task.failure || task.failureCode || 'Provider generation failed').slice(0, 1000);
+  } else if (status === 'FAILED' || status === 'CANCELLED') {
+    const error = String(task.task_status_msg || task.failure || task.failureCode || 'Provider generation failed').slice(0, 1000);
     await db.from('vw_generations').update({ status: 'failed', error, poll_count: polls, completed_at: new Date().toISOString() }).eq('id', generation.id);
     await db.from('vw_projects').update({ status: 'failed', error }).eq('id', generation.project_id);
   } else if (polls >= 60) {
@@ -339,7 +514,7 @@ async function pollGeneration(generation: any) {
     await db.from('vw_generations').update({ status: 'failed', error, poll_count: polls }).eq('id', generation.id);
     await db.from('vw_projects').update({ status: 'failed', error }).eq('id', generation.project_id);
   } else {
-    await db.from('vw_generations').update({ poll_count: polls, result: { provider_status: task.status } }).eq('id', generation.id);
+    await db.from('vw_generations').update({ poll_count: polls, result: { provider_status: status } }).eq('id', generation.id);
   }
 }
 async function tick(ownerId?: string, generationId?: string) {
@@ -364,6 +539,30 @@ async function tick(ownerId?: string, generationId?: string) {
     }
   }
   return acted;
+}
+async function retryGeneration(user: any, generationId: string) {
+  if (!generationId) throw new Error('generation_id is required');
+  const { data: generation, error } = await db.from('vw_generations')
+    .select('*').eq('id', generationId).eq('owner_id', user.id).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!generation) throw new Error('Generation not found');
+  if (generation.status !== 'failed') throw new Error('Only failed generations can be retried');
+  const route = await routeFor(generation.media_type);
+  const { error: resetError } = await db.from('vw_generations').update({
+    provider: route.provider,
+    model: route.model,
+    operation: route.operation,
+    status: 'queued',
+    external_id: null,
+    error: null,
+    poll_count: 0,
+    submitted_at: null,
+    completed_at: null
+  }).eq('id', generation.id).eq('owner_id', user.id);
+  if (resetError) throw new Error(resetError.message);
+  await db.from('vw_projects').update({ status: 'active', error: null }).eq('id', generation.project_id).eq('owner_id', user.id);
+  const acted = await tick(user.id, generation.id);
+  return { acted, ...(await listWorkspace(user)) };
 }
 async function listWorkspace(user: any) {
   const [{ data: projects, error: projectError }, { data: generations, error: generationError }, { data: assets }] = await Promise.all([
@@ -393,12 +592,13 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
   try {
     const url = new URL(req.url);
+    console.log('[visionweaver-studio] request', { method: req.method, path: url.pathname });
     if (req.method === 'GET' && url.pathname.endsWith('/health')) {
       const health = await providerHealth();
       return response(req, {
         ok: true,
         service: 'visionweaver-studio',
-        version: 4,
+        version: 5,
         capabilities: models(),
         ...health
       });
@@ -406,7 +606,9 @@ Deno.serve(async (req: Request) => {
     if (req.method !== 'POST') return response(req, { ok: false, error: 'method_not_allowed' }, 405);
     const body = await req.json().catch(() => ({}));
     if (body.action === 'tick' && await isCron(req)) {
-      return response(req, { ok: true, acted: await tick() });
+      const acted = await tick();
+      console.log('[visionweaver-studio] tick complete', { count: acted.length, acted });
+      return response(req, { ok: true, acted });
     }
     const user = await currentUser(req);
     if (!user) return response(req, { ok: false, error: 'production_sign_in_required' }, 401);
@@ -415,9 +617,13 @@ Deno.serve(async (req: Request) => {
       const acted = await tick(user.id, body.generation_id || undefined);
       return response(req, { ok: true, acted, ...(await listWorkspace(user)) });
     }
+    if (body.action === 'retry') {
+      return response(req, { ok: true, ...(await retryGeneration(user, String(body.generation_id || ''))) });
+    }
     if (body.action === 'list') return response(req, { ok: true, ...(await listWorkspace(user)) });
     return response(req, { ok: false, error: 'unknown_action' }, 400);
   } catch (error) {
+    console.error('[visionweaver-studio] request failed', { error: String(error) });
     return response(req, { ok: false, error: String(error).replace(/^Error:\s*/, '').slice(0, 1000) }, 500);
   }
 });

@@ -23,6 +23,7 @@ type LiveGeneration = {
 type StudioHealth = {
   ok: boolean; version: number;
   readiness: Record<StudioMode | 'planning', boolean>;
+  providers?: Record<string, { configured: boolean; verified: boolean; status?: number | null }>;
   capabilities: Record<StudioMode, { provider: string; model: string; operation: string }>;
 };
 
@@ -44,10 +45,10 @@ const nav = [
 ] as const;
 
 const modes: { id: StudioMode; label: string; icon: typeof Film; models: string[]; description: string }[] = [
-  { id: 'video', label: 'Video', icon: Film, models: ['Runway Gen-4.5'], description: 'Generate text-to-video shots with durable jobs and output tracking.' },
-  { id: 'image', label: 'Image', icon: Image, models: ['Runway Gen-4 Image Turbo'], description: 'Create production stills and store finished outputs.' },
-  { id: 'audio', label: 'Audio', icon: Mic2, models: ['Runway Eleven Text-to-Sound v2'], description: 'Generate sound effects and atmospheres with durable output tracking.' },
-  { id: 'movie', label: 'Movie', icon: Clapperboard, models: ['VisionWeaver Movie Pipeline'], description: 'Create a treatment, characters, shot plan, audio plan and delivery package.' },
+  { id: 'video', label: 'Video', icon: Film, models: ['Auto route · Runway → Kling'], description: 'Generate text-to-video shots with durable jobs, automatic provider failover and output tracking.' },
+  { id: 'image', label: 'Image', icon: Image, models: ['Auto route · Runway → Kling'], description: 'Create production stills with automatic provider failover and private output storage.' },
+  { id: 'audio', label: 'Audio', icon: Mic2, models: ['Auto route · ElevenLabs → Runway'], description: 'Generate sound effects and atmospheres with durable private output storage.' },
+  { id: 'movie', label: 'Movie', icon: Clapperboard, models: ['VisionWeaver Movie Pipeline · resilient route'], description: 'Create a treatment, characters, shot plan, audio plan and delivery package.' },
   { id: 'book', label: 'Book', icon: BookOpen, models: ['VisionWeaver Author · Claude Sonnet 4.6'], description: 'Create an outline, sample chapter, cover prompt, audiobook direction and publishing package.' }
 ];
 
@@ -112,6 +113,7 @@ export default function VisionWeaverWorkspace() {
   const [connectionEmail, setConnectionEmail] = useState('');
   const [connectionSent, setConnectionSent] = useState(false);
   const [health, setHealth] = useState<StudioHealth | null>(null);
+  const [healthChecked, setHealthChecked] = useState(false);
   const [liveGenerations, setLiveGenerations] = useState<LiveGeneration[]>([]);
   const [aspect, setAspect] = useState('16:9');
   const [quality, setQuality] = useState('Standard');
@@ -160,7 +162,9 @@ export default function VisionWeaverWorkspace() {
     if (base) fetch(`${base}/functions/v1/visionweaver-studio/health`)
       .then((result) => result.json())
       .then((value) => { if (active && value.ok) setHealth(value); })
-      .catch(() => { if (active) setHealth(null); });
+      .catch(() => { if (active) setHealth(null); })
+      .finally(() => { if (active) setHealthChecked(true); });
+    else setHealthChecked(true);
     return () => { active = false; data.subscription.unsubscribe(); };
   }, []);
 
@@ -219,6 +223,21 @@ export default function VisionWeaverWorkspace() {
       return;
     }
     setLiveGenerations(data.generations || []);
+  }
+
+  async function retryGeneration(generationId: string) {
+    if (!supabase || !productionUser) return;
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke('visionweaver-studio', {
+      body: { action: 'retry', generation_id: generationId }
+    });
+    setBusy(false);
+    if (error || !data?.ok) {
+      setNotice(data?.error || error?.message || 'Generation could not be retried.');
+      return;
+    }
+    setLiveGenerations(data.generations || []);
+    setNotice('Generation rerouted to a verified provider and restarted.');
   }
 
   async function connectProduction(e: FormEvent) {
@@ -338,7 +357,7 @@ export default function VisionWeaverWorkspace() {
       <nav>{nav.map(([name, Icon]) => <button key={name} className={view === name ? 'active' : ''} onClick={() => setView(name)}><Icon />{name}</button>)}</nav>
       <label>CREATE</label>
       {modes.map((item) => <button className="vw-create-link" key={item.id} onClick={() => selectMode(item.id)}><item.icon />Generate {item.label}</button>)}
-      <div className="vw-system-state"><i /><span><b>{health ? 'Engine online' : 'Checking engine'}</b><small>{productionUser ? 'Production connected' : 'Planning mode · production locked'}</small></span></div>
+      <div className="vw-system-state"><i /><span><b>{health ? 'Engine online' : healthChecked ? 'Engine unavailable' : 'Checking engine'}</b><small>{productionUser ? 'Production connected' : 'Planning mode · production locked'}</small></span></div>
     </aside>
 
     <main className="vw-main">
@@ -350,7 +369,7 @@ export default function VisionWeaverWorkspace() {
 
       <section className={`vw-production-bar ${productionUser ? 'connected' : ''}`}>
         <span><ShieldCheck /></span>
-        <div><b>{productionUser ? 'Production connected' : 'Connect Production to render real media'}</b><small>{productionUser ? productionUser.email : health ? `${(['image', 'video', 'audio', 'book', 'movie'] as StudioMode[]).filter((item) => health.readiness[item]).length} of 5 full pipelines ready. Runway media rendering is locked until its active key verifies.` : 'Checking provider readiness…'}</small></div>
+        <div><b>{productionUser ? 'Production connected' : 'Connect Production to render real media'}</b><small>{productionUser ? productionUser.email : health ? `${(['image', 'video', 'audio', 'book', 'movie'] as StudioMode[]).filter((item) => health.readiness[item]).length} of 5 pipelines ready. VisionWeaver automatically routes around an unavailable provider.` : healthChecked ? 'Provider health could not be reached. Local planning remains available.' : 'Checking provider readiness…'}</small></div>
         {productionUser
           ? <><button onClick={() => loadLive(true)}><RefreshCw /> Sync outputs</button><button onClick={disconnectProduction}>Disconnect</button></>
           : <button onClick={() => setConnectionOpen(true)}>Connect Production</button>}
@@ -413,6 +432,7 @@ export default function VisionWeaverWorkspace() {
           <small>{generation.media_type} · {generation.model}</small><h3>{generation.prompt.slice(0, 90)}</h3>
           <p>{generation.error || generation.status.replaceAll('_', ' ')}</p>
           {(generation.media_type === 'book' || generation.media_type === 'movie') && generation.status === 'complete' && <button onClick={() => downloadPackage(generation)}><FileText /> Download package</button>}
+          {generation.status === 'failed' && <button disabled={busy} onClick={() => retryGeneration(generation.id)}><RefreshCw /> Retry with verified provider</button>}
           {generation.playable_urls?.[0] && <a href={generation.playable_urls[0]} target="_blank" rel="noreferrer"><Play /> Open output</a>}
         </article>)}</div></section>}
         <button className="vw-library-upload" onClick={() => fileRef.current?.click()}><Upload /> Upload images, video, audio or manuscripts</button>{assets.length ? <div className="vw-asset-grid">{assets.map((asset) => <article key={asset.id}>{asset.url ? <img src={asset.url} alt="" /> : <span>{asset.kind === 'video' ? <FileVideo /> : asset.kind === 'audio' ? <FileAudio /> : asset.kind === 'document' ? <FileText /> : <FileImage />}</span>}<div><b>{asset.name}</b><small>{asset.kind} · {asset.size}</small></div><button aria-label={`Remove ${asset.name}`} onClick={() => setAssets((current) => current.filter((item) => item.id !== asset.id))}><X /></button></article>)}</div> : <div className="vw-empty"><FolderOpen /><h3>No assets yet</h3><p>Add Drive exports, manuscripts, reference images, footage or audio.</p></div>}</section>}
