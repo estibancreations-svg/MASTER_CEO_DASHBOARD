@@ -95,3 +95,9 @@ select net.http_post(
   timeout_milliseconds:=110000
 );
 $cron$);
+
+
+-- Cover existing and new foreign-key joins used by the studio.
+create index if not exists vw_projects_template_idx on public.vw_projects(template_id);
+create index if not exists vw_assets_project_idx on public.vw_assets(project_id);
+create index if not exists vw_assets_generation_idx on public.vw_assets(generation_id);
