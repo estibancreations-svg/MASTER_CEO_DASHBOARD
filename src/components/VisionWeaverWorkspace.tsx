@@ -115,6 +115,7 @@ export default function VisionWeaverWorkspace() {
   const [liveGenerations, setLiveGenerations] = useState<LiveGeneration[]>([]);
   const [aspect, setAspect] = useState('16:9');
   const [quality, setQuality] = useState('Standard');
+  const [lesson, setLesson] = useState<{ title: string; description: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
@@ -363,6 +364,13 @@ export default function VisionWeaverWorkspace() {
         <button disabled={busy || connectionSent}><ShieldCheck /> {connectionSent ? 'Secure link sent' : 'Send secure production link'}</button>
       </form></div>}
 
+      {lesson && <div className="vw-modal" role="dialog" aria-modal="true"><form onSubmit={(event) => event.preventDefault()}>
+        <button type="button" className="vw-close" aria-label="Close" onClick={() => setLesson(null)}><X /></button>
+        <span className="eyebrow">VISIONWEAVER ACADEMY GUIDE</span><h2>{lesson.title}</h2><p>{lesson.description}</p>
+        <ol className="vw-lesson-steps"><li><b>Define the output.</b><span>Write the audience, medium, purpose and acceptance criteria before selecting a model.</span></li><li><b>Build the production contract.</b><span>Attach references, continuity rules, aspect ratio, quality target and approval gate.</span></li><li><b>Generate, inspect and record.</b><span>Review the durable job status, open the output in Library, and preserve the package for the next workflow stage.</span></li></ol>
+        <button type="button" onClick={() => { setLesson(null); setView('Studio'); }}><WandSparkles /> Practice in Studio</button>
+      </form></div>}
+
       {adding && <div className="vw-modal" role="dialog" aria-modal="true"><form onSubmit={create}>
         <button type="button" className="vw-close" aria-label="Close" onClick={() => setAdding(false)}><X /></button>
         <span className="eyebrow">NEW CREATIVE PROJECT</span><h2>What are you making?</h2>
@@ -409,7 +417,7 @@ export default function VisionWeaverWorkspace() {
         </article>)}</div></section>}
         <button className="vw-library-upload" onClick={() => fileRef.current?.click()}><Upload /> Upload images, video, audio or manuscripts</button>{assets.length ? <div className="vw-asset-grid">{assets.map((asset) => <article key={asset.id}>{asset.url ? <img src={asset.url} alt="" /> : <span>{asset.kind === 'video' ? <FileVideo /> : asset.kind === 'audio' ? <FileAudio /> : asset.kind === 'document' ? <FileText /> : <FileImage />}</span>}<div><b>{asset.name}</b><small>{asset.kind} · {asset.size}</small></div><button aria-label={`Remove ${asset.name}`} onClick={() => setAssets((current) => current.filter((item) => item.id !== asset.id))}><X /></button></article>)}</div> : <div className="vw-empty"><FolderOpen /><h3>No assets yet</h3><p>Add Drive exports, manuscripts, reference images, footage or audio.</p></div>}</section>}
 
-      {view === 'Academy' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">VISIONWEAVER ACADEMY</span><h1>Learn the complete pipeline</h1><p>Short operating guides built around the original 16-node VisionWeaver system.</p></div><div className="vw-academy-grid">{[['01', 'Prompt + reference intake', 'Prepare source material and a clear creative outcome.'], ['02', 'Character and environment lock', 'Protect visual continuity before generating shots.'], ['03', 'Scene breakdown + cinematography', 'Convert narrative beats into render-ready scenes.'], ['04', 'Audio direction', 'Plan dialogue, score, ambience and sound effects.'], ['05', 'Generation + review', 'Queue models, compare results and apply QC gates.'], ['06', 'Assembly + publishing', 'Create masters and platform-specific derivatives.']].map(([number, title, description]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{description}</p><button onClick={() => setNotice(`${title} guide opened. The interactive lesson content is ready for the next curriculum pass.`)}>Start lesson <ArrowRight /></button></article>)}</div></section>}
+      {view === 'Academy' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">VISIONWEAVER ACADEMY</span><h1>Learn the complete pipeline</h1><p>Short operating guides built around the original 16-node VisionWeaver system.</p></div><div className="vw-academy-grid">{[['01', 'Prompt + reference intake', 'Prepare source material and a clear creative outcome.'], ['02', 'Character and environment lock', 'Protect visual continuity before generating shots.'], ['03', 'Scene breakdown + cinematography', 'Convert narrative beats into render-ready scenes.'], ['04', 'Audio direction', 'Plan dialogue, score, ambience and sound effects.'], ['05', 'Generation + review', 'Queue models, compare results and apply QC gates.'], ['06', 'Assembly + publishing', 'Create masters and platform-specific derivatives.']].map(([number, title, description]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{description}</p><button onClick={() => setLesson({ title, description })}>Start lesson <ArrowRight /></button></article>)}</div></section>}
 
       {notice && <div className="vw-toast" role="status"><CheckCircle2 /><span>{notice}</span><button aria-label="Dismiss" onClick={() => setNotice('')}><X /></button></div>}
     </main>
