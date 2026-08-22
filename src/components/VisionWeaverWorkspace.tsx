@@ -6,6 +6,7 @@ import {
   RefreshCw, Search, Settings2, ShieldCheck, Sparkles, Upload, Users, WandSparkles,
   Workflow, X, Zap
 } from 'lucide-react';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { useIdentity } from '../auth/IdentityContext';
 
@@ -14,6 +15,16 @@ type Scene = { id: string; job_id: string; scene_index: number; scene_id: string
 type Asset = { id: string; name: string; kind: 'image' | 'video' | 'audio' | 'document'; size: string; url?: string; created_at: string };
 type Character = { id: string; name: string; description: string; status: string };
 type StudioMode = 'image' | 'video' | 'audio' | 'book' | 'movie';
+type LiveGeneration = {
+  id: string; project_id: string; media_type: StudioMode; status: string; prompt: string;
+  model: string; error?: string | null; result?: Record<string, unknown>; playable_urls?: string[];
+  created_at: string;
+};
+type StudioHealth = {
+  ok: boolean; version: number;
+  readiness: Record<StudioMode | 'planning', boolean>;
+  capabilities: Record<StudioMode, { provider: string; model: string; operation: string }>;
+};
 
 const STORAGE_KEY = 'visionweaver-studio-v4';
 const builderJobs: Job[] = [
@@ -33,11 +44,11 @@ const nav = [
 ] as const;
 
 const modes: { id: StudioMode; label: string; icon: typeof Film; models: string[]; description: string }[] = [
-  { id: 'video', label: 'Video', icon: Film, models: ['Runway Gen-4.5', 'Kling 3.0', 'Seedance 2.5', 'LTX-2.5'], description: 'Generate, edit, extend, upscale and assemble video.' },
-  { id: 'image', label: 'Image', icon: Image, models: ['GPT Image 2', 'FLUX.1', 'Ideogram', 'Stable Diffusion 3.5'], description: 'Create, edit, vary, upscale and expand images.' },
-  { id: 'audio', label: 'Audio', icon: Mic2, models: ['ElevenLabs', 'Suno', 'MusicGen', 'Stable Audio'], description: 'Voice, music, dialogue, sound effects and mastering.' },
-  { id: 'movie', label: 'Movie', icon: Clapperboard, models: ['VisionWeaver Pipeline', 'Runway + Kling', 'ComfyUI Film Stack'], description: 'Script to storyboard, shots, sound, edit and release.' },
-  { id: 'book', label: 'Book', icon: BookOpen, models: ['VisionWeaver Author', 'Claude', 'OpenAI', 'Local LLM'], description: 'Outline, draft, edit, illustrate, lay out and publish.' }
+  { id: 'video', label: 'Video', icon: Film, models: ['Runway Gen-4.5'], description: 'Generate text-to-video shots with durable jobs and output tracking.' },
+  { id: 'image', label: 'Image', icon: Image, models: ['Runway Gen-4 Image Turbo'], description: 'Create production stills and store finished outputs.' },
+  { id: 'audio', label: 'Audio', icon: Mic2, models: ['Runway Eleven Text-to-Sound v2'], description: 'Generate sound effects and atmospheres with durable output tracking.' },
+  { id: 'movie', label: 'Movie', icon: Clapperboard, models: ['VisionWeaver Movie Pipeline'], description: 'Create a treatment, characters, shot plan, audio plan and delivery package.' },
+  { id: 'book', label: 'Book', icon: BookOpen, models: ['VisionWeaver Author · Claude Sonnet 4.6'], description: 'Create an outline, sample chapter, cover prompt, audiobook direction and publishing package.' }
 ];
 
 const apps = [
@@ -96,6 +107,14 @@ export default function VisionWeaverWorkspace() {
   const [agentLog, setAgentLog] = useState<string[]>([]);
   const [form, setForm] = useState({ title: '', concept: '', scenes: '6', platform: 'Movie' });
   const [characterForm, setCharacterForm] = useState({ name: '', description: '' });
+  const [productionUser, setProductionUser] = useState<User | null>(identity.user);
+  const [connectionOpen, setConnectionOpen] = useState(false);
+  const [connectionEmail, setConnectionEmail] = useState('');
+  const [connectionSent, setConnectionSent] = useState(false);
+  const [health, setHealth] = useState<StudioHealth | null>(null);
+  const [liveGenerations, setLiveGenerations] = useState<LiveGeneration[]>([]);
+  const [aspect, setAspect] = useState('16:9');
+  const [quality, setQuality] = useState('Standard');
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
@@ -129,6 +148,27 @@ export default function VisionWeaverWorkspace() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'production_scenes' }, load).subscribe();
     return () => { client.removeChannel(channel); };
   }, [identity.isBuilder]);
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+    let active = true;
+    client.auth.getSession().then(({ data }) => { if (active) setProductionUser(data.session?.user || null); });
+    const { data } = client.auth.onAuthStateChange((_event, session) => { if (active) setProductionUser(session?.user || null); });
+    const base = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    if (base) fetch(`${base}/functions/v1/visionweaver-studio/health`)
+      .then((result) => result.json())
+      .then((value) => { if (active && value.ok) setHealth(value); })
+      .catch(() => { if (active) setHealth(null); });
+    return () => { active = false; data.subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (!productionUser) { setLiveGenerations([]); return; }
+    loadLive(false);
+    const timer = window.setInterval(() => loadLive(true), 15000);
+    return () => window.clearInterval(timer);
+  }, [productionUser?.id]);
 
   useEffect(() => {
     if (!identity.isBuilder || !jobs.length) return;
@@ -168,26 +208,95 @@ export default function VisionWeaverWorkspace() {
     setBusy(false);
   }
 
+  async function loadLive(refresh: boolean) {
+    if (!supabase || !productionUser) return;
+    const { data, error } = await supabase.functions.invoke('visionweaver-studio', {
+      body: { action: refresh ? 'refresh' : 'list' }
+    });
+    if (error || !data?.ok) {
+      setNotice(data?.error || error?.message || 'Could not load the production workspace.');
+      return;
+    }
+    setLiveGenerations(data.generations || []);
+  }
+
+  async function connectProduction(e: FormEvent) {
+    e.preventDefault();
+    if (!supabase || !connectionEmail.trim()) return;
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email: connectionEmail.trim(),
+      options: {
+        emailRedirectTo: `${location.origin}/systems/visionweaver`,
+        shouldCreateUser: false
+      }
+    });
+    setBusy(false);
+    if (error) setNotice(error.message);
+    else { setConnectionSent(true); setNotice('Secure production link sent. Return here after opening it.'); }
+  }
+
+  async function disconnectProduction() {
+    await supabase?.auth.signOut();
+    setProductionUser(null);
+    setNotice('Production session disconnected. Planning remains available locally.');
+  }
+
+  function downloadPackage(generation: LiveGeneration) {
+    const blob = new Blob([JSON.stringify(generation.result || {}, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `visionweaver-${generation.media_type}-${generation.id}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function generate() {
     if (!prompt.trim()) { setNotice('Describe what you want to create first.'); return; }
     setBusy(true); setAgentLog([]);
     const title = `${modes.find((item) => item.id === mode)?.label} session · ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+    if (productionUser && supabase) {
+      const ratioMap: Record<string, string> = {
+        '16:9': mode === 'image' ? '1360:768' : '1280:720',
+        '9:16': mode === 'image' ? '768:1360' : '720:1280',
+        '1:1': mode === 'image' ? '1024:1024' : '1280:720',
+        '4:5': mode === 'image' ? '1080:1350' : '720:1280'
+      };
+      const { data, error } = await supabase.functions.invoke('visionweaver-studio', {
+        body: {
+          action: 'create',
+          media_type: mode,
+          prompt,
+          title,
+          organization_id: identity.organizationId,
+          parameters: { ratio: ratioMap[aspect], quality, duration: mode === 'audio' ? 8 : 5 }
+        }
+      });
+      if (error || !data?.ok) {
+        setNotice(data?.error || error?.message || 'Generation could not be started.');
+      } else {
+        await loadLive(false);
+        setView('Library');
+        setNotice(mode === 'book' || mode === 'movie'
+          ? `${modes.find((item) => item.id === mode)?.label} package completed and saved.`
+          : `${modes.find((item) => item.id === mode)?.label} generation submitted. VisionWeaver will keep processing it if you leave this page.`);
+      }
+      setBusy(false);
+      return;
+    }
+
     const count = mode === 'movie' ? 12 : mode === 'book' ? 10 : mode === 'video' ? 6 : 1;
-    const item: Job = { id: crypto.randomUUID(), project_title: title, concept: prompt, scene_count: count, target_platform: mode, status: identity.isBuilder ? 'planned' : 'queued', approval_state: 'draft', created_at: new Date().toISOString() };
-    const steps = ['Reading prompt and references', 'Selecting the production route', 'Building continuity and structure', 'Preparing editable outputs'];
+    const item: Job = { id: crypto.randomUUID(), project_title: title, concept: prompt, scene_count: count, target_platform: mode, status: 'planned', approval_state: 'draft', created_at: new Date().toISOString() };
+    const steps = ['Reading prompt and references', 'Selecting the production route', 'Building continuity and structure', 'Preparing an editable local plan'];
     for (const step of steps) {
       setAgentLog((current) => [...current, step]);
-      await new Promise((resolve) => setTimeout(resolve, 180));
+      await new Promise((resolve) => setTimeout(resolve, 120));
     }
-    if (identity.isBuilder) {
-      setJobs((current) => [item, ...current]);
-      setScenes((current) => [...planScenes(item, count, prompt), ...current]);
-      setActiveId(item.id); setView('Workflows');
-      setNotice(`${title} created with ${count} editable ${mode === 'book' ? 'chapters' : 'scenes'}. Live rendering shows as locked until provider credentials pass readiness.`);
-    } else if (supabase && identity.user) {
-      const { data, error } = await supabase.from('production_jobs').insert({ project_title: item.project_title, concept: item.concept, scene_count: item.scene_count, target_platform: item.target_platform, status: 'queued', approval_state: 'draft', owner_id: identity.user.id, created_by: identity.user.email }).select('id,project_title,concept,scene_count,target_platform,status,approval_state,created_at').single();
-      if (error) setNotice(error.message); else { setJobs((current) => [data, ...current]); setActiveId(data.id); setView('Workflows'); setNotice('Generation job queued.'); }
-    }
+    setJobs((current) => [item, ...current]);
+    setScenes((current) => [...planScenes(item, count, prompt), ...current]);
+    setActiveId(item.id); setView('Workflows');
+    setNotice(`${title} saved as a local plan. Connect Production to render real media and store durable outputs.`);
     setBusy(false);
   }
 
@@ -228,7 +337,7 @@ export default function VisionWeaverWorkspace() {
       <nav>{nav.map(([name, Icon]) => <button key={name} className={view === name ? 'active' : ''} onClick={() => setView(name)}><Icon />{name}</button>)}</nav>
       <label>CREATE</label>
       {modes.map((item) => <button className="vw-create-link" key={item.id} onClick={() => selectMode(item.id)}><item.icon />Generate {item.label}</button>)}
-      <div className="vw-system-state"><i /><span><b>Workspace online</b><small>{identity.isBuilder ? 'Local-first mode' : 'Supabase live mode'}</small></span></div>
+      <div className="vw-system-state"><i /><span><b>{health ? 'Engine online' : 'Checking engine'}</b><small>{productionUser ? 'Production connected' : 'Planning mode · production locked'}</small></span></div>
     </aside>
 
     <main className="vw-main">
@@ -237,6 +346,22 @@ export default function VisionWeaverWorkspace() {
         <button onClick={() => fileRef.current?.click()}><Upload /> Add references</button>
         <input ref={fileRef} className="vw-file-input" type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" onChange={handleFiles} />
       </header>
+
+      <section className={`vw-production-bar ${productionUser ? 'connected' : ''}`}>
+        <span><ShieldCheck /></span>
+        <div><b>{productionUser ? 'Production connected' : 'Connect Production to render real media'}</b><small>{productionUser ? productionUser.email : health ? `${(['image', 'video', 'audio', 'book', 'movie'] as StudioMode[]).filter((item) => health.readiness[item]).length} of 5 full pipelines ready. Runway media rendering is locked until its active key verifies.` : 'Checking provider readiness…'}</small></div>
+        {productionUser
+          ? <><button onClick={() => loadLive(true)}><RefreshCw /> Sync outputs</button><button onClick={disconnectProduction}>Disconnect</button></>
+          : <button onClick={() => setConnectionOpen(true)}>Connect Production</button>}
+      </section>
+
+      {connectionOpen && <div className="vw-modal" role="dialog" aria-modal="true"><form onSubmit={connectProduction}>
+        <button type="button" className="vw-close" aria-label="Close" onClick={() => setConnectionOpen(false)}><X /></button>
+        <span className="eyebrow">PROTECTED PRODUCTION ACCESS</span><h2>Connect the live media engine</h2>
+        <p>Use an existing authorized executive account. The public dashboard stays accessible; provider spending and private outputs stay protected.</p>
+        <label className="wide">Executive email<input required type="email" value={connectionEmail} onChange={(event) => setConnectionEmail(event.target.value)} placeholder="you@company.com" /></label>
+        <button disabled={busy || connectionSent}><ShieldCheck /> {connectionSent ? 'Secure link sent' : 'Send secure production link'}</button>
+      </form></div>}
 
       {adding && <div className="vw-modal" role="dialog" aria-modal="true"><form onSubmit={create}>
         <button type="button" className="vw-close" aria-label="Close" onClick={() => setAdding(false)}><X /></button>
@@ -250,7 +375,7 @@ export default function VisionWeaverWorkspace() {
 
       {view === 'Home' && <section className="vw-home">
         <div className="vw-hero"><span className="eyebrow">ONE WORKSPACE · EVERY MEDIUM</span><h1>What do you want to create?</h1><p>Generate images, video, audio, books and complete movies—then keep every asset, character and workflow connected.</p>
-          <div className="vw-composer"><div className="vw-ref-row">{assets.slice(0, 4).map((asset) => <span key={asset.id}>{asset.kind === 'image' ? <FileImage /> : asset.kind === 'video' ? <FileVideo /> : asset.kind === 'audio' ? <FileAudio /> : <FileText />}{asset.name}<button onClick={() => setAssets((current) => current.filter((item) => item.id !== asset.id))}><X /></button></span>)}</div><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Start with your idea. Add references, a manuscript, footage, images or audio." /><div><button className="secondary" onClick={() => fileRef.current?.click()}><Plus /> Reference</button><span>{model}</span><button disabled={busy} onClick={generate}>{busy ? <RefreshCw className="spin" /> : <ArrowRight />}</button></div></div>
+          <div className="vw-composer"><div className="vw-ref-row">{assets.slice(0, 4).map((asset) => <span key={asset.id}>{asset.kind === 'image' ? <FileImage /> : asset.kind === 'video' ? <FileVideo /> : asset.kind === 'audio' ? <FileAudio /> : <FileText />}{asset.name}<button onClick={() => setAssets((current) => current.filter((item) => item.id !== asset.id))}><X /></button></span>)}</div><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Start with your idea. Add references, a manuscript, footage, images or audio." /><div><button className="secondary" onClick={() => fileRef.current?.click()}><Plus /> Reference</button><span>{model}</span><button disabled={busy || Boolean(health && !health.readiness[mode] && mode !== 'movie')} onClick={generate}>{busy ? <RefreshCw className="spin" /> : <ArrowRight />}</button></div></div>
           <div className="vw-mode-chips">{modes.map((item) => <button key={item.id} className={mode === item.id ? 'active' : ''} onClick={() => { const config = modes.find((entry) => entry.id === item.id)!; setMode(item.id); setModel(config.models[0]); setPrompt(starterPrompts[item.id]); }}><item.icon />{item.label}</button>)}</div>
         </div>
         <div className="vw-category-row"><button onClick={() => useWorkflow('Product → Campaign', 'image', 'Product references, ad concepts and social derivatives.')}>Marketing campaigns</button><button onClick={() => selectMode('movie')}>Movies</button><button onClick={() => useWorkflow('Weekly Social Factory', 'video', 'Platform variants, captions and thumbnails.')}>Social media</button><button onClick={() => useApp('Lesson Visualizer', 'Video', 'Turn a concept into clear teaching scenes.')}>Educational content</button><button onClick={() => useApp('Character Across Worlds', 'Image', 'Explore one subject across visual styles.')}>Experimental art</button><button onClick={() => setView('Apps')}>Other</button></div>
@@ -258,9 +383,9 @@ export default function VisionWeaverWorkspace() {
         <section><div className="vw-section-title"><div><span className="eyebrow">STARTER APPS</span><h2>Build from a proven creative route</h2></div><button onClick={() => setView('Apps')}>View all <ArrowRight /></button></div><div className="vw-card-grid">{apps.slice(0, 6).map(([name, category, description, Icon]) => <article key={name}><span><Icon /></span><small>{category}</small><h3>{name}</h3><p>{description}</p><button onClick={() => useApp(name, category, description)}>Open app <ArrowRight /></button></article>)}</div></section>
       </section>}
 
-      {view === 'Agent' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">VISIONWEAVER AGENT</span><h1>Build the production with an agent</h1><p>Describe the outcome; the agent creates an editable plan and preserves approval gates.</p></div><div className="vw-agent"><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} /><div className="vw-agent-actions"><button onClick={() => useWorkflow('Idea → Feature Film', 'movie', workflows[1][2])}>Movie workflow</button><button onClick={() => useWorkflow('Book → Audiobook → Trailer', 'book', workflows[0][2])}>Book workflow</button><button onClick={() => useWorkflow('Product → Campaign', 'image', workflows[3][2])}>Ad campaign</button><button disabled={busy} onClick={generate}><Sparkles /> Build with Agent</button></div>{agentLog.length > 0 && <ol className="vw-agent-log">{agentLog.map((entry) => <li key={entry}><CheckCircle2 />{entry}</li>)}</ol>}</div></section>}
+      {view === 'Agent' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">VISIONWEAVER AGENT</span><h1>Build the production with an agent</h1><p>Describe the outcome; the agent creates an editable plan and preserves approval gates.</p></div><div className="vw-agent"><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} /><div className="vw-agent-actions"><button onClick={() => useWorkflow('Idea → Feature Film', 'movie', workflows[1][2])}>Movie workflow</button><button onClick={() => useWorkflow('Book → Audiobook → Trailer', 'book', workflows[0][2])}>Book workflow</button><button onClick={() => useWorkflow('Product → Campaign', 'image', workflows[3][2])}>Ad campaign</button><button disabled={busy || Boolean(health && !health.readiness[mode] && mode !== 'movie')} onClick={generate}><Sparkles /> Build with Agent</button></div>{agentLog.length > 0 && <ol className="vw-agent-log">{agentLog.map((entry) => <li key={entry}><CheckCircle2 />{entry}</li>)}</ol>}</div></section>}
 
-      {view === 'Studio' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">MULTIMODAL TOOL STUDIO</span><h1>{modes.find((item) => item.id === mode)?.label} Studio</h1><p>{modes.find((item) => item.id === mode)?.description}</p></div><div className="vw-studio-tabs">{modes.map((item) => <button className={mode === item.id ? 'active' : ''} key={item.id} onClick={() => selectMode(item.id)}><item.icon />{item.label}</button>)}</div><div className="vw-tool-grid"><section className="vw-upload-zone" onClick={() => fileRef.current?.click()}><Upload /><h3>Add references</h3><p>Images, video, audio, PDF, DOCX or TXT</p><small>{assets.length} attached to this workspace</small></section><section className="vw-settings"><label>Model<select value={model} onChange={(event) => setModel(event.target.value)}>{modes.find((item) => item.id === mode)?.models.map((item) => <option key={item}>{item}</option>)}</select></label><label>Instructions<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} /></label><div className="vw-setting-row"><label>Aspect<select><option>16:9</option><option>9:16</option><option>1:1</option><option>4:5</option></select></label><label>Quality<select><option>Draft</option><option>Standard</option><option>High</option><option>4K delivery</option></select></label></div><button disabled={busy} onClick={generate}><Sparkles /> Create {mode === 'book' ? 'book plan' : mode === 'movie' ? 'movie plan' : `${mode} job`}</button></section></div></section>}
+      {view === 'Studio' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">MULTIMODAL TOOL STUDIO</span><h1>{modes.find((item) => item.id === mode)?.label} Studio</h1><p>{modes.find((item) => item.id === mode)?.description}</p></div><div className="vw-studio-tabs">{modes.map((item) => <button className={mode === item.id ? 'active' : ''} key={item.id} onClick={() => selectMode(item.id)}><item.icon />{item.label}</button>)}</div><div className="vw-tool-grid"><section className="vw-upload-zone" onClick={() => fileRef.current?.click()}><Upload /><h3>Add references</h3><p>Images, video, audio, PDF, DOCX or TXT</p><small>{assets.length} attached to this workspace</small></section><section className="vw-settings"><label>Model<select value={model} onChange={(event) => setModel(event.target.value)}>{modes.find((item) => item.id === mode)?.models.map((item) => <option key={item}>{item}</option>)}</select></label><label>Instructions<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} /></label><div className="vw-setting-row"><label>Aspect<select value={aspect} onChange={(event) => setAspect(event.target.value)}><option>16:9</option><option>9:16</option><option>1:1</option><option>4:5</option></select></label><label>Quality<select value={quality} onChange={(event) => setQuality(event.target.value)}><option>Draft</option><option>Standard</option><option>High</option></select></label></div><button disabled={busy || Boolean(health && !health.readiness[mode] && mode !== 'movie')} onClick={generate}><Sparkles /> Create {mode === 'book' ? 'book plan' : mode === 'movie' ? 'movie plan' : `${mode} job`}</button></section></div></section>}
 
       {view === 'Apps' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">CREATIVE APPS</span><h1>Everything needed to make anything</h1><p>Each app opens with its workflow, medium and starting brief already selected.</p></div><div className="vw-card-grid">{filteredApps.map(([name, category, description, Icon]) => <article key={name}><span><Icon /></span><small>{category}</small><h3>{name}</h3><p>{description}</p><button onClick={() => useApp(name, category, description)}>Open app <ArrowRight /></button></article>)}</div></section>}
 
@@ -268,7 +393,21 @@ export default function VisionWeaverWorkspace() {
 
       {view === 'Characters' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">CONTINUITY SYSTEM</span><h1>Characters, voices and visual identity</h1><p>Lock the traits every generation must preserve.</p></div><form className="vw-character-form" onSubmit={addCharacter}><input required placeholder="Character name" value={characterForm.name} onChange={(event) => setCharacterForm({ ...characterForm, name: event.target.value })} /><textarea required placeholder="Appearance, wardrobe, personality, voice and non-negotiable continuity details" value={characterForm.description} onChange={(event) => setCharacterForm({ ...characterForm, description: event.target.value })} /><button><Plus /> Lock character</button></form><div className="vw-character-grid">{characters.map((character) => <article key={character.id}><span><Users /></span><div><small>{character.status}</small><h3>{character.name}</h3><p>{character.description}</p></div><button onClick={() => { setPrompt(`Create a scene featuring ${character.name}. Preserve: ${character.description}`); setView('Studio'); }}><WandSparkles /> Create with character</button></article>)}</div></section>}
 
-      {view === 'Library' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">CONNECTED MEDIA LIBRARY</span><h1>References and generated assets</h1><p>Assets added on this device remain available to the workspace session.</p></div><button className="vw-library-upload" onClick={() => fileRef.current?.click()}><Upload /> Upload images, video, audio or manuscripts</button>{assets.length ? <div className="vw-asset-grid">{assets.map((asset) => <article key={asset.id}>{asset.url ? <img src={asset.url} alt="" /> : <span>{asset.kind === 'video' ? <FileVideo /> : asset.kind === 'audio' ? <FileAudio /> : asset.kind === 'document' ? <FileText /> : <FileImage />}</span>}<div><b>{asset.name}</b><small>{asset.kind} · {asset.size}</small></div><button aria-label={`Remove ${asset.name}`} onClick={() => setAssets((current) => current.filter((item) => item.id !== asset.id))}><X /></button></article>)}</div> : <div className="vw-empty"><FolderOpen /><h3>No assets yet</h3><p>Add Drive exports, manuscripts, reference images, footage or audio.</p></div>}</section>}
+      {view === 'Library' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">CONNECTED MEDIA LIBRARY</span><h1>References and generated assets</h1><p>Production outputs are stored in the connected workspace; local references remain on this device.</p></div>
+        {liveGenerations.length > 0 && <section className="vw-live-library"><div className="vw-section-title"><div><span className="eyebrow">LIVE OUTPUTS</span><h2>Production generations</h2></div><button onClick={() => loadLive(true)}><RefreshCw /> Refresh</button></div><div className="vw-generation-grid">{liveGenerations.map((generation) => <article key={generation.id} className={`status-${generation.status}`}>
+          <div className="vw-generation-preview">{generation.playable_urls?.[0]
+            ? generation.media_type === 'image' ? <img src={generation.playable_urls[0]} alt="" />
+              : generation.media_type === 'video' ? <video controls preload="metadata" src={generation.playable_urls[0]} />
+              : generation.media_type === 'audio' ? <audio controls src={generation.playable_urls[0]} />
+              : <FileText />
+            : generation.status === 'complete' && (generation.media_type === 'book' || generation.media_type === 'movie') ? <BookOpen />
+            : generation.status === 'failed' ? <X /> : <RefreshCw className="spin" />}</div>
+          <small>{generation.media_type} · {generation.model}</small><h3>{generation.prompt.slice(0, 90)}</h3>
+          <p>{generation.error || generation.status.replaceAll('_', ' ')}</p>
+          {(generation.media_type === 'book' || generation.media_type === 'movie') && generation.status === 'complete' && <button onClick={() => downloadPackage(generation)}><FileText /> Download package</button>}
+          {generation.playable_urls?.[0] && <a href={generation.playable_urls[0]} target="_blank" rel="noreferrer"><Play /> Open output</a>}
+        </article>)}</div></section>}
+        <button className="vw-library-upload" onClick={() => fileRef.current?.click()}><Upload /> Upload images, video, audio or manuscripts</button>{assets.length ? <div className="vw-asset-grid">{assets.map((asset) => <article key={asset.id}>{asset.url ? <img src={asset.url} alt="" /> : <span>{asset.kind === 'video' ? <FileVideo /> : asset.kind === 'audio' ? <FileAudio /> : asset.kind === 'document' ? <FileText /> : <FileImage />}</span>}<div><b>{asset.name}</b><small>{asset.kind} · {asset.size}</small></div><button aria-label={`Remove ${asset.name}`} onClick={() => setAssets((current) => current.filter((item) => item.id !== asset.id))}><X /></button></article>)}</div> : <div className="vw-empty"><FolderOpen /><h3>No assets yet</h3><p>Add Drive exports, manuscripts, reference images, footage or audio.</p></div>}</section>}
 
       {view === 'Academy' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">VISIONWEAVER ACADEMY</span><h1>Learn the complete pipeline</h1><p>Short operating guides built around the original 16-node VisionWeaver system.</p></div><div className="vw-academy-grid">{[['01', 'Prompt + reference intake', 'Prepare source material and a clear creative outcome.'], ['02', 'Character and environment lock', 'Protect visual continuity before generating shots.'], ['03', 'Scene breakdown + cinematography', 'Convert narrative beats into render-ready scenes.'], ['04', 'Audio direction', 'Plan dialogue, score, ambience and sound effects.'], ['05', 'Generation + review', 'Queue models, compare results and apply QC gates.'], ['06', 'Assembly + publishing', 'Create masters and platform-specific derivatives.']].map(([number, title, description]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{description}</p><button onClick={() => setNotice(`${title} guide opened. The interactive lesson content is ready for the next curriculum pass.`)}>Start lesson <ArrowRight /></button></article>)}</div></section>}
 
