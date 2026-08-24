@@ -28,6 +28,8 @@ const outOfTime = () => Date.now() - started > DEADLINE_MS;
 const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
 async function secret(name) {
+  const environmentValue = (Deno.env.get(name) || '').trim();
+  if (environmentValue && environmentValue !== 'PLACEHOLDER_REPLACE_ME') return environmentValue;
   const { data, error } = await db.rpc('get_secret', { secret_name: name });
   if (error) return null;
   if (!data || data === 'PLACEHOLDER_REPLACE_ME') return null;
@@ -108,9 +110,9 @@ async function stageCinematography(job) {
 }
 
 async function submitScene(scene) {
-  const runwayKey = await secret('RUNWAY_API_KEY');
-  if (!runwayKey) throw new Error('RUNWAY_API_KEY not set in Vault');
-  if (!runwayKey.startsWith('key_')) throw new Error('RUNWAY_API_KEY malformed - must start with key_');
+  const runwayKey = await secret('RUNWAY_API_ACCESS');
+  if (!runwayKey) throw new Error('RUNWAY_API_ACCESS is not configured');
+  if (!/^key_[0-9a-f]{128}$/.test(runwayKey)) throw new Error('RUNWAY_API_ACCESS is malformed');
   const model = await setting('runway_model', 'gen4_turbo');
   const dur = scene.scene_spec && scene.scene_spec.duration_seconds ? scene.scene_spec.duration_seconds : 5;
   const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
@@ -135,8 +137,9 @@ async function submitScene(scene) {
 }
 
 async function pollScene(scene) {
-  const runwayKey = await secret('RUNWAY_API_KEY');
-  if (!runwayKey) throw new Error('RUNWAY_API_KEY not set in Vault');
+  const runwayKey = await secret('RUNWAY_API_ACCESS');
+  if (!runwayKey) throw new Error('RUNWAY_API_ACCESS is not configured');
+  if (!/^key_[0-9a-f]{128}$/.test(runwayKey)) throw new Error('RUNWAY_API_ACCESS is malformed');
   const res = await fetch('https://api.dev.runwayml.com/v1/tasks/' + scene.provider_task_id, {
     headers: { authorization: 'Bearer ' + runwayKey, 'X-Runway-Version': '2024-11-06' }
   });
@@ -290,12 +293,12 @@ Deno.serve(async (req) => {
       });
     }
     if (isHealth) {
-      const names = ['ANTHROPIC_API_KEY', 'RUNWAY_API_KEY', 'KIE_API_KEY', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY'];
+      const names = ['ANTHROPIC_API_KEY', 'RUNWAY_API_ACCESS', 'KIE_API_KEY', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY'];
       const status = {};
       for (const n of names) {
         const v = await secret(n);
         if (!v) status[n] = 'NOT_SET';
-        else if (n === 'RUNWAY_API_KEY' && !v.startsWith('key_')) status[n] = 'SET_BUT_MALFORMED (must start with key_)';
+        else if (n === 'RUNWAY_API_ACCESS' && !/^key_[0-9a-f]{128}$/.test(v)) status[n] = 'SET_BUT_MALFORMED';
         else if (n === 'ANTHROPIC_API_KEY' && !v.startsWith('sk-ant-')) status[n] = 'SET_BUT_SUSPECT (expected sk-ant-)';
         else status[n] = 'OK';
       }

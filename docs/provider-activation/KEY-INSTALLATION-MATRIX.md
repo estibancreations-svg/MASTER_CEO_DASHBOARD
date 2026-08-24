@@ -30,7 +30,7 @@ After installing keys, report only the slot names completed—for example, “`O
 | 4 | [Anthropic Console](https://console.anthropic.com/settings/keys) | `ANTHROPIC_API_KEY` | Claude reasoning/review lane |
 | 5 | [DeepSeek Platform](https://platform.deepseek.com/api_keys) | `DEEPSEEK_API_KEY` | Direct DeepSeek reasoning lane |
 | 6 | [xAI Console](https://console.x.ai/) | `XAI_API_KEY` | Direct Grok/xAI lane—not X social OAuth |
-| 7 | [Runway Developer Portal](https://dev.runwayml.com/) | `RUNWAY_API_KEY` | VisionWeaver video generation; expected prefix `key_` |
+| 7 | [Runway Developer Portal](https://dev.runwayml.com/) | `RUNWAY_API_ACCESS` | VisionWeaver video generation; expected prefix `key_` |
 | 8 | [KIE.ai](https://kie.ai/) | `KIE_API_KEY` | Optional VisionWeaver generation gateway |
 | 9 | [Kling API documentation](https://klingai.com/global/dev/document-api) | `KLING_ACCESS_KEY`, `KLING_SECRET_KEY` | Kling creative/video route |
 | 10 | [Higgsfield Cloud](https://cloud.higgsfield.ai/) | `HIGGSFIELD_API_KEY`, `HIGGSFIELD_API_SECRET` | Higgsfield creative/video route |

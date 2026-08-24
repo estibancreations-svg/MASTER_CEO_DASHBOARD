@@ -38,6 +38,8 @@ function response(req: Request, body: unknown, status = 200) {
   return Response.json(body, { status, headers: cors(req) });
 }
 async function secret(name: string) {
+  const environmentValue = (Deno.env.get(name) || '').trim();
+  if (environmentValue && environmentValue !== 'PLACEHOLDER_REPLACE_ME') return environmentValue;
   const { data, error } = await db.rpc('get_secret', { secret_name: name });
   if (error || !data || data === 'PLACEHOLDER_REPLACE_ME') return null;
   const value = String(data).trim();
@@ -73,8 +75,8 @@ async function claude(system: string, user: string, maxTokens = 5000) {
   return (json.content || []).filter((part: any) => part.type === 'text').map((part: any) => part.text).join('\n');
 }
 async function runway(path: string, init: RequestInit = {}) {
-  const key = await secret('RUNWAY_API_KEY');
-  if (!key || !key.startsWith('key_')) throw new Error('Runway is not configured');
+  const key = await secret('RUNWAY_API_ACCESS');
+  if (!key || !/^key_[0-9a-f]{128}$/.test(key)) throw new Error('Runway access is not configured correctly');
   const result = await fetch(RUNWAY_BASE + path, {
     ...init,
     headers: {
@@ -176,7 +178,7 @@ let healthCache: { expires: number; value: any } | null = null;
 async function providerHealth() {
   if (healthCache && healthCache.expires > Date.now()) return healthCache.value;
   const [anthropicKey, runwayKey, klingAccess, klingSecret, elevenLabsKey] = await Promise.all([
-    secret('ANTHROPIC_API_KEY'), secret('RUNWAY_API_KEY'), secret('KLING_ACCESS_KEY'),
+    secret('ANTHROPIC_API_KEY'), secret('RUNWAY_API_ACCESS'), secret('KLING_ACCESS_KEY'),
     secret('KLING_SECRET_KEY'), secret('ELEVENLABS_API_KEY')
   ]);
   let anthropicVerified = false;
@@ -196,7 +198,8 @@ async function providerHealth() {
       anthropicVerified = result.ok;
     } catch (_) {}
   }
-  if (runwayKey) {
+  const runwayFormatValid = Boolean(runwayKey && /^key_[0-9a-f]{128}$/.test(runwayKey));
+  if (runwayKey && runwayFormatValid) {
     try {
       const result = await fetch(RUNWAY_BASE + '/tasks/00000000-0000-0000-0000-000000000000', {
         headers: { authorization: 'Bearer ' + runwayKey, 'X-Runway-Version': RUNWAY_VERSION }
@@ -230,7 +233,14 @@ async function providerHealth() {
   const value = {
     providers: {
       anthropic: { configured: Boolean(anthropicKey), verified: anthropicVerified, status: anthropicStatus },
-      runway: { configured: Boolean(runwayKey), verified: runwayVerified, status: runwayStatus },
+      runway: {
+        configured: Boolean(runwayKey),
+        length_valid: runwayKey?.length === 132,
+        characters_valid: Boolean(runwayKey && /^key_[0-9a-f]+$/.test(runwayKey)),
+        format_valid: runwayFormatValid,
+        verified: runwayVerified,
+        status: runwayStatus
+      },
       kling: { configured: Boolean(klingAccess && klingSecret), verified: klingVerified, status: klingStatus },
       elevenlabs: { configured: Boolean(elevenLabsKey), verified: elevenLabsVerified, status: elevenLabsStatus }
     },

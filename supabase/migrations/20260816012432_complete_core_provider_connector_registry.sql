@@ -4,7 +4,7 @@ with target_org as (
   values
    ('google_gemini','Google Gemini','ai_model','staged','https','["text","vision","multimodal","generation"]'::jsonb,'api_key',array['GEMINI_API_KEY']::text[],'https://ai.google.dev/api','https://generativelanguage.googleapis.com','placeholder','Direct Gemini route. Credential remains non-production until health, privacy, cost and fallback tests pass.'),
    ('openrouter','OpenRouter','ai_gateway','staged','https','["model_gateway","fallback_routing","usage"]'::jsonb,'api_key',array['OPENROUTER_API_KEY']::text[],'https://openrouter.ai/docs','https://openrouter.ai/api','placeholder','Separate gateway from OpenAI. Activation requires provider/model allowlists and cost controls.'),
-   ('runway','Runway','creative_ai','staged','https','["text_to_video","image_to_video","generation"]'::jsonb,'api_key',array['RUNWAY_API_KEY']::text[],'https://docs.dev.runwayml.com','https://api.dev.runwayml.com','placeholder','VisionWeaver video-generation provider. Keys must remain server-side.'),
+   ('runway','Runway','creative_ai','staged','https','["text_to_video","image_to_video","generation"]'::jsonb,'api_key',array['RUNWAY_API_ACCESS']::text[],'https://docs.dev.runwayml.com','https://api.dev.runwayml.com','placeholder','VisionWeaver video-generation provider. Access credentials must remain server-side.'),
    ('kie','KIE.ai','creative_ai','staged','https','["generation_gateway","image","video"]'::jsonb,'api_key',array['KIE_API_KEY']::text[],'https://docs.kie.ai','https://api.kie.ai','placeholder','Optional creative gateway with Runway fallback; no live execution until certified.')
 )
 insert into public.ec_connectors(
@@ -34,7 +34,7 @@ with target_org as (
   values
    ('google-gemini','Google Gemini','SYS-THELMA-001','ai_model','server_side','["text","vision","multimodal","generation"]'::jsonb,array['GEMINI_API_KEY']::text[],'{"registry":"pre-key-closeout","activation":"provider-gated"}'::jsonb),
    ('openrouter','OpenRouter','SYS-THELMA-001','ai_gateway','server_side','["model_gateway","fallback_routing","usage"]'::jsonb,array['OPENROUTER_API_KEY']::text[],'{"registry":"pre-key-closeout","activation":"provider-gated"}'::jsonb),
-   ('runway','Runway','SYS-VISION-001','creative_ai','server_side','["text_to_video","image_to_video","generation"]'::jsonb,array['RUNWAY_API_KEY']::text[],'{"registry":"pre-key-closeout","activation":"provider-gated"}'::jsonb),
+   ('runway','Runway','SYS-VISION-001','creative_ai','server_side','["text_to_video","image_to_video","generation"]'::jsonb,array['RUNWAY_API_ACCESS']::text[],'{"registry":"pre-key-closeout","activation":"provider-gated"}'::jsonb),
    ('kie','KIE.ai','SYS-VISION-001','creative_ai','server_side','["generation_gateway","image","video"]'::jsonb,array['KIE_API_KEY']::text[],'{"registry":"pre-key-closeout","activation":"provider-gated"}'::jsonb)
 )
 insert into public.ceo_integrations(

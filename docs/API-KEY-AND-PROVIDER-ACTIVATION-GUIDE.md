@@ -11,7 +11,7 @@ The live project was inspected by secret name and status only. No secret values 
 | Credential slot | Current status | Runtime consumer | Purpose |
 |---|---:|---|---|
 | `VISIONWEAVER_CRON_SECRET` | SET | VisionWeaver scheduler boundary | Authorizes the internal scheduled invocation |
-| `RUNWAY_API_KEY` | PLACEHOLDER | VisionWeaver orchestrator | Submit and poll video-generation jobs |
+| `RUNWAY_API_ACCESS` | PLACEHOLDER | VisionWeaver orchestrator | Submit and poll video-generation jobs |
 | `ANTHROPIC_API_KEY` | PLACEHOLDER | VisionWeaver orchestrator | Parse concepts, create scene breakdowns, prompts, and publish packages |
 | `GEMINI_API_KEY` | PLACEHOLDER | Provider health registry; routing integration pending | Gemini text/image capability |
 | `KIE_API_KEY` | PLACEHOLDER | Provider health registry; adapter integration pending | KIE-hosted image, video, and audio models |
@@ -19,19 +19,19 @@ The live project was inspected by secret name and status only. No secret values 
 
 ## Where each class of value belongs
 
-### 1. Supabase Vault — model and media provider keys
+### 1. Supabase Edge Function Secrets — model and media provider access
 
-Use the Supabase project **yqealeekngxooyoemfba** and open **Database → Vault**. Replace the placeholder value for the exact existing secret name. Do not create spelling variants.
+Use the Supabase project **yqealeekngxooyoemfba** and open **Edge Functions → Secrets**. Create or update the exact secret name. Do not create spelling variants.
 
-Put these in Vault:
+Put these in Edge Function Secrets:
 
-- `RUNWAY_API_KEY`
+- `RUNWAY_API_ACCESS`
 - `ANTHROPIC_API_KEY`
 - `GEMINI_API_KEY`
 - `KIE_API_KEY`
 - `OPENROUTER_API_KEY`
 
-The current VisionWeaver orchestrator calls the database `get_secret` function, so putting Runway or Anthropic only in Vercel or Edge Function Secrets will not activate that pipeline.
+The VisionWeaver runtimes read Edge Function Secrets first and then use an exact-name Supabase Vault fallback. Provider access must never be placed in Vercel or any `VITE_` variable.
 
 ### 2. Supabase Edge Function Secrets — OAuth application credentials
 
@@ -61,7 +61,7 @@ Do not place provider keys, OAuth client secrets, Supabase secret/service-role k
 
 | Provider | Obtain/manage key at | Exact stored name | Activation role |
 |---|---|---|---|
-| Runway | Runway Developer Portal → API Keys | `RUNWAY_API_KEY` | VisionWeaver video rendering |
+| Runway | Runway Developer Portal → API Keys | `RUNWAY_API_ACCESS` | VisionWeaver video rendering |
 | Gemini | Google AI Studio → API Keys | `GEMINI_API_KEY` | THELMA/VisionWeaver Google model route |
 | Anthropic | Claude Console → Settings → API Keys | `ANTHROPIC_API_KEY` | Current VisionWeaver planning stages |
 | KIE | KIE API Key Management | `KIE_API_KEY` | Optional image/video/audio model adapters |
@@ -74,7 +74,7 @@ Do not place provider keys, OAuth client secrets, Supabase secret/service-role k
 
 ## Safe activation order
 
-1. **Runway** — replace the Vault placeholder; run health validation without generating media.
+1. **Runway** — create or update `RUNWAY_API_ACCESS` in Edge Function Secrets; run health validation without generating media.
 2. **Anthropic** — replace the Vault placeholder; run a minimal structured-output test.
 3. **Gemini** — replace the Vault placeholder; validate identity, quota, and one inexpensive test.
 4. **OpenRouter** — create a project-specific key with a low spending limit; validate model discovery and fallback without enabling autopilot.
