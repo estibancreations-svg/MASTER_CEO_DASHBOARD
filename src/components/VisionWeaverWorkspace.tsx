@@ -109,9 +109,6 @@ export default function VisionWeaverWorkspace() {
   const [form, setForm] = useState({ title: '', concept: '', scenes: '6', platform: 'Movie' });
   const [characterForm, setCharacterForm] = useState({ name: '', description: '' });
   const [productionUser, setProductionUser] = useState<User | null>(identity.user);
-  const [connectionOpen, setConnectionOpen] = useState(false);
-  const [connectionEmail, setConnectionEmail] = useState('');
-  const [connectionSent, setConnectionSent] = useState(false);
   const [health, setHealth] = useState<StudioHealth | null>(null);
   const [healthChecked, setHealthChecked] = useState(false);
   const [liveGenerations, setLiveGenerations] = useState<LiveGeneration[]>([]);
@@ -240,26 +237,10 @@ export default function VisionWeaverWorkspace() {
     setNotice('Generation rerouted to a verified provider and restarted.');
   }
 
-  async function connectProduction(e: FormEvent) {
-    e.preventDefault();
-    if (!supabase || !connectionEmail.trim()) return;
-    setBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email: connectionEmail.trim(),
-      options: {
-        emailRedirectTo: `${location.origin}/systems/visionweaver`,
-        shouldCreateUser: false
-      }
-    });
-    setBusy(false);
-    if (error) setNotice(error.message);
-    else { setConnectionSent(true); setNotice('Secure production link sent. Return here after opening it.'); }
-  }
-
   async function disconnectProduction() {
-    await supabase?.auth.signOut();
+    await supabase?.auth.signOut({ scope: 'global' });
     setProductionUser(null);
-    setNotice('Production session disconnected. Planning remains available locally.');
+    setNotice('Signed out of the governed production workspace.');
   }
 
   function downloadPackage(generation: LiveGeneration) {
@@ -316,7 +297,7 @@ export default function VisionWeaverWorkspace() {
     setJobs((current) => [item, ...current]);
     setScenes((current) => [...planScenes(item, count, prompt), ...current]);
     setActiveId(item.id); setView('Workflows');
-    setNotice(`${title} saved as a local plan. Connect Production to render real media and store durable outputs.`);
+    setNotice(`${title} saved as a local plan. Sign in at the system entrance to render real media and store durable outputs.`);
     setBusy(false);
   }
 
@@ -369,19 +350,11 @@ export default function VisionWeaverWorkspace() {
 
       <section className={`vw-production-bar ${productionUser ? 'connected' : ''}`}>
         <span><ShieldCheck /></span>
-        <div><b>{productionUser ? 'Production connected' : 'Connect Production to render real media'}</b><small>{productionUser ? productionUser.email : health ? `${(['image', 'video', 'audio', 'book', 'movie'] as StudioMode[]).filter((item) => health.readiness[item]).length} of 5 pipelines ready. VisionWeaver automatically routes around an unavailable provider.` : healthChecked ? 'Provider health could not be reached. Local planning remains available.' : 'Checking provider readiness…'}</small></div>
+        <div><b>{productionUser ? 'Production connected' : 'Sign in to render real media'}</b><small>{productionUser ? productionUser.email : health ? `${(['image', 'video', 'audio', 'book', 'movie'] as StudioMode[]).filter((item) => health.readiness[item]).length} of 5 pipelines ready. VisionWeaver automatically routes around an unavailable provider.` : healthChecked ? 'Provider health could not be reached. Local planning remains available.' : 'Checking provider readiness…'}</small></div>
         {productionUser
-          ? <><button onClick={() => loadLive(true)}><RefreshCw /> Sync outputs</button><button onClick={disconnectProduction}>Disconnect</button></>
-          : <button onClick={() => setConnectionOpen(true)}>Connect Production</button>}
+          ? <><button onClick={() => loadLive(true)}><RefreshCw /> Sync outputs</button><button onClick={disconnectProduction}>Sign out</button></>
+          : <span>Use the main dashboard login</span>}
       </section>
-
-      {connectionOpen && <div className="vw-modal" role="dialog" aria-modal="true"><form onSubmit={connectProduction}>
-        <button type="button" className="vw-close" aria-label="Close" onClick={() => setConnectionOpen(false)}><X /></button>
-        <span className="eyebrow">PROTECTED PRODUCTION ACCESS</span><h2>Connect the live media engine</h2>
-        <p>Use an existing authorized executive account. The public dashboard stays accessible; provider spending and private outputs stay protected.</p>
-        <label className="wide">Executive email<input required type="email" value={connectionEmail} onChange={(event) => setConnectionEmail(event.target.value)} placeholder="you@company.com" /></label>
-        <button disabled={busy || connectionSent}><ShieldCheck /> {connectionSent ? 'Secure link sent' : 'Send secure production link'}</button>
-      </form></div>}
 
       {lesson && <div className="vw-modal" role="dialog" aria-modal="true"><form onSubmit={(event) => event.preventDefault()}>
         <button type="button" className="vw-close" aria-label="Close" onClick={() => setLesson(null)}><X /></button>

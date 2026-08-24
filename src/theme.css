@@ -1,0 +1,74 @@
+:root{
+  color-scheme:dark;
+  --system-bg:#080b10;
+  --system-surface:#111720;
+  --system-surface-2:#171e29;
+  --system-line:#2a3544;
+  --system-text:#edf4fb;
+  --system-muted:#92a2b5;
+  --system-accent:#6be5ff;
+}
+
+html[data-theme="dark"]{color-scheme:dark;background:var(--system-bg)}
+html[data-theme="dark"] body{background:var(--system-bg);color:var(--system-text)}
+
+.system-controls{
+  position:fixed;z-index:1000;right:16px;bottom:16px;display:flex;align-items:center;gap:6px;
+  padding:6px;border:1px solid rgba(142,169,198,.28);border-radius:14px;
+  background:rgba(8,13,20,.92);box-shadow:0 18px 48px rgba(0,0,0,.38);backdrop-filter:blur(16px)
+}
+.system-controls button{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 11px;border:1px solid transparent;border-radius:9px;background:transparent;color:#aab8c8;font:800 10px/1 system-ui,sans-serif;cursor:pointer}
+.system-controls button:hover,.system-controls button.active{border-color:#3b536b;background:#182431;color:#fff}
+.system-controls button:focus-visible{outline:3px solid #58d8ff;outline-offset:2px}
+.system-controls button:disabled{cursor:wait;opacity:.6}
+.system-controls svg{width:16px;height:16px}
+.system-controls .system-logout{border-left-color:#3b4654;color:#ffb6c2}
+
+html[data-theme="dark"] :is(.master-shell,.master-main,.master-content,.app-shell,.workspace-only){background:var(--system-bg)!important;color:var(--system-text)!important}
+html[data-theme="dark"] :is(.master-header,.master-nav,.sidebar,.panel,.metric,.briefing,.master-card,.master-metrics article,.module-metrics article,.search-results,.notification-drawer,.thelma-modal form,.data-state,.property,.grant-card,.authority,.manual,.endpoint,.fabric-controls article,.fabric-boundary){background:var(--system-surface)!important;border-color:var(--system-line)!important;color:var(--system-text)!important}
+html[data-theme="dark"] :is(.master-header input,.master-search,.master-search input,.module-create input,.module-row select,.search input,.control-grid button,.land-tabs button,input,select,textarea){background:#0c121a!important;border-color:#304052!important;color:var(--system-text)!important}
+html[data-theme="dark"] :is(.master-heading p,.master-card small,.master-row small,.module-row span,.table-head,.briefing p,.panel p,.work-row small,.health-row small,.timeline small,.data-state span,.property p,.grant-card p,.authority p,.manual p,.endpoint p){color:var(--system-muted)!important}
+html[data-theme="dark"] :is(.master-row,.module-row,.table-head,.work-row,.decision,.health-row,.event,.history-row){border-color:var(--system-line)!important}
+html[data-theme="dark"] :is(.card-title button,.master-heading button,.identity-signout,.system-open,.data-state button){background:#172431!important;border-color:#3b536b!important;color:#e5f6ff!important}
+
+html[data-theme="notepad"]{
+  color-scheme:light;
+  --system-bg:#f5e594;
+  --system-surface:rgba(255,250,211,.9);
+  --system-surface-2:rgba(247,232,156,.9);
+  --system-line:#bca75a;
+  --system-text:#2a2a24;
+  --system-muted:#665f43;
+  --system-accent:#8a6300;
+  background:#f5e594;
+}
+html[data-theme="notepad"] body,
+html[data-theme="notepad"] :is(.master-shell,.master-main,.master-content,.app-shell,.workspace-only,.vw-studio-shell,.vw-main,.auth-screen){
+  color:var(--system-text)!important;
+  background-color:#f5e594!important;
+  background-image:repeating-linear-gradient(to bottom,transparent 0 31px,rgba(54,112,160,.2) 32px 33px),linear-gradient(to right,transparent 76px,rgba(185,57,70,.38) 77px 79px,transparent 80px)!important;
+  background-attachment:local!important;
+}
+html[data-theme="notepad"] :is(.master-nav,.master-header,.sidebar,.vw-sidebar,.vw-topbar){background:rgba(240,220,121,.96)!important;border-color:#a99550!important;color:#2a2a24!important}
+html[data-theme="notepad"] :is(.master-card,.master-metrics article,.module-metrics article,.panel,.metric,.briefing,.search-results,.notification-drawer,.thelma-modal form,.data-state,.property,.grant-card,.authority,.manual,.endpoint,.fabric-controls article,.fabric-boundary,.auth-card,.vw-card-grid article,.vw-workflow-grid article,.vw-academy-grid article,.vw-metrics article,.vw-composer,.vw-agent,.vw-upload-zone,.vw-settings,.vw-project-list,.vw-storyboard,.vw-character-grid article,.vw-asset-grid article,.vw-modal form,.vw-production-bar,.vw-generation-grid article,.vw-lesson-steps li){
+  background:rgba(255,250,211,.9)!important;border-color:#bca75a!important;color:#2a2a24!important;box-shadow:0 8px 24px rgba(92,74,22,.1)!important
+}
+html[data-theme="notepad"] :is(.master-nav button,.sidebar button,.vw-sidebar button,.suite-switch,.master-menu,.master-alert,.icon-button,.vw-topbar button,.vw-section-title button,.vw-agent-actions button,.vw-studio-tabs button,.vw-mode-chips button,.vw-category-row button,.control-grid button,.land-tabs button,.card-title button,.master-heading button,.identity-signout,.system-open,.data-state button,.auth-card button){color:#302b1d!important}
+html[data-theme="notepad"] :is(.master-nav button.active,.sidebar button.active,.vw-sidebar nav button.active,.vw-mode-chips button.active,.vw-studio-tabs button.active,.system-open,.auth-submit){background:#ddc765!important;border-color:#8f7620!important;color:#201d14!important}
+html[data-theme="notepad"] :is(input,select,textarea,.master-search,.search,.vw-topbar label){background:rgba(255,253,225,.86)!important;border-color:#ab9850!important;color:#2a2a24!important}
+html[data-theme="notepad"] :is(input,textarea)::placeholder{color:#7d724f!important}
+html[data-theme="notepad"] :is(.master-heading p,.master-card small,.master-row small,.module-row span,.table-head,.briefing p,.panel p,.work-row small,.health-row small,.timeline small,.data-state span,.vw-hero p,.vw-page-heading p,.vw-card-grid p,.vw-workflow-grid p,.vw-academy-grid p,.vw-settings label,.vw-project-list small,.vw-storyboard p,.vw-character-grid p,.vw-asset-grid small,.auth-card p){color:#665f43!important}
+html[data-theme="notepad"] :is(.master-row,.module-row,.table-head,.work-row,.decision,.health-row,.event,.history-row,.vw-project-list>button,.vw-storyboard article){border-color:#c7b363!important}
+html[data-theme="notepad"] .eyebrow{color:#7a5e00!important}
+html[data-theme="notepad"] .vw-brand>span{background:linear-gradient(135deg,#8d7117,#d1af3f)!important}
+html[data-theme="notepad"] .vw-production-bar.connected{background:rgba(192,220,150,.72)!important;border-color:#719148!important}
+html[data-theme="notepad"] .system-controls{background:rgba(255,248,197,.95);border-color:#9f8840;box-shadow:0 14px 38px rgba(82,65,15,.22)}
+html[data-theme="notepad"] .system-controls button{color:#574d2b}
+html[data-theme="notepad"] .system-controls button:hover,html[data-theme="notepad"] .system-controls button.active{background:#ddc765;border-color:#8f7620;color:#201d14}
+html[data-theme="notepad"] .system-controls .system-logout{color:#823c3c;border-left-color:#a99550}
+
+@media(max-width:720px){
+  .system-controls{right:10px;bottom:10px}
+  .system-controls button{min-width:42px;padding:9px}
+  .system-controls button span{display:none}
+}

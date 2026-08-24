@@ -11,4 +11,5 @@ import './cmgio.css';
 import './fabric.css';
 import './auth.css';
 import './master.css';
+import './theme.css';
 createRoot(document.getElementById('root')!).render(<StrictMode><AuthGate><App /></AuthGate></StrictMode>);
