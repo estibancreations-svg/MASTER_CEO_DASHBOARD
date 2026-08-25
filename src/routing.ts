@@ -40,7 +40,9 @@ export function parseDashboardRoute(pathname:string):DashboardRoute{
   if(clean==='/visionweaver')return{surface:'vision'};
   const parts=clean.split('/').filter(Boolean);
   if(parts[0]==='modules'){
-    const page=modulesBySlug.get(parts[1]||'');
+    const moduleSlug=parts[1]||'';
+    if(moduleSlug==='agent-hub'||moduleSlug==='agent-logs')return{surface:'thelma'};
+    const page=modulesBySlug.get(moduleSlug);
     return{surface:'master',page:page||'Dashboard'};
   }
   if(parts[0]==='c-suite'){
@@ -54,6 +56,6 @@ export function parseDashboardRoute(pathname:string):DashboardRoute{
   return{surface:'master',page:'Dashboard'};
 }
 
-export const routeForModule=(name:string)=>name==='Dashboard'?'/dashboard':`/modules/${slugify(name)}`;
+export const routeForModule=(name:string)=>name==='Dashboard'?'/dashboard':name==='Agent Hub'||name==='Agent Logs'?'/systems/thelma':`/modules/${slugify(name)}`;
 export const routeForSuitePage=(name:string)=>`/c-suite/${slugify(name)}`;
 export const routeForSystem=(surface:Exclude<DashboardSurface,'master'|'suite'>)=>systemPaths[surface];
