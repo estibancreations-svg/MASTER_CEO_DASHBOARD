@@ -6,7 +6,7 @@ export type DashboardRoute={
 };
 
 export const MASTER_MODULES=[
-  'Dashboard','AI Mastery','Agent Hub','Leads Pipeline','Content Engine','Social Media','Trends','Communications','CRM','Products','Finance','System Audit','Certificates','Settings','Documents','Files','Team Overview','Video Storyboard','Social Analytics','Lead Scoring Rules','API Integration','Revenue Report','Agent Logs','Media Library','Multi-Account Posting','Trend Signal Alerts','Help Center'
+  'Dashboard','Analyst Memory','AI Mastery','Agent Hub','Leads Pipeline','Content Engine','Social Media','Trends','Communications','CRM','Products','Finance','System Audit','Certificates','Settings','Documents','Files','Team Overview','Video Storyboard','Social Analytics','Lead Scoring Rules','API Integration','Revenue Report','Agent Logs','Media Library','Multi-Account Posting','Trend Signal Alerts','Help Center'
 ] as const;
 
 export const SUITE_PAGES=[
