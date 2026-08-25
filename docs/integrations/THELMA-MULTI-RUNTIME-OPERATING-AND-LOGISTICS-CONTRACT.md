@@ -17,7 +17,7 @@ THELMA is one governed enterprise intelligence with multiple delivery surfaces. 
 | GitHub | Canonical source code, migrations, runtime contracts, tests, PR review and release evidence | Live operational state |
 | Vercel | Production CEO/THELMA web experience built from tested GitHub main | Agent memory or repair authorization |
 | Replit | THELMA Logistics operating companion and future bounded execution workspace | Independent memory, duplicate agent grants, or unverified completion claims |
-| Base44 | Logistics/mobile operational surface and configured agents/connectors after reconnection | Replacing Supabase canon or bypassing approval gates |
+| Base44 | Deferred optional surface; not on the active critical path | Replacing Supabase canon or bypassing approval gates |
 
 ## Production operating model
 
@@ -94,16 +94,18 @@ Frontend clients use only publishable credentials:
 
 Server-side systems may use separate scoped secrets, but service-role, provider and GitHub credentials must never appear in client bundles, source control, chat transcripts, Analyst Memory bodies or ordinary logs.
 
-GitHub execution must use a least-privilege installation credential with repository allow-listing and short-lived tokens. Replit and Base44 must receive only the scopes required for their assigned role.
+GitHub execution must use a least-privilege installation credential with repository allow-listing and short-lived tokens. Replit must receive only the scopes required for its assigned role. Base44 remains deferred unless the CEO restores it to scope.
 
-## Release state at creation
+## Current release state
 
 - PR #31 merged to main: `80dd304160d96ac6d628b65a8af7930046fe34a7`
 - GitHub Quality Gate: run `32900450854` — success
 - Vercel production deployment: `dpl_9hth29V3nY6WuWNbppYimeaHjALN` — READY
 - THELMA Edge Function: `thelma-ai` v2 — ACTIVE, JWT required
-- Replit logistics app: `410249c4-3049-4f7c-b127-db924ec64189` — provisioning
-- Base44: blocked by OAuth reauthentication before app inventory
+- Replit logistics app: `410249c4-3049-4f7c-b127-db924ec64189` — published successfully as deployment `39339cfc-b377-4ebc-bf66-fda5913ed317`
+- Replit public URL: `https://rounded-lumpy-assembly--stevenhenry80.replit.app`
+- Replit end-to-end Supabase/logistics certification: pending
+- Base44: deferred by CEO after repeated OAuth `invalid_grant` failures; removed from the critical path
 - Authenticated THELMA conversation certification: blocked pending authorized CEO sign-in
 - Current observed ledger: 61 active White Blood Cell signals, 0 conversations, 0 messages, 0 repair plans
 
