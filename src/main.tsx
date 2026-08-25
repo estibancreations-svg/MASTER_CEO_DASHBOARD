@@ -14,4 +14,5 @@ import './auth.css';
 import './master.css';
 import './theme.css';
 import './product-ui.css';
+import './analyst.css';
 createRoot(document.getElementById('root')!).render(<StrictMode><AuthGate><GlobalNavigation><App /></GlobalNavigation></AuthGate></StrictMode>);
