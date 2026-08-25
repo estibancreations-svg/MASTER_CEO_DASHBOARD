@@ -1,54 +1,78 @@
 # Architect Accountability and Quality Gate
 
-## Current release status — 2026-08-15
+## Current status — 2026-08-24
 
-**Status: QC HARDENING IN PROGRESS — not production-certified.**
+**Status: CANONICAL RECONSTRUCTION / QC HARDENING — not production-certified.**
 
-The application is deployed and its provider-independent workflows are certified. Builder mode intentionally bypasses login and uses seeded interface records. External provider execution and protected production writes remain disabled until identity is restored and each connector passes activation testing.
+The application is deployed, but deployment availability is not accepted as proof of business-function completion. The August 15 checklist is retained only as historical evidence because authentication, navigation, Fabric behavior, workspace controls, and reconstruction requirements changed after that certification pass.
 
-## Verified
+## Release-bound evidence rule
 
-- Production URL returns HTTP 200 and the latest Vercel production deployment is READY.
-- No Vercel runtime errors were reported in the inspected window.
-- GitHub main contains merged work through PR #24 before this certification branch.
-- Supabase is ACTIVE_HEALTHY and public application tables report RLS enabled.
-- Builder data is explicitly labeled as seeded—not live business performance.
-- Document metadata, accessible icon labels, dialog naming, keyboard focus, reduced-motion handling, and narrow-screen safeguards are included.
-- Rollback-safe internal workflow certification passed for LandWeaver, VisionWeaver, GrantOS, THELMA, EC Integration Fabric, and CMGIO; zero synthetic rows persisted.
-- All six attached production workspaces launch and render their governed builder boundaries.
-- EC Fabric now enforces valid job transitions, authorization, retry exhaustion, dead-letter evidence, ASK-based human requeue, automatic event history, and append-only audit records at the database boundary.
-- Exact iPhone, Android, iPad, and desktop viewport checks show no page-level horizontal overflow; attached workspaces now use the full content column.
-- Mobile primary and icon actions meet the 44 px touch-target baseline; keyboard focus remains visible and inspected contrast samples meet WCAG AA.
-- Builder degradation, empty-state, loading, failure, retry, bounded-retry, dead-letter, and rollback-readiness paths are present and distinguishable.
+Every QC claim must be bound to the exact release it tested. A certification record must identify:
 
-## Remaining release gates
+- Git commit SHA;
+- Vercel deployment ID;
+- Supabase migration/schema state;
+- changed Edge Function names and versions;
+- provider/configuration verification date;
+- automated test/evaluation evidence;
+- primary workflow evidence from request through real output/business side effect;
+- failure/recovery evidence;
+- known limitations and deferred capabilities.
 
-- [ ] Restore required authentication and organization membership enforcement.
-- [ ] Re-test Architect, delegated, denied, expired-session, and sign-out paths.
-- [ ] Enable or document the Supabase leaked-password protection decision.
-- [x] Require JWT verification or an equivalent signed boundary for every externally callable Edge Function.
-- [ ] Run authenticated create, lifecycle-transition, audit, and realtime tests.
-- [ ] Activate providers one at a time with server-side secrets and synthetic preview data.
-- [x] Verify VisionWeaver internal project → scene → review → completion state path.
-- [x] Verify GrantOS internal discovery → evidence → authorization-ready drafting path.
-- [x] Verify LandWeaver internal intake → diligence → financial review → approval path.
-- [x] Verify THELMA internal request → authorization → run → incident-resolution path.
-- [x] Verify EC Fabric job → retry → dead letter → human override, with immutable evidence.
-- [x] Verify CMGIO internal campaign → asset QC → signal action → completion path.
-- [ ] Verify THELMA request → live model routing → sourced response → cost record.
-- [x] Complete iPad, iPhone, Android, desktop viewport, keyboard, focus, contrast, empty, degraded, failure, retry, and rollback-readiness tests.
-- [ ] Complete the database backup/restore drill and physical-device spot check before production certification.
-- [ ] Reconcile runtime status and connection registry after each provider activation.
+If relevant code, schema, policy, Edge Function, provider configuration, or workflow logic changes, earlier evidence becomes **STALE-UNVERIFIED** for the affected capability until re-tested.
+
+## Current verified infrastructure facts
+
+- The production application has an active Vercel deployment path.
+- Supabase is the production database/auth/runtime foundation.
+- EC Fabric durable queues, state transitions, retries, dead-letter handling and audit infrastructure exist.
+- VisionWeaver has active production Edge Functions and provider integration code.
+- Authentication has been restored to the production application, with social-provider buttons guarded by live provider enablement.
+- The repository now contains an automated `Quality Gate` GitHub Actions workflow.
+- `npm run quality` now performs type checks, machine-checkable invariant tests, release-evidence verification and the production build.
+
+These facts certify infrastructure only. They do **not** certify that every named business workflow performs its intended domain work.
+
+## Known reconstruction blockers
+
+- [ ] Replace generic EC Fabric success fallback with explicit registered workflow handlers; unsupported workflows must not report completion.
+- [ ] Implement real THELMA conversation/model routing, sourced response, tool execution and cost evidence.
+- [ ] Reconstruct the full canonical agent organization and capability registry.
+- [ ] Replace generic Master Dashboard modules with their own capability/read/action contracts.
+- [ ] Restore omitted systems and canonical packages identified in the reconstruction audit.
+- [ ] Complete field-level schema reconciliation for every canonical system capability.
+- [ ] Recompute system readiness from evidence rather than legacy percentages.
+- [ ] Revalidate stale recovery/security findings against the live release.
+- [ ] Complete authenticated lifecycle/RLS matrix tests.
+- [ ] Activate and certify external providers one at a time.
+- [ ] Enable or explicitly disposition Supabase leaked-password protection.
+- [ ] Complete backup run and isolated restore drill with RPO/RTO evidence.
+- [ ] Complete physical iPad/iPhone/Android/desktop spot checks against the rebuilt product workflows.
 
 ## Promotion rule
 
-A deployed interface is not a production-certified operating system. Promotion requires evidence across browser → application → API → database/provider → response → audit trail. Seeded, staged, registered, degraded, connected, and production states must remain visibly distinct.
+A deployed interface is not a production-certified operating system. A route returning HTTP 200, a Vercel `READY` state, a queue becoming empty, a database row reaching `completed`, or a synthetic state-machine test is insufficient.
 
+Primary workflow promotion requires:
 
-### Edge Function boundary certification — 2026-08-15
+`SOURCE -> CONTRACT -> IMPLEMENTATION -> AUTHORIZATION -> EXECUTION -> OUTPUT -> VALIDATION -> AUDIT -> FAILURE RECOVERY -> TEST -> RELEASE EVIDENCE`
 
-- `dashboard-data`: platform JWT verification plus server-side user validation, executive `app_metadata.role` authorization, canonical production-origin CORS, and current publishable/secret-key compatibility.
-- `visionweaver-orchestrator`: Vault-backed bearer secret, constant-time digest comparison, method restriction and signed health route.
-- `oauth-callback`: public by protocol, bounded by platform binding, expiring one-time state, atomic consume-before-exchange, method restriction and secure token-storage checks.
+All links applicable to the workflow must be demonstrated for the exact release candidate.
 
-Builder-mode login remains intentionally deferred; this completed gate certifies endpoint boundaries, not full authenticated application launch.
+## Evidence states
+
+Use only:
+
+- `CERTIFIED` — evidence is current and bound to this release.
+- `PARTIAL` — some required evidence exists, but promotion gates remain.
+- `STALE-UNVERIFIED` — previously tested, but relevant implementation/configuration changed.
+- `FAILED` — required evidence disproved the claim.
+- `NOT-IMPLEMENTED` — capability contract exists but executable implementation does not.
+- `NOT-APPLICABLE` — gate does not apply and rationale is recorded.
+
+## Historical note — 2026-08-15
+
+The former QC record reported provider-independent workflow checks, responsive/accessibility checks, database transition tests, and Edge Function boundary work. Those results remain useful historical evidence, but they no longer certify the current release after subsequent authentication, Fabric, THELMA, navigation, workspace, and reconstruction changes.
+
+See `docs/operations/RELEASE-PROMOTION-POLICY.md` for the active promotion policy.
