@@ -1,5 +1,6 @@
 import{PropsWithChildren,useEffect,useMemo,useState}from'react';
 import{ArrowLeft,Bot,ChevronDown,Gauge,Grid3X3,Home,Landmark,Megaphone,PanelTop,Play,Workflow,X}from'lucide-react';
+import ThelmaAIConsole from'./ThelmaAIConsole';
 
 type SystemLink={key:string;name:string;description:string;path:string;icon:any;tag:string};
 const systems:SystemLink[]=[
@@ -11,6 +12,8 @@ const systems:SystemLink[]=[
  {key:'integration-fabric',name:'EC Integration Fabric',description:'Authorize, route, retry and audit production jobs.',path:'/systems/integration-fabric',icon:Workflow,tag:'INFRASTRUCTURE'}
 ];
 
+function currentSystemKey(path:string){if(path.includes('visionweaver'))return'SYS-VISION-001';if(path.includes('landweaver'))return'SYS-LAND-001';if(path.includes('grantos'))return'SYS-GRANT-001';if(path.includes('cmgio'))return'SYS-MKT-001';if(path.includes('integration-fabric'))return'SYS-FABRIC-001';if(path.includes('thelma'))return'SYS-THELMA-001';return'SYS-CEO-001'}
+
 function currentLocation(path:string){
  if(path==='/dashboard'||path.startsWith('/dashboard/'))return{title:'Master Dashboard',systemHome:'/dashboard'};
  if(path.startsWith('/c-suite'))return{title:'C-Suite Command',systemHome:'/c-suite/executive-overview'};
@@ -20,7 +23,7 @@ function currentLocation(path:string){
 }
 
 export default function GlobalNavigation({children}:PropsWithChildren){
- const[path,setPath]=useState(()=>window.location.pathname),[open,setOpen]=useState(false);
+ const[path,setPath]=useState(()=>window.location.pathname),[open,setOpen]=useState(false),[thelmaOpen,setThelmaOpen]=useState(false);
  useEffect(()=>{
   const notify=()=>setPath(window.location.pathname);
   const originalPush=window.history.pushState.bind(window.history),originalReplace=window.history.replaceState.bind(window.history);
@@ -40,6 +43,7 @@ export default function GlobalNavigation({children}:PropsWithChildren){
     <button onClick={()=>go('/dashboard')} className={path.startsWith('/dashboard')?'active':''}><Home/><span>Main Dashboard</span></button>
     {!path.startsWith('/dashboard')&&<button onClick={()=>go(location.systemHome)}><PanelTop/><span>System Home</span></button>}
     <button onClick={()=>go('/c-suite/executive-overview')} className={path.startsWith('/c-suite')?'active':''}><Gauge/><span>C-Suite</span></button>
+    <button className={thelmaOpen?'active':''} onClick={()=>setThelmaOpen(true)}><Bot/><span>Ask THELMA</span></button>
     <button className={open?'active':''} onClick={()=>setOpen(!open)}><Grid3X3/><span>All Systems</span><ChevronDown/></button>
    </nav>
   </header>
@@ -48,6 +52,7 @@ export default function GlobalNavigation({children}:PropsWithChildren){
    <div className="ec-system-grid">{systems.map(({key,name,description,path:target,icon:Icon,tag})=><button key={key} onClick={()=>go(target)} className={path.startsWith(target)?'current':''}><span className="ec-system-icon"><Icon/></span><span className="ec-system-copy"><small>{tag}</small><b>{name}</b><em>{description}</em></span><span className="ec-open-label">Open</span></button>)}</div>
    <div className="ec-switcher-foot"><button onClick={()=>go('/dashboard')}><Home/>Master Dashboard</button><button onClick={()=>go('/c-suite/executive-overview')}><Gauge/>C-Suite Command</button></div>
   </section></div>}
+  {thelmaOpen&&<div className="ec-thelma-overlay" onClick={()=>setThelmaOpen(false)}><section className="ec-thelma-dock" onClick={e=>e.stopPropagation()}><button className="ec-thelma-close" onClick={()=>setThelmaOpen(false)} aria-label="Close THELMA"><X/></button><ThelmaAIConsole contextSystemKey={currentSystemKey(path)}/></section></div>}
   <div className="ec-product-body">{children}</div>
  </div>;
 }
