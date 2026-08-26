@@ -37,9 +37,9 @@ The Ecosystem Scout runs weekly and may search, collect metadata, compare, score
 |---|---|---|
 | OpenAI models | `MODEL_ACTIVE` | Keep model routing and spend policy current. |
 | Claude models | `MODEL_ACTIVE` | Keep model routing and spend policy current. |
-| Codex engineering specialist | `PLANNED` | Deploy a sandboxed server-side Codex SDK/MCP worker with a scoped GitHub App. |
+| Codex engineering specialist | `AWAITING_CREDENTIAL` | Control plane is installed. Add the dedicated `OPENAI_API_KEY` GitHub Actions secret and certify one low-risk dry run. |
 | Figma | `CHATGPT_ONLY` | Use Figma through an officially supported Codex/Claude client first; direct custom THELMA client support requires Figma approval/support or an alternate official API path. |
-| GitHub repair executor | `AWAITING_CREDENTIAL` | Create a least-privilege GitHub App; never use a broad personal token. |
+| GitHub repair executor | `PLANNED` | Manual governed workflow is installed; runtime dispatch remains disabled pending a workload-identity bridge. Never use a broad personal token. |
 | Supabase | `ACTIVE` | Continue RLS, service-role isolation, and evidence logging. |
 | Vercel | `PLANNED` | Add scoped read/verification access; production remains Git + Quality Gate governed. |
 | Replit logistics | `PLANNED` | Complete authenticated Supabase logistics E2E certification. |
@@ -60,6 +60,8 @@ The Ecosystem Scout runs weekly and may search, collect metadata, compare, score
 ## OpenAI and Codex inside THELMA
 
 Use the OpenAI Agents SDK for THELMA’s multi-agent loop, handoffs, guardrails, tracing, and resumable approval state. Use the Codex SDK or Codex as an MCP specialist for coding work. Codex runs server-side against a sandbox and a scoped GitHub App, produces a branch/PR, and cannot merge or deploy until the Quality Gate and CEO policy permit it.
+
+The initial implementation uses the official Codex GitHub Action with a dedicated OpenAI project key. THELMA approvals synchronize into `thelma_code_repair_requests`; the runner enforces approved paths, blocks workflow/database/credential files, runs `npm run quality`, and may only open a repair pull request. See [THELMA Codex Repair Executor](THELMA-CODEX-REPAIR-EXECUTOR.md).
 
 Official references:
 
@@ -100,4 +102,3 @@ The scheduled scan runs Monday at 13:00 UTC. THELMA presents:
 - a separate CEO decision for sandbox evaluation.
 
 No popularity metric alone certifies quality. No weekly discovery can auto-promote into production.
-
