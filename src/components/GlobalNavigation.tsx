@@ -74,6 +74,11 @@ export default function GlobalNavigation({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
+    if (path === '/c-suite/resource-and-usage') setResourceOpen(true);
+    if (path === '/c-suite/intelligence-and-research') setEcosystemOpen(true);
+  }, [path]);
+
+  useEffect(() => {
     if (identity.isBuilder || !identity.user || !supabase) return;
     let cancelled = false;
     (async () => {
