@@ -35,9 +35,9 @@ The Ecosystem Scout runs weekly and may search, collect metadata, compare, score
 
 | Integration | Current state | Next activation gate |
 |---|---|---|
-| OpenAI models | `MODEL_ACTIVE` | Keep model routing and spend policy current. |
+| OpenAI models | `MODEL_ACTIVE` | Use only canonical credential name `OPENAI_API_ACCESS`; keep model routing and spend policy current. |
 | Claude models | `MODEL_ACTIVE` | Keep model routing and spend policy current. |
-| Codex engineering specialist | `AWAITING_CREDENTIAL` | Control plane is installed. Add the dedicated `OPENAI_API_KEY` GitHub Actions secret and certify one low-risk dry run. |
+| Codex engineering specialist | `AWAITING_CREDENTIAL` | Control plane is installed. Add/verify the dedicated `OPENAI_API_ACCESS` GitHub Actions secret and certify one low-risk dry run. |
 | Figma | `CHATGPT_ONLY` | Use Figma through an officially supported Codex/Claude client first; direct custom THELMA client support requires Figma approval/support or an alternate official API path. |
 | GitHub repair executor | `PLANNED` | Manual governed workflow is installed; runtime dispatch remains disabled pending a workload-identity bridge. Never use a broad personal token. |
 | Supabase | `ACTIVE` | Continue RLS, service-role isolation, and evidence logging. |
@@ -61,7 +61,7 @@ The Ecosystem Scout runs weekly and may search, collect metadata, compare, score
 
 Use the OpenAI Agents SDK for THELMA’s multi-agent loop, handoffs, guardrails, tracing, and resumable approval state. Use the Codex SDK or Codex as an MCP specialist for coding work. Codex runs server-side against a sandbox and a scoped GitHub App, produces a branch/PR, and cannot merge or deploy until the Quality Gate and CEO policy permit it.
 
-The initial implementation uses the official Codex GitHub Action with a dedicated OpenAI project key. THELMA approvals synchronize into `thelma_code_repair_requests`; the runner enforces approved paths, blocks workflow/database/credential files, runs `npm run quality`, and may only open a repair pull request. See [THELMA Codex Repair Executor](THELMA-CODEX-REPAIR-EXECUTOR.md).
+The initial implementation uses the official Codex GitHub Action with a dedicated OpenAI project credential stored under the canonical secret name `OPENAI_API_ACCESS`. THELMA approvals synchronize into `thelma_code_repair_requests`; the runner enforces approved paths, blocks workflow/database/credential files, runs `npm run quality`, and may only open a repair pull request. See [THELMA Codex Repair Executor](THELMA-CODEX-REPAIR-EXECUTOR.md).
 
 Official references:
 
