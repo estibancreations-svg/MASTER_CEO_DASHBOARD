@@ -1,0 +1,125 @@
+{
+  "report_version": "1.0-premerge",
+  "generated_at": "2026-08-27T22:00:00Z",
+  "repository": "estibancreations-svg/MASTER_CEO_DASHBOARD",
+  "canonical_repository": "estibancreations-svg/Master-System-Buildout",
+  "base_sha": "e1bd08286e769b3bcfac5f891464e482cc3bfbe8",
+  "release_branch": "release/enterprise-recalibration-2026-08-27",
+  "release_sha": "92220ac9553608646c2f50b76484cc5d73e246c6",
+  "main_sha_after_merge": null,
+  "pr_number": null,
+  "quality_gate": {
+    "status": "PENDING",
+    "required_steps": ["npm ci","npm run lint","npm test","npm run verify:release","npm run build"],
+    "run_id": null
+  },
+  "deployment": {
+    "status": "PENDING_FINAL_RELEASE",
+    "provider": "Vercel",
+    "production_url": "https://master-ceo-dashboard.vercel.app/",
+    "deployment_id": null,
+    "deployed_sha": null
+  },
+  "governance": {
+    "base_ten": "IMPLEMENTED_UNVERIFIED",
+    "authority_owner": "THE_ARCHITECT",
+    "reserved_authority": 60,
+    "system_scope": 100,
+    "final_decision_owner": "THE_ARCHITECT",
+    "recommendations_allowed": true,
+    "challenge_allowed": true,
+    "silent_override_allowed": false,
+    "emergency_bypass_owner": "THE_ARCHITECT",
+    "repository_ruleset": "BLOCKED_EXTERNAL_CONNECTOR_LIMITATION"
+  },
+  "branches": [
+    {"name":"resource-intelligence-routing","disposition":"INCORPORATED_IN_RELEASE","known_head":"62eab315333b630ea419fe16aed4b277b41dbefd"},
+    {"name":"release/enterprise-recalibration-2026-08-27","disposition":"CURRENT_RELEASE","known_head":"92220ac9553608646c2f50b76484cc5d73e246c6"}
+  ],
+  "systems": [
+    {"system_key":"SYS-DASH-001","name":"Master Dashboard","state":"PARTIAL","launch_route":"/dashboard"},
+    {"system_key":"SYS-CEO-001","name":"CEO Command Center","state":"PARTIAL","launch_route":"/c-suite/executive-overview"},
+    {"system_key":"SYS-THELMA-001","name":"THELMA","state":"PARTIAL","launch_route":"/systems/thelma"},
+    {"system_key":"SYS-FABRIC-001","name":"EC Integration Fabric","state":"PARTIAL","launch_route":"/systems/integration-fabric"},
+    {"system_key":"SYS-VISION-001","name":"VisionWeaver","state":"PARTIAL","launch_route":"/systems/visionweaver"},
+    {"system_key":"SYS-LAND-001","name":"LandWeaver","state":"PARTIAL","launch_route":"/systems/landweaver"},
+    {"system_key":"SYS-GRANT-001","name":"GrantOS","state":"PARTIAL","launch_route":"/systems/grantos"},
+    {"system_key":"SYS-CMGIO-001","name":"CMGIO","state":"PARTIAL","launch_route":"/systems/cmgio-map"},
+    {"system_key":"SYS-ADS-001","name":"Master Advertising Platform","state":"RECOVERY_REQUIRED","launch_route":null},
+    {"system_key":"SYS-AGENCYFLOW-001","name":"AgencyFlow","state":"RECOVERY_REQUIRED","launch_route":null},
+    {"system_key":"SYS-CLIMATE-001","name":"ClimateTrack Pro","state":"RECOVERY_REQUIRED","launch_route":null},
+    {"system_key":"SYS-PUBLISH-001","name":"Publishing & Media Studio","state":"SPECIFICATION_ONLY","launch_route":null},
+    {"system_key":"SYS-IAM-001","name":"IAM / Self-Help","state":"NOT_IMPLEMENTED","launch_route":null},
+    {"system_key":"SYS-TELECOM-001","name":"Telecommunications","state":"NOT_IMPLEMENTED","launch_route":null},
+    {"system_key":"SYS-ASSESS-001","name":"Assessment Suite","state":"NOT_IMPLEMENTED","launch_route":null},
+    {"system_key":"SYS-TRAINING-001","name":"AI Mastery / Training","state":"PARTIAL","launch_route":null},
+    {"system_key":"SYS-QC-001","name":"Quality Control Agency","state":"PARTIAL","launch_route":null}
+  ],
+  "tests": [
+    {"name":"openai-access-name.test.mjs","status":"PENDING_RELEASE_RUN"},
+    {"name":"gemini-connection-name.test.mjs","status":"PENDING_RELEASE_RUN"},
+    {"name":"enterprise-recalibration.test.mjs","status":"PENDING_RELEASE_RUN"}
+  ],
+  "migrations": [
+    "20260827030544_resource_intelligence_core.sql",
+    "20260827030651_resource_intelligence_seed_and_pricing_v2.sql",
+    "20260827030746_resource_sync_schedule_and_doctrine.sql",
+    "20260827031312_resource_model_cost_helpers.sql",
+    "20260827031739_resource_usage_automatic_bridges.sql",
+    "20260827031807_model_tool_research_intelligence.sql",
+    "20260827041518_gemini_connection_and_enterprise_ecosystem_alignment_v3.sql",
+    "20260827051656_ecosystem_v31_partitioned_schedule_and_provider_truth.sql",
+    "20260827220000_base_ten_and_social_commerce_runtime.sql"
+  ],
+  "edge_functions": [
+    {"name":"thelma-ai","status":"SOURCE_RECONCILED_DEPLOYMENT_RECHECK_REQUIRED"},
+    {"name":"resource-intelligence","status":"SOURCE_RECONCILED_DEPLOYMENT_RECHECK_REQUIRED"},
+    {"name":"ecosystem-watch","status":"SOURCE_RECONCILED_DEPLOYMENT_RECHECK_REQUIRED"},
+    {"name":"visionweaver-orchestrator","status":"SOURCE_RECONCILED_DEPLOYMENT_RECHECK_REQUIRED"}
+  ],
+  "providers": [
+    {"provider":"runway","credential_name":"RUNWAY_API_ACCESS","state":"PREVIOUSLY_ACTIVE_RECHECK_REQUIRED"},
+    {"provider":"openai","credential_name":"OPENAI_API_ACCESS","state":"CREDENTIAL_VALID_INFERENCE_PREVIOUSLY_DEPLETED"},
+    {"provider":"gemini","credential_name":"GEMINI_CONNECTION","state":"CREDENTIAL_VALID_BILLING_REQUIRED_AT_LAST_TEST"}
+  ],
+  "resource_accounts": [],
+  "model_status": [],
+  "ecosystem_scans": [
+    {"version":"v3.1","schedule_utc":["13:00","13:02","13:04"],"days":["Monday","Thursday"],"state":"IMPLEMENTED_REVERIFY_AFTER_RELEASE"}
+  ],
+  "social_reporting": {
+    "state": "PARTIAL",
+    "tables": ["social_metric_snapshots","social_attribution_events","social_weekly_reports","social_monthly_reports","social_forecasts"],
+    "weekly_schedule_utc": "13:10 Monday/Thursday",
+    "monthly_schedule_utc": "13:20 day 1",
+    "source_adapters": "NOT_IMPLEMENTED"
+  },
+  "accounting_attribution": {
+    "state": "PARTIAL",
+    "correlation_distinguished_from_attribution": true,
+    "finance_system_integration": "NOT_IMPLEMENTED"
+  },
+  "security_findings": [
+    {"finding":"main branch/rulesets not writable from current connector","severity":"high","state":"BLOCKED_EXTERNAL_ACTION"},
+    {"finding":"high/critical THELMA approvals require architect role in new migration","severity":"governance","state":"IMPLEMENTED_UNVERIFIED"}
+  ],
+  "blockers": [
+    "exact release SHA Quality Gate pending",
+    "final merge/deployment proof pending",
+    "GitHub ruleset activation requires external GitHub UI/API action",
+    "OpenAI funding may remain depleted",
+    "Gemini billing/prepayment remains required at last test",
+    "social/ad/commerce source adapters not yet implemented",
+    "authenticated THELMA E2E proof pending",
+    "canonical Master-System-Buildout system registry reconciliation pending"
+  ],
+  "architect_actions": [
+    "activate protected-main/ruleset policy externally if connector still cannot write it",
+    "restore provider billing when OpenAI/Gemini inference is desired"
+  ],
+  "evidence": [
+    "Issue #39 independent verifier gate",
+    "Master-System-Buildout PR #12 Base Ten and Social-Commerce canon",
+    "release branch diff from e1bd08286e769b3bcfac5f891464e482cc3bfbe8"
+  ]
+}
