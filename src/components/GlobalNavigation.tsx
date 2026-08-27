@@ -6,31 +6,39 @@ import EcosystemIntelligencePanel from './EcosystemIntelligencePanel';
 import { useIdentity } from '../auth/IdentityContext';
 import { supabase } from '../lib/supabase';
 
-type SystemLink = { key: string; name: string; description: string; path: string; icon: any; tag: string };
+type SystemState = 'OPERATIONAL' | 'PARTIAL' | 'BLOCKED' | 'SPECIFICATION_ONLY' | 'RECOVERY_REQUIRED' | 'NOT_IMPLEMENTED';
+type SystemLink = { key: string; systemKey: string; name: string; description: string; path?: string; icon: any; tag: string; state: SystemState };
+
 const systems: SystemLink[] = [
-  { key: 'visionweaver', name: 'VisionWeaver', description: 'Create images, video, audio, books and movies.', path: '/systems/visionweaver', icon: Play, tag: 'CREATE' },
-  { key: 'landweaver', name: 'LandWeaver', description: 'Research, score and manage property opportunities.', path: '/systems/landweaver', icon: Landmark, tag: 'PROPERTY' },
-  { key: 'grantos', name: 'GrantOS', description: 'Manage funding opportunities, evidence and submissions.', path: '/systems/grantos', icon: PanelTop, tag: 'FUNDING' },
-  { key: 'thelma', name: 'THELMA', description: 'Dispatch governed work to agents and monitor execution.', path: '/systems/thelma', icon: Bot, tag: 'OPERATIONS' },
-  { key: 'cmgio-map', name: 'CMGIO', description: 'Plan campaigns, monitor signals and optimize growth.', path: '/systems/cmgio-map', icon: Megaphone, tag: 'GROWTH' },
-  { key: 'integration-fabric', name: 'EC Integration Fabric', description: 'Authorize, route, retry and audit production jobs.', path: '/systems/integration-fabric', icon: Workflow, tag: 'INFRASTRUCTURE' }
+  { key: 'dashboard', systemKey: 'SYS-DASH-001', name: 'Master Dashboard', description: 'Enterprise operating overview, navigation and system launcher.', path: '/dashboard', icon: Home, tag: 'OPERATIONS', state: 'PARTIAL' },
+  { key: 'ceo', systemKey: 'SYS-CEO-001', name: 'CEO Command Center', description: 'Executive governance, decisions, risk, finance and strategic intelligence.', path: '/c-suite/executive-overview', icon: Gauge, tag: 'EXECUTIVE', state: 'PARTIAL' },
+  { key: 'thelma', systemKey: 'SYS-THELMA-001', name: 'THELMA', description: 'Governed operating intelligence, agents, repairs, resources and White Blood Cells.', path: '/systems/thelma', icon: Bot, tag: 'INTELLIGENCE', state: 'PARTIAL' },
+  { key: 'integration-fabric', systemKey: 'SYS-FABRIC-001', name: 'EC Integration Fabric', description: 'Authorize, route, retry and audit deterministic production jobs.', path: '/systems/integration-fabric', icon: Workflow, tag: 'INFRASTRUCTURE', state: 'PARTIAL' },
+  { key: 'visionweaver', systemKey: 'SYS-VISION-001', name: 'VisionWeaver', description: 'Creative production for images, video, audio, books and movies.', path: '/systems/visionweaver', icon: Play, tag: 'CREATE', state: 'PARTIAL' },
+  { key: 'landweaver', systemKey: 'SYS-LAND-001', name: 'LandWeaver', description: 'GIS/property research, scoring and opportunity management.', path: '/systems/landweaver', icon: Landmark, tag: 'PROPERTY', state: 'PARTIAL' },
+  { key: 'grantos', systemKey: 'SYS-GRANT-001', name: 'GrantOS', description: 'Funding discovery, evidence, drafting, submission and compliance.', path: '/systems/grantos', icon: PanelTop, tag: 'FUNDING', state: 'PARTIAL' },
+  { key: 'cmgio-map', systemKey: 'SYS-CMGIO-001', name: 'CMGIO', description: 'Marketing and growth intelligence, campaigns, signals and optimization.', path: '/systems/cmgio-map', icon: Megaphone, tag: 'GROWTH', state: 'PARTIAL' },
+  { key: 'ads', systemKey: 'SYS-ADS-001', name: 'Master Advertising Platform', description: 'Advertising strategy, creative, testing, spend and campaign execution.', icon: Megaphone, tag: 'ADVERTISING', state: 'RECOVERY_REQUIRED' },
+  { key: 'agencyflow', systemKey: 'SYS-AGENCYFLOW-001', name: 'AgencyFlow', description: 'Agency operations, CRM, clients, communications, socials and workflow.', icon: PanelTop, tag: 'AGENCY', state: 'RECOVERY_REQUIRED' },
+  { key: 'climate', systemKey: 'SYS-CLIMATE-001', name: 'ClimateTrack Pro', description: 'Climate, sustainability, environmental intelligence and reporting.', icon: PanelTop, tag: 'CLIMATE', state: 'RECOVERY_REQUIRED' },
+  { key: 'publishing', systemKey: 'SYS-PUBLISH-001', name: 'Publishing & Media Studio', description: 'Books, EPUB/PDF, audiobook, media packaging and distribution control.', icon: PanelTop, tag: 'PUBLISH', state: 'SPECIFICATION_ONLY' },
+  { key: 'iam', systemKey: 'SYS-IAM-001', name: 'IAM / Self-Help', description: 'Identity self-service, access, connection health and governed recovery.', icon: PanelTop, tag: 'IDENTITY', state: 'NOT_IMPLEMENTED' },
+  { key: 'telecom', systemKey: 'SYS-TELECOM-001', name: 'Telecommunications', description: 'Voice, SIP, SMS, routing, transcription and communications operations.', icon: PanelTop, tag: 'COMMS', state: 'NOT_IMPLEMENTED' },
+  { key: 'assessment', systemKey: 'SYS-ASSESS-001', name: 'Assessment Suite', description: 'Assessments, scoring, longitudinal intelligence and capability mapping.', icon: PanelTop, tag: 'ASSESS', state: 'NOT_IMPLEMENTED' },
+  { key: 'training', systemKey: 'SYS-TRAINING-001', name: 'AI Mastery / Training', description: 'Curriculum, tutoring, exercises, mastery evidence and certificates.', icon: PanelTop, tag: 'TRAINING', state: 'PARTIAL' },
+  { key: 'qc', systemKey: 'SYS-QC-001', name: 'Quality Control Agency', description: 'Independent verification, regression, release evidence and system certification.', icon: PanelTop, tag: 'QUALITY', state: 'PARTIAL' }
 ];
 
 function currentSystemKey(path: string) {
-  if (path.includes('visionweaver')) return 'SYS-VISION-001';
-  if (path.includes('landweaver')) return 'SYS-LAND-001';
-  if (path.includes('grantos')) return 'SYS-GRANT-001';
-  if (path.includes('cmgio')) return 'SYS-CMGIO-001';
-  if (path.includes('integration-fabric')) return 'SYS-FABRIC-001';
-  if (path.includes('thelma')) return 'SYS-THELMA-001';
-  return 'SYS-CEO-001';
+  const item = systems.find(system => system.path && path.startsWith(system.path));
+  return item?.systemKey || 'SYS-CEO-001';
 }
 
 function currentLocation(path: string) {
   if (path === '/dashboard' || path.startsWith('/dashboard/')) return { title: 'Master Dashboard', systemHome: '/dashboard' };
   if (path.startsWith('/c-suite')) return { title: 'C-Suite Command', systemHome: '/c-suite/executive-overview' };
-  const item = systems.find(system => path.startsWith(system.path));
-  if (item) return { title: item.name, systemHome: item.path };
+  const item = systems.find(system => system.path && path.startsWith(system.path));
+  if (item?.path) return { title: item.name, systemHome: item.path };
   return { title: 'Estiban Creations', systemHome: '/dashboard' };
 }
 
@@ -114,15 +122,18 @@ export default function GlobalNavigation({ children }: PropsWithChildren) {
     {open && <div className="ec-system-overlay" onClick={() => setOpen(false)}>
       <section className="ec-system-switcher" onClick={event => event.stopPropagation()}>
         <div className="ec-switcher-head">
-          <div><small>WORKSPACES</small><h2>Where do you want to work?</h2><p>Every production system is one click away.</p></div>
+          <div><small>ENTERPRISE REGISTRY · 17 SYSTEMS</small><h2>Where do you want to work?</h2><p>Executable systems open directly. Rebuilding systems remain visible with their truthful current state.</p></div>
           <button onClick={() => setOpen(false)} aria-label="Close"><X /></button>
         </div>
         <div className="ec-system-grid">
-          {systems.map(({ key, name, description, path: target, icon: Icon, tag }) => <button key={key} onClick={() => go(target)} className={path.startsWith(target) ? 'current' : ''}>
-            <span className="ec-system-icon"><Icon /></span>
-            <span className="ec-system-copy"><small>{tag}</small><b>{name}</b><em>{description}</em></span>
-            <span className="ec-open-label">Open</span>
-          </button>)}
+          {systems.map(({ key, name, description, path: target, icon: Icon, tag, state }) => {
+            const launchable = Boolean(target);
+            return <button key={key} onClick={() => target && go(target)} disabled={!launchable} className={target && path.startsWith(target) ? 'current' : ''} aria-disabled={!launchable}>
+              <span className="ec-system-icon"><Icon /></span>
+              <span className="ec-system-copy"><small>{tag} · {state}</small><b>{name}</b><em>{description}</em></span>
+              <span className="ec-open-label">{launchable ? 'Open' : state}</span>
+            </button>;
+          })}
         </div>
         <div className="ec-switcher-foot">
           <button onClick={() => go('/dashboard')}><Home />Master Dashboard</button>
