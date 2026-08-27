@@ -6,9 +6,11 @@
 
 ## Non-negotiable rule
 
-Do not paste API keys into ChatGPT, GitHub, screenshots, email, browser code, or any Vercel variable beginning with `VITE_`. Provider keys belong in **Supabase Dashboard → Master Dashboard project → Database → Vault → Secrets**. Update the existing named slot; do not create a differently named duplicate.
+Do not paste API credentials into ChatGPT, GitHub, screenshots, email, browser code, or any Vercel variable beginning with `VITE_`. Provider credentials belong in **Supabase Dashboard → Master Dashboard project → Database → Vault → Secrets** or the approved Edge Function secret store. Update the existing named slot; do not create a differently named duplicate.
 
-After installing keys, report only the slot names completed—for example, “`OPENAI_API_KEY` installed.” Never send the values.
+For OpenAI, the canonical slot is **`OPENAI_API_ACCESS`**. The retired KEY-based OpenAI name must not be used in active runtime code, workflows, registries, instructions, or new environments.
+
+After installing credentials, report only the slot names completed—for example, “`OPENAI_API_ACCESS` installed.” Never send the values.
 
 ## Installation sequence
 
@@ -16,16 +18,16 @@ After installing keys, report only the slot names completed—for example, “`O
 2. Create a dedicated Estiban Creations server-side credential.
 3. Apply the smallest available scopes, project restrictions, monthly budget and usage alerts.
 4. Copy the value once.
-5. Open Supabase Vault and update the matching existing secret name.
+5. Open Supabase Vault or the approved Edge Function secret store and update the matching existing secret name.
 6. Delete the value from clipboard history, Notes, downloads and screenshots.
 7. Leave the connector staged. Health, cost, privacy, fallback and kill-switch tests come next.
 
 ## AI and model providers
 
-| Order | Provider site | Vault slot | Intended use |
+| Order | Provider site | Vault/secret slot | Intended use |
 | ---: | --- | --- | --- |
 | 1 | [Google AI Studio API Keys](https://aistudio.google.com/app/apikey) | `GEMINI_API_KEY` | THELMA multimodal lane and VisionWeaver planning/image work |
-| 2 | [OpenAI API Keys](https://platform.openai.com/api-keys) | `OPENAI_API_KEY` | Direct OpenAI reasoning/tool lane |
+| 2 | [OpenAI API Keys](https://platform.openai.com/api-keys) | `OPENAI_API_ACCESS` | Direct OpenAI reasoning/tool lane and governed Codex repair executor |
 | 3 | [OpenRouter Keys](https://openrouter.ai/settings/keys) | `OPENROUTER_API_KEY` | Separate multi-provider gateway and fallback route |
 | 4 | [Anthropic Console](https://console.anthropic.com/settings/keys) | `ANTHROPIC_API_KEY` | Claude reasoning/review lane |
 | 5 | [DeepSeek Platform](https://platform.deepseek.com/api_keys) | `DEEPSEEK_API_KEY` | Direct DeepSeek reasoning lane |
@@ -37,7 +39,7 @@ After installing keys, report only the slot names completed—for example, “`O
 | 11 | [ElevenLabs API Keys](https://elevenlabs.io/app/settings/api-keys) | `ELEVENLABS_API_KEY` | Voice generation; use a restricted key and credit quota |
 | 12 | [Honcho documentation](https://honcho.dev/docs) | `HONCHO_API_KEY` | Optional managed memory; not required for owned memory |
 
-OpenAI and OpenRouter are separate services, accounts, billing systems and Vault slots.
+OpenAI and OpenRouter are separate services, accounts, billing systems and secret slots.
 
 ## Communications
 
@@ -69,9 +71,9 @@ The registry also includes blank insurance-provider, gas-station/fuel-partner an
 
 ## Credentials that are not provider uploads
 
-- `VISIONWEAVER_CRON_SECRET` is an internal signed-worker boundary. Do not replace it with a model key.
+- `VISIONWEAVER_CRON_SECRET` is an internal signed-worker boundary. Do not replace it with a model credential.
 - Supabase browser configuration uses only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
-- Database passwords, service-role/secret keys and provider keys never belong in browser variables.
+- Database passwords, service-role/secret values and provider credentials never belong in browser variables.
 - The database-backup connection string is handled separately under the recovery runbook.
 
 ## Post-install activation order

@@ -18,14 +18,15 @@ Failures stay explicit: `TEST_FAILED`, `QUALITY_GATE_FAILED`, `FAILED`, `BLOCKED
 
 ## Credential boundaries
 
-- OpenAI: dedicated project key stored as GitHub Actions secret `OPENAI_API_KEY`.
+- OpenAI: dedicated project credential stored as GitHub Actions secret `OPENAI_API_ACCESS`.
 - GitHub: job-scoped `${{ github.token }}` is introduced only after Codex exits, then used to create a repair branch and PR.
 - No personal access token is stored in Supabase or exposed to Codex.
 - No credential is passed to browser code, ordinary database tables, prompts, logs, or artifacts.
+- `OPENAI_API_ACCESS` is the canonical OpenAI credential name. The retired KEY-based name must not be used by active runtime code, workflows, provider registries, or instructions.
 
 ## Activation checklist
 
-1. Install the dedicated key as repository secret `OPENAI_API_KEY`.
+1. Install the dedicated credential as repository secret `OPENAI_API_ACCESS`.
 2. Select an approved low-risk request whose paths are limited to `src/`, `tests/`, or `docs/`.
 3. Dispatch `THELMA Codex Repair Executor` using its request UUID, approval UUID, acceptance criteria, allowed paths, and exact `CEO_APPROVED` acknowledgement.
 4. Confirm the runner rejects forbidden paths and runs `npm run quality`.
@@ -38,4 +39,3 @@ Failures stay explicit: `TEST_FAILED`, `QUALITY_GATE_FAILED`, `FAILED`, `BLOCKED
 - [Codex GitHub Action](https://developers.openai.com/codex/github-action)
 - [Codex SDK](https://learn.chatgpt.com/docs/codex-sdk)
 - [Supabase API security](https://supabase.com/docs/guides/api/securing-your-api)
-

@@ -70,7 +70,7 @@ jobs:
         id: codex
         uses: openai/codex-action@v1
         with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_ACCESS }}
           model: gpt-5.6-sol
           effort: high
           sandbox: workspace-write
@@ -118,4 +118,3 @@ jobs:
           gh auth setup-git
           git push --set-upstream origin "$BRANCH_NAME"
           gh pr create --base main --head "$BRANCH_NAME" --title "THELMA repair: ${REPAIR_TITLE:0:100}" --body "Repair request: ${REQUEST_ID}\nCEO approval: ${APPROVAL_REFERENCE}\n\nThis PR was prepared in a bounded Codex workspace. It may not merge until the repository Quality Gate passes and the CEO merge policy permits it. Deployment and VERITAS verification remain separate evidence gates."
-
