@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
       });
     }
     if (isHealth) {
-      const names = ['ANTHROPIC_API_KEY', 'RUNWAY_API_ACCESS', 'KIE_API_KEY', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY'];
+      const names = ['ANTHROPIC_API_KEY', 'RUNWAY_API_ACCESS', 'KIE_API_KEY', 'GEMINI_CONNECTION', 'OPENROUTER_API_KEY'];
       const status = {};
       for (const n of names) {
         const v = await secret(n);
