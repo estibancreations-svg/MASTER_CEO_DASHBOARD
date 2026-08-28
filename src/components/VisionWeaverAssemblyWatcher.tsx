@@ -9,8 +9,8 @@ export default function VisionWeaverAssemblyWatcher() {
   const lastFailure = useRef(new Map<string, number>());
 
   useEffect(() => {
+    if (!supabase) return;
     const client = supabase;
-    if (!client) return;
     let active = true;
 
     async function assembleReadySequences() {
