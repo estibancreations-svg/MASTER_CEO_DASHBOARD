@@ -12,6 +12,7 @@ function json(res, status, body) {
 
 function runFfmpeg(args) {
   return new Promise((resolve, reject) => {
+    if (!ffmpegPath) return reject(new Error('ffmpeg runtime is unavailable'));
     const child = spawn(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'pipe'] });
     let stderr = '';
     child.stderr.on('data', (chunk) => { stderr += String(chunk).slice(-12000); });
@@ -29,12 +30,15 @@ function safeConcatLine(url) {
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
-    return json(res, 200, {
-      ok: true,
+    let binaryReady = false;
+    try { binaryReady = Boolean(ffmpegPath && (await fs.stat(ffmpegPath)).isFile()); } catch (_) {}
+    return json(res, binaryReady ? 200 : 503, {
+      ok: binaryReady,
       service: 'visionweaver-master-assembler',
       mode: 'ffmpeg_stream_copy',
       max_segments: 20,
-      reencode: false
+      reencode: false,
+      binary_ready: binaryReady
     });
   }
   if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method_not_allowed' });
@@ -83,8 +87,8 @@ export default async function handler(req, res) {
     return json(res, 409, { ok: false, error: 'durable_segment_copy_missing' });
   }
 
-  const paths = children.map((item) => item.storage_paths[0]);
-  const { data: signed, error: signedError } = await supabase.storage.from('visionweaver-outputs').createSignedUrls(paths, 1800);
+  const sourcePaths = children.map((item) => item.storage_paths[0]);
+  const { data: signed, error: signedError } = await supabase.storage.from('visionweaver-outputs').createSignedUrls(sourcePaths, 1800);
   if (signedError || !signed || signed.some((item) => !item.signedUrl)) {
     return json(res, 500, { ok: false, error: signedError?.message || 'could_not_sign_segments' });
   }
@@ -108,10 +112,10 @@ export default async function handler(req, res) {
     const stat = await fs.stat(masterPath);
     if (!stat.size) throw new Error('assembled master is empty');
     const buffer = await fs.readFile(masterPath);
-    const storagePath = `${user.id}/${parent.project_id}/masters/${parent.id}.mp4`;
+    const storagePath = `${user.id}/${parent.project_id}/masters/${parent.id}-${Date.now()}.mp4`;
     const { error: uploadError } = await supabase.storage.from('visionweaver-outputs').upload(storagePath, buffer, {
       contentType: 'video/mp4',
-      upsert: true
+      upsert: false
     });
     if (uploadError) throw new Error(`master upload failed: ${uploadError.message}`);
 
@@ -124,11 +128,14 @@ export default async function handler(req, res) {
         reencoded: false,
         segment_count: children.length,
         master_storage_path: storagePath,
+        source_storage_paths: sourcePaths,
         bytes: stat.size,
         assembled_at: new Date().toISOString()
       }
     };
-    const existingPaths = Array.isArray(parent.storage_paths) ? parent.storage_paths.filter((item) => item !== storagePath) : [];
+    const existingPaths = Array.isArray(parent.storage_paths)
+      ? parent.storage_paths.filter((item) => !String(item).includes(`/${parent.project_id}/masters/`))
+      : [];
     const { error: parentUpdateError } = await supabase.from('vw_generations').update({
       storage_paths: [storagePath, ...existingPaths],
       result,
@@ -136,7 +143,7 @@ export default async function handler(req, res) {
     }).eq('id', parent.id).eq('owner_id', user.id);
     if (parentUpdateError) throw new Error(`generation update failed: ${parentUpdateError.message}`);
 
-    await supabase.from('vw_assets').insert({
+    const { error: assetError } = await supabase.from('vw_assets').insert({
       project_id: parent.project_id,
       generation_id: parent.id,
       owner_id: user.id,
@@ -145,6 +152,7 @@ export default async function handler(req, res) {
       storage_path: storagePath,
       metadata: { role: 'master', strategy: 'ffmpeg_stream_copy', segment_count: children.length, bytes: stat.size }
     });
+    if (assetError) throw new Error(`master asset record failed: ${assetError.message}`);
 
     const { data: masterSigned, error: masterSignedError } = await supabase.storage.from('visionweaver-outputs').createSignedUrl(storagePath, 3600);
     if (masterSignedError) throw new Error(`master signing failed: ${masterSignedError.message}`);
