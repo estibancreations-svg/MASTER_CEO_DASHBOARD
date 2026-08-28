@@ -9,13 +9,23 @@ const watcher = readFileSync('src/components/VisionWeaverAssemblyWatcher.tsx', '
 const assembler = readFileSync('api/visionweaver-assemble.js', 'utf8');
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 
-test('VisionWeaver single-shot video supports current Runway Seedance 2.5 duration limits', () => {
-  assert.match(studio, /RUNWAY_LONG_VIDEO_MODEL = 'seedance2_5'/);
-  assert.match(studio, /Math\.max\(4, Math\.min\(30, Number\(parameters\.duration\) \|\| 5\)\)/);
-  assert.match(studio, /runway_seedance2_5: \{ min: 4, max: 30 \}/);
+test('VisionWeaver Studio source preserves the active duration-aware Runway production contract', () => {
+  assert.match(studio, /SHORT_PROVIDER_SHOT_MAX_SECONDS = 10/);
+  assert.match(studio, /LONG_FORM_PROVIDER_SHOT_MAX_SECONDS = 30/);
+  assert.match(studio, /boundedInteger\(totalSeconds, 10, 5, 600\)/);
+  assert.match(studio, /runway_long_video_model', 'seedance2_5'/);
+  assert.match(studio, /operation: 'duration_aware_sequence'/);
 });
 
-test('VisionWeaver long-form scenes use strict sequential video extension', () => {
+test('VisionWeaver Studio source preserves sequential extend continuity', () => {
+  assert.match(studio, /extend_from_generation_id/);
+  assert.match(studio, /promptVideo: continuation\.url/);
+  assert.match(studio, /mode: 'extend'/);
+  assert.match(studio, /if \(!continuation\.ready\) return/);
+  assert.match(studio, /deliverable_state: resolved === total && total > 0 \? 'sequence_ready' : 'rendering'/);
+});
+
+test('VisionWeaver project orchestrator uses strict sequential video extension', () => {
   assert.match(orchestrator, /RUNWAY_MODEL = 'seedance2_5'/);
   assert.match(orchestrator, /promptVideo: predecessor\.video_url/);
   assert.match(orchestrator, /mode: 'extend'/);
