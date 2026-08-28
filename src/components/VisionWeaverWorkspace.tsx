@@ -18,6 +18,8 @@ type StudioMode = 'image' | 'video' | 'audio' | 'book' | 'movie';
 type LiveGeneration = {
   id: string; project_id: string; media_type: StudioMode; status: string; prompt: string;
   model: string; error?: string | null; result?: Record<string, unknown>; playable_urls?: string[];
+  progress?: { complete: number; failed: number; total: number } | null;
+  children?: Array<{ id: string; status: string; sequence_index?: number; playable_urls?: string[] }>;
   created_at: string;
 };
 type StudioHealth = {
@@ -45,7 +47,7 @@ const nav = [
 ] as const;
 
 const modes: { id: StudioMode; label: string; icon: typeof Film; models: string[]; description: string }[] = [
-  { id: 'video', label: 'Video', icon: Film, models: ['Auto route · Runway → Kling'], description: 'Generate text-to-video shots with durable jobs, automatic provider failover and output tracking.' },
+  { id: 'video', label: 'Video', icon: Film, models: ['Auto route · Runway → Kling'], description: 'Create 5-second shots through 10-minute productions. Long-form jobs are split into sequential Runway Seedance segments and can extend each completed shot into the next.' },
   { id: 'image', label: 'Image', icon: Image, models: ['Auto route · Runway → Kling'], description: 'Create production stills with automatic provider failover and private output storage.' },
   { id: 'audio', label: 'Audio', icon: Mic2, models: ['Auto route · ElevenLabs → Runway'], description: 'Generate sound effects and atmospheres with durable private output storage.' },
   { id: 'movie', label: 'Movie', icon: Clapperboard, models: ['VisionWeaver Movie Pipeline · resilient route'], description: 'Create a treatment, characters, shot plan, audio plan and delivery package.' },
@@ -84,6 +86,12 @@ const starterPrompts: Record<StudioMode, string> = {
   book: 'Turn this idea into an outline, chapter plan, manuscript and publishing package.'
 };
 
+const videoDurationOptions = [
+  ['5', '5 seconds'], ['10', '10 seconds'], ['15', '15 seconds'], ['30', '30 seconds'],
+  ['45', '45 seconds'], ['60', '1 minute'], ['90', '1½ minutes'], ['120', '2 minutes'],
+  ['300', '5 minutes'], ['600', '10 minutes']
+] as const;
+
 function readLocal() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
 }
@@ -106,7 +114,7 @@ export default function VisionWeaverWorkspace() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [agentLog, setAgentLog] = useState<string[]>([]);
-  const [form, setForm] = useState({ title: '', concept: '', scenes: '6', platform: 'Movie' });
+  const [form, setForm] = useState({ title: '', concept: '', scenes: '6', platform: 'Movie', runtime: 'auto' });
   const [characterForm, setCharacterForm] = useState({ name: '', description: '' });
   const [productionUser, setProductionUser] = useState<User | null>(identity.user);
   const [health, setHealth] = useState<StudioHealth | null>(null);
@@ -114,6 +122,8 @@ export default function VisionWeaverWorkspace() {
   const [liveGenerations, setLiveGenerations] = useState<LiveGeneration[]>([]);
   const [aspect, setAspect] = useState('16:9');
   const [quality, setQuality] = useState('Standard');
+  const [videoDuration, setVideoDuration] = useState('10');
+  const [continuityMode, setContinuityMode] = useState<'reference' | 'extend'>('extend');
   const [lesson, setLesson] = useState<{ title: string; description: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -194,19 +204,36 @@ export default function VisionWeaverWorkspace() {
 
   async function create(e: FormEvent) {
     e.preventDefault();
-    const count = Math.max(1, Math.min(40, Number(form.scenes) || 1));
+    const requestedCount = Math.max(1, Math.min(20, Number(form.scenes) || 1));
+    const videoLike = ['Movie', 'Video', 'Social'].includes(form.platform);
+    const runtimeSeconds = videoLike && form.runtime !== 'auto' ? Number(form.runtime) : null;
+    const count = Math.max(requestedCount, runtimeSeconds ? Math.ceil(runtimeSeconds / 30) : 1);
     if (identity.isBuilder) {
       const item: Job = { id: crypto.randomUUID(), project_title: form.title, concept: form.concept, scene_count: count, target_platform: form.platform, status: 'planned', approval_state: 'draft', created_at: new Date().toISOString() };
       setJobs((current) => [item, ...current]);
       setScenes((current) => [...planScenes(item, count, form.concept), ...current]);
       setActiveId(item.id); setAdding(false); setView('Workflows');
-      setNotice('Production created and saved on this device. Open Studio to continue.');
+      setNotice(runtimeSeconds ? `Production planned for ${runtimeSeconds} seconds across at least ${count} continuity units.` : 'Production created and saved on this device. Open Studio to continue.');
       return;
     }
     if (!supabase || !identity.user) return;
     setBusy(true);
-    const { data, error } = await supabase.from('production_jobs').insert({ project_title: form.title, concept: form.concept, scene_count: count, target_platform: form.platform, status: 'queued', approval_state: 'draft', owner_id: identity.user.id, created_by: identity.user.email }).select('id,project_title,concept,scene_count,target_platform,status,approval_state,created_at').single();
-    if (error) setNotice(error.message); else { setJobs((current) => [data, ...current]); setActiveId(data.id); setAdding(false); setNotice('Production queued for orchestration.'); }
+    const { data, error } = await supabase.from('production_jobs').insert({
+      project_title: form.title,
+      concept: form.concept,
+      scene_count: count,
+      target_platform: form.platform,
+      status: 'queued',
+      approval_state: 'draft',
+      owner_id: identity.user.id,
+      created_by: identity.user.email,
+      provenance: runtimeSeconds ? {
+        target_duration_seconds: runtimeSeconds,
+        continuity_mode: 'strict_extend',
+        source: 'visionweaver-workspace'
+      } : { source: 'visionweaver-workspace' }
+    }).select('id,project_title,concept,scene_count,target_platform,status,approval_state,created_at').single();
+    if (error) setNotice(error.message); else { setJobs((current) => [data, ...current]); setActiveId(data.id); setAdding(false); setNotice(runtimeSeconds ? `Production queued for ${runtimeSeconds} seconds of sequential orchestration.` : 'Production queued for orchestration.'); }
     setBusy(false);
   }
 
@@ -264,6 +291,8 @@ export default function VisionWeaverWorkspace() {
         '1:1': mode === 'image' ? '1024:1024' : '1280:720',
         '4:5': mode === 'image' ? '1080:1350' : '720:1280'
       };
+      const targetDuration = mode === 'video' ? Math.max(5, Math.min(600, Number(videoDuration) || 10)) : mode === 'audio' ? 8 : 5;
+      const longForm = mode === 'video' && targetDuration > 10;
       const { data, error } = await supabase.functions.invoke('visionweaver-studio', {
         body: {
           action: 'create',
@@ -271,7 +300,19 @@ export default function VisionWeaverWorkspace() {
           prompt,
           title,
           organization_id: identity.organizationId,
-          parameters: { ratio: ratioMap[aspect], quality, duration: mode === 'audio' ? 8 : 5 }
+          parameters: {
+            ratio: ratioMap[aspect],
+            quality,
+            duration: targetDuration,
+            ...(mode === 'video' ? {
+              target_duration_seconds: targetDuration,
+              continuity_mode: longForm ? continuityMode : 'reference',
+              video_generation_profile: longForm ? 'long_form' : 'short_form',
+              provider_shot_max_seconds: longForm ? 30 : 10,
+              variant_count: 1,
+              platform: 'Custom'
+            } : {})
+          }
         }
       });
       if (error || !data?.ok) {
@@ -281,13 +322,15 @@ export default function VisionWeaverWorkspace() {
         setView('Library');
         setNotice(mode === 'book' || mode === 'movie'
           ? `${modes.find((item) => item.id === mode)?.label} package completed and saved.`
-          : `${modes.find((item) => item.id === mode)?.label} generation submitted. VisionWeaver will keep processing it if you leave this page.`);
+          : mode === 'video'
+            ? `${targetDuration}-second video production submitted${longForm ? ` with ${continuityMode === 'extend' ? 'sequential extend continuity' : 'reference continuity'}` : ''}. VisionWeaver will keep processing it if you leave this page.`
+            : `${modes.find((item) => item.id === mode)?.label} generation submitted. VisionWeaver will keep processing it if you leave this page.`);
       }
       setBusy(false);
       return;
     }
 
-    const count = mode === 'movie' ? 12 : mode === 'book' ? 10 : mode === 'video' ? 6 : 1;
+    const count = mode === 'movie' ? 12 : mode === 'book' ? 10 : mode === 'video' ? Math.max(1, Math.ceil((Number(videoDuration) || 10) / 30)) : 1;
     const item: Job = { id: crypto.randomUUID(), project_title: title, concept: prompt, scene_count: count, target_platform: mode, status: 'planned', approval_state: 'draft', created_at: new Date().toISOString() };
     const steps = ['Reading prompt and references', 'Selecting the production route', 'Building continuity and structure', 'Preparing an editable local plan'];
     for (const step of steps) {
@@ -368,14 +411,15 @@ export default function VisionWeaverWorkspace() {
         <span className="eyebrow">NEW CREATIVE PROJECT</span><h2>What are you making?</h2>
         <label>Project title<input required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></label>
         <label>Format<select value={form.platform} onChange={(event) => setForm({ ...form, platform: event.target.value })}><option>Movie</option><option>Book</option><option>Video</option><option>Image campaign</option><option>Audio</option><option>Social</option></select></label>
-        <label>Scenes or chapters<input type="number" min="1" max="40" value={form.scenes} onChange={(event) => setForm({ ...form, scenes: event.target.value })} /></label>
+        <label>Scenes or chapters<input type="number" min="1" max="20" value={form.scenes} onChange={(event) => setForm({ ...form, scenes: event.target.value })} /></label>
+        <label>Target runtime<select value={form.runtime} onChange={(event) => setForm({ ...form, runtime: event.target.value })}><option value="auto">Auto / scene based</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option><option value="600">10 minutes</option></select></label>
         <label className="wide">Creative concept<textarea required value={form.concept} onChange={(event) => setForm({ ...form, concept: event.target.value })} /></label>
         <button disabled={busy}><Sparkles /> Create editable production</button>
       </form></div>}
 
       {view === 'Home' && <section className="vw-home">
         <div className="vw-hero"><span className="eyebrow">ONE WORKSPACE · EVERY MEDIUM</span><h1>What do you want to create?</h1><p>Generate images, video, audio, books and complete movies—then keep every asset, character and workflow connected.</p>
-          <div className="vw-composer"><div className="vw-ref-row">{assets.slice(0, 4).map((asset) => <span key={asset.id}>{asset.kind === 'image' ? <FileImage /> : asset.kind === 'video' ? <FileVideo /> : asset.kind === 'audio' ? <FileAudio /> : <FileText />}{asset.name}<button onClick={() => setAssets((current) => current.filter((item) => item.id !== asset.id))}><X /></button></span>)}</div><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Start with your idea. Add references, a manuscript, footage, images or audio." /><div><button className="secondary" onClick={() => fileRef.current?.click()}><Plus /> Reference</button><span>{model}</span><button disabled={busy || Boolean(health && !health.readiness[mode] && mode !== 'movie')} onClick={generate}>{busy ? <RefreshCw className="spin" /> : <ArrowRight />}</button></div></div>
+          <div className="vw-composer"><div className="vw-ref-row">{assets.slice(0, 4).map((asset) => <span key={asset.id}>{asset.kind === 'image' ? <FileImage /> : asset.kind === 'video' ? <FileVideo /> : asset.kind === 'audio' ? <FileAudio /> : <FileText />}{asset.name}<button onClick={() => setAssets((current) => current.filter((item) => item.id !== asset.id))}><X /></button></span>)}</div><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Start with your idea. Add references, a manuscript, footage, images or audio." /><div><button className="secondary" onClick={() => fileRef.current?.click()}><Plus /> Reference</button><span>{mode === 'video' ? `${videoDurationOptions.find(([value]) => value === videoDuration)?.[1]} · ${model}` : model}</span><button disabled={busy || Boolean(health && !health.readiness[mode] && mode !== 'movie')} onClick={generate}>{busy ? <RefreshCw className="spin" /> : <ArrowRight />}</button></div></div>
           <div className="vw-mode-chips">{modes.map((item) => <button key={item.id} className={mode === item.id ? 'active' : ''} onClick={() => { const config = modes.find((entry) => entry.id === item.id)!; setMode(item.id); setModel(config.models[0]); setPrompt(starterPrompts[item.id]); }}><item.icon />{item.label}</button>)}</div>
         </div>
         <div className="vw-category-row"><button onClick={() => useWorkflow('Product → Campaign', 'image', 'Product references, ad concepts and social derivatives.')}>Marketing campaigns</button><button onClick={() => selectMode('movie')}>Movies</button><button onClick={() => useWorkflow('Weekly Social Factory', 'video', 'Platform variants, captions and thumbnails.')}>Social media</button><button onClick={() => useApp('Lesson Visualizer', 'Video', 'Turn a concept into clear teaching scenes.')}>Educational content</button><button onClick={() => useApp('Character Across Worlds', 'Image', 'Explore one subject across visual styles.')}>Experimental art</button><button onClick={() => setView('Apps')}>Other</button></div>
@@ -385,7 +429,7 @@ export default function VisionWeaverWorkspace() {
 
       {view === 'Agent' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">VISIONWEAVER AGENT</span><h1>Build the production with an agent</h1><p>Describe the outcome; the agent creates an editable plan and preserves approval gates.</p></div><div className="vw-agent"><textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} /><div className="vw-agent-actions"><button onClick={() => useWorkflow('Idea → Feature Film', 'movie', workflows[1][2])}>Movie workflow</button><button onClick={() => useWorkflow('Book → Audiobook → Trailer', 'book', workflows[0][2])}>Book workflow</button><button onClick={() => useWorkflow('Product → Campaign', 'image', workflows[3][2])}>Ad campaign</button><button disabled={busy || Boolean(health && !health.readiness[mode] && mode !== 'movie')} onClick={generate}><Sparkles /> Build with Agent</button></div>{agentLog.length > 0 && <ol className="vw-agent-log">{agentLog.map((entry) => <li key={entry}><CheckCircle2 />{entry}</li>)}</ol>}</div></section>}
 
-      {view === 'Studio' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">MULTIMODAL TOOL STUDIO</span><h1>{modes.find((item) => item.id === mode)?.label} Studio</h1><p>{modes.find((item) => item.id === mode)?.description}</p></div><div className="vw-studio-tabs">{modes.map((item) => <button className={mode === item.id ? 'active' : ''} key={item.id} onClick={() => selectMode(item.id)}><item.icon />{item.label}</button>)}</div><div className="vw-tool-grid"><section className="vw-upload-zone" onClick={() => fileRef.current?.click()}><Upload /><h3>Add references</h3><p>Images, video, audio, PDF, DOCX or TXT</p><small>{assets.length} attached to this workspace</small></section><section className="vw-settings"><label>Model<select value={model} onChange={(event) => setModel(event.target.value)}>{modes.find((item) => item.id === mode)?.models.map((item) => <option key={item}>{item}</option>)}</select></label><label>Instructions<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} /></label><div className="vw-setting-row"><label>Aspect<select value={aspect} onChange={(event) => setAspect(event.target.value)}><option>16:9</option><option>9:16</option><option>1:1</option><option>4:5</option></select></label><label>Quality<select value={quality} onChange={(event) => setQuality(event.target.value)}><option>Draft</option><option>Standard</option><option>High</option></select></label></div><button disabled={busy || Boolean(health && !health.readiness[mode] && mode !== 'movie')} onClick={generate}><Sparkles /> Create {mode === 'book' ? 'book plan' : mode === 'movie' ? 'movie plan' : `${mode} job`}</button></section></div></section>}
+      {view === 'Studio' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">MULTIMODAL TOOL STUDIO</span><h1>{modes.find((item) => item.id === mode)?.label} Studio</h1><p>{modes.find((item) => item.id === mode)?.description}</p></div><div className="vw-studio-tabs">{modes.map((item) => <button className={mode === item.id ? 'active' : ''} key={item.id} onClick={() => selectMode(item.id)}><item.icon />{item.label}</button>)}</div><div className="vw-tool-grid"><section className="vw-upload-zone" onClick={() => fileRef.current?.click()}><Upload /><h3>Add references</h3><p>Images, video, audio, PDF, DOCX or TXT</p><small>{assets.length} attached to this workspace</small></section><section className="vw-settings"><label>Model<select value={model} onChange={(event) => setModel(event.target.value)}>{modes.find((item) => item.id === mode)?.models.map((item) => <option key={item}>{item}</option>)}</select></label><label>Instructions<textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} /></label><div className="vw-setting-row"><label>Aspect<select value={aspect} onChange={(event) => setAspect(event.target.value)}><option>16:9</option><option>9:16</option><option>1:1</option><option>4:5</option></select></label><label>Quality<select value={quality} onChange={(event) => setQuality(event.target.value)}><option>Draft</option><option>Standard</option><option>High</option></select></label></div>{mode === 'video' && <><div className="vw-setting-row"><label>Runtime<select value={videoDuration} onChange={(event) => setVideoDuration(event.target.value)}>{videoDurationOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Continuity<select value={continuityMode} onChange={(event) => setContinuityMode(event.target.value as 'reference' | 'extend')}><option value="extend">Extend prior shot</option><option value="reference">Reference continuity</option></select></label></div><small>{Number(videoDuration) > 10 ? `Long-form: VisionWeaver will create ${Math.ceil(Number(videoDuration) / 30)} sequential segment${Math.ceil(Number(videoDuration) / 30) === 1 ? '' : 's'} and ${continuityMode === 'extend' ? 'continue each segment from the completed prior video' : 'preserve continuity by prompt/reference'}.` : 'Short-form: one provider shot. Choose more than 10 seconds to activate the long-form Seedance route.'}</small></>}<button disabled={busy || Boolean(health && !health.readiness[mode] && mode !== 'movie')} onClick={generate}><Sparkles /> Create {mode === 'book' ? 'book plan' : mode === 'movie' ? 'movie plan' : `${mode} job`}</button></section></div></section>}
 
       {view === 'Apps' && <section className="vw-page"><div className="vw-page-heading"><span className="eyebrow">CREATIVE APPS</span><h1>Everything needed to make anything</h1><p>Each app opens with its workflow, medium and starting brief already selected.</p></div><div className="vw-card-grid">{filteredApps.map(([name, category, description, Icon]) => <article key={name}><span><Icon /></span><small>{category}</small><h3>{name}</h3><p>{description}</p><button onClick={() => useApp(name, category, description)}>Open app <ArrowRight /></button></article>)}</div></section>}
 
@@ -404,9 +448,11 @@ export default function VisionWeaverWorkspace() {
             : generation.status === 'failed' ? <X /> : <RefreshCw className="spin" />}</div>
           <small>{generation.media_type} · {generation.model}</small><h3>{generation.prompt.slice(0, 90)}</h3>
           <p>{generation.error || generation.status.replaceAll('_', ' ')}</p>
+          {generation.progress && <p>Shots: {generation.progress.complete}/{generation.progress.total} complete{generation.progress.failed ? ` · ${generation.progress.failed} failed` : ''}</p>}
+          {generation.media_type === 'video' && (generation.playable_urls?.length || 0) > 1 && <div className="vw-agent-actions">{generation.playable_urls!.map((url, index) => <a key={`${generation.id}-${index}`} href={url} target="_blank" rel="noreferrer"><Play /> Clip {index + 1}</a>)}</div>}
           {(generation.media_type === 'book' || generation.media_type === 'movie') && generation.status === 'complete' && <button onClick={() => downloadPackage(generation)}><FileText /> Download package</button>}
           {generation.status === 'failed' && <button disabled={busy} onClick={() => retryGeneration(generation.id)}><RefreshCw /> Retry with verified provider</button>}
-          {generation.playable_urls?.[0] && <a href={generation.playable_urls[0]} target="_blank" rel="noreferrer"><Play /> Open output</a>}
+          {generation.playable_urls?.[0] && <a href={generation.playable_urls[0]} target="_blank" rel="noreferrer"><Play /> Open first output</a>}
         </article>)}</div></section>}
         <button className="vw-library-upload" onClick={() => fileRef.current?.click()}><Upload /> Upload images, video, audio or manuscripts</button>{assets.length ? <div className="vw-asset-grid">{assets.map((asset) => <article key={asset.id}>{asset.url ? <img src={asset.url} alt="" /> : <span>{asset.kind === 'video' ? <FileVideo /> : asset.kind === 'audio' ? <FileAudio /> : asset.kind === 'document' ? <FileText /> : <FileImage />}</span>}<div><b>{asset.name}</b><small>{asset.kind} · {asset.size}</small></div><button aria-label={`Remove ${asset.name}`} onClick={() => setAssets((current) => current.filter((item) => item.id !== asset.id))}><X /></button></article>)}</div> : <div className="vw-empty"><FolderOpen /><h3>No assets yet</h3><p>Add Drive exports, manuscripts, reference images, footage or audio.</p></div>}</section>}
 
