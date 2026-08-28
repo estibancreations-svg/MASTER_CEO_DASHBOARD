@@ -12,11 +12,18 @@ test('VisionWeaver single-shot video supports current Runway Seedance 2.5 durati
 });
 
 test('VisionWeaver long-form scenes use strict sequential video extension', () => {
-  assert.match(orchestrator, /RUNWAY_LONGFORM_MODEL = 'seedance2_5'/);
+  assert.match(orchestrator, /RUNWAY_MODEL = 'seedance2_5'/);
   assert.match(orchestrator, /promptVideo: predecessor\.video_url/);
   assert.match(orchestrator, /mode: 'extend'/);
-  assert.match(orchestrator, /continuity_mode: predecessor \? 'extend_previous_scene' : 'origin'/);
-  assert.match(orchestrator, /only one new scene enters the chain per tick/i);
+  assert.match(orchestrator, /continuity_mode: extend \? 'extend_previous_scene' : 'origin'/);
+  assert.match(orchestrator, /acted\.push\('submit:' \+ scene\.scene_id \+ ':' \+ result\.operation\);\s*return;/s);
+});
+
+test('VisionWeaver defaults short projects to five seconds and expands explicit long-form runtimes safely', () => {
+  assert.match(orchestrator, /setting\('visionweaver_segment_seconds', '5'\)/);
+  assert.match(orchestrator, /source\.match\(\/\\b\(\\d\+\(\?:\\\.\\d\+\)\?\)\\s\*\(\?:minutes\?\|mins\?\|min\)\\b\/\)/);
+  assert.match(orchestrator, /Math\.max\(requestedScenes, Math\.ceil\(runtime \/ 30\)\)/);
+  assert.match(orchestrator, /sceneCount > 120/);
 });
 
 test('VisionWeaver does not falsely label generated clips as a stitched master', () => {

@@ -1,12 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-// VisionWeaver Orchestrator
-// Durable, minute-tick production pipeline.
-// Long-form continuity rule:
-//   Scene 1: text-to-video.
-//   Scene N>1: video-to-video extend from Scene N-1.
-// This keeps scene generation sequential and restart-safe.
-
 function namedSupabaseKey(jsonEnv, legacyEnv) {
   try {
     const named = JSON.parse(Deno.env.get(jsonEnv) || '{}');
@@ -19,18 +12,17 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SERVICE_KEY = namedSupabaseKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY');
 if (!SUPABASE_URL || !SERVICE_KEY) throw new Error('Supabase server credentials are unavailable');
 
+const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 const RUNWAY_BASE = 'https://api.dev.runwayml.com/v1';
 const RUNWAY_VERSION = '2024-11-06';
-const RUNWAY_LONGFORM_MODEL = 'seedance2_5';
+const RUNWAY_MODEL = 'seedance2_5';
 const DEADLINE_MS = 100000;
 const started = Date.now();
 const outOfTime = () => Date.now() - started > DEADLINE_MS;
 
-const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
-
 async function secret(name) {
-  const environmentValue = (Deno.env.get(name) || '').trim();
-  if (environmentValue && environmentValue !== 'PLACEHOLDER_REPLACE_ME') return environmentValue;
+  const envValue = (Deno.env.get(name) || '').trim();
+  if (envValue && envValue !== 'PLACEHOLDER_REPLACE_ME') return envValue;
   const { data, error } = await db.rpc('get_secret', { secret_name: name });
   if (error || !data || data === 'PLACEHOLDER_REPLACE_ME') return null;
   return String(data).trim();
@@ -38,11 +30,18 @@ async function secret(name) {
 
 async function setting(key, fallback) {
   const { data } = await db.from('system_settings').select('value').eq('key', key).maybeSingle();
-  if (!data) return fallback;
-  return typeof data.value === 'string' ? data.value : fallback;
+  return typeof data?.value === 'string' ? data.value : fallback;
 }
 
-async function claude(system, user, maxTokens = 4000) {
+function cleanJson(raw) {
+  let text = String(raw || '').trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first >= 0 && last > first) text = text.slice(first, last + 1);
+  return JSON.parse(text);
+}
+
+async function claude(system, user, maxTokens = 5000) {
   const key = await secret('ANTHROPIC_API_KEY');
   if (!key) throw new Error('ANTHROPIC_API_KEY not set in Vault');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -60,55 +59,13 @@ async function claude(system, user, maxTokens = 4000) {
     })
   });
   if (!res.ok) throw new Error('Anthropic ' + res.status + ': ' + (await res.text()).slice(0, 400));
-  const json = await res.json();
-  return (json.content || [])
-    .filter((block) => block.type === 'text')
-    .map((block) => block.text)
-    .join('\n');
-}
-
-function parseJson(raw) {
-  let text = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start !== -1 && end > start) text = text.slice(start, end + 1);
-  return JSON.parse(text);
-}
-
-function clampSegmentDuration(value, fallback = 15) {
-  const n = Number(value);
-  const resolved = Number.isFinite(n) ? n : fallback;
-  return Math.max(4, Math.min(30, Math.round(resolved)));
-}
-
-function targetRuntime(job) {
-  const provenance = job?.provenance && typeof job.provenance === 'object' ? job.provenance : {};
-  const candidate = Number(
-    provenance.target_duration_seconds ??
-    provenance.target_runtime_seconds ??
-    provenance.duration_seconds ??
-    0
-  );
-  return Number.isFinite(candidate) && candidate > 0 ? Math.round(candidate) : null;
-}
-
-async function segmentDurationFor(job) {
-  const provenance = job?.provenance && typeof job.provenance === 'object' ? job.provenance : {};
-  const explicit = Number(provenance.segment_duration_seconds || 0);
-  if (Number.isFinite(explicit) && explicit > 0) return clampSegmentDuration(explicit);
-
-  const runtime = targetRuntime(job);
-  const count = Math.max(1, Number(job.scene_count) || 1);
-  if (runtime) return clampSegmentDuration(Math.ceil(runtime / count));
-
-  return clampSegmentDuration(await setting('visionweaver_segment_seconds', '15'));
+  const body = await res.json();
+  return (body.content || []).filter((part) => part.type === 'text').map((part) => part.text).join('\n');
 }
 
 async function runway(path, init = {}) {
   const key = await secret('RUNWAY_API_ACCESS');
-  if (!key) throw new Error('RUNWAY_API_ACCESS is not configured');
-  if (!/^key_[0-9a-f]{128}$/.test(key)) throw new Error('RUNWAY_API_ACCESS is malformed');
-
+  if (!key || !/^key_[0-9a-f]{128}$/.test(key)) throw new Error('RUNWAY_API_ACCESS is not configured correctly');
   const res = await fetch(RUNWAY_BASE + path, {
     ...init,
     headers: {
@@ -118,92 +75,119 @@ async function runway(path, init = {}) {
       ...(init.headers || {})
     }
   });
-  const body = await res.text();
-  if (!res.ok) throw new Error('Runway ' + res.status + ': ' + body.slice(0, 400));
-  return body ? JSON.parse(body) : {};
+  const text = await res.text();
+  if (!res.ok) throw new Error('Runway ' + res.status + ': ' + text.slice(0, 400));
+  return text ? JSON.parse(text) : {};
+}
+
+function clampDuration(value, fallback = 5) {
+  const number = Number(value);
+  return Math.max(4, Math.min(30, Math.round(Number.isFinite(number) ? number : fallback)));
+}
+
+function inferRuntimeSeconds(job) {
+  const provenance = job?.provenance && typeof job.provenance === 'object' ? job.provenance : {};
+  const explicit = Number(
+    provenance.target_duration_seconds ??
+    provenance.target_runtime_seconds ??
+    provenance.duration_seconds ??
+    0
+  );
+  if (Number.isFinite(explicit) && explicit > 0) return Math.round(explicit);
+
+  const source = `${job?.project_title || ''} ${job?.concept || ''}`.toLowerCase();
+  const hour = source.match(/\b(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|hr)\b/);
+  if (hour) return Math.round(Number(hour[1]) * 3600);
+  const minute = source.match(/\b(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|min)\b/);
+  if (minute) return Math.round(Number(minute[1]) * 60);
+  const second = source.match(/\b(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|sec)\b/);
+  if (second) return Math.round(Number(second[1]));
+  return null;
+}
+
+async function productionPlan(job) {
+  const runtime = inferRuntimeSeconds(job);
+  const requestedScenes = Math.max(1, Number(job.scene_count) || 1);
+  const defaultSegment = clampDuration(await setting('visionweaver_segment_seconds', '5'), 5);
+  if (!runtime) return { runtime: null, sceneCount: requestedScenes, segmentSeconds: defaultSegment };
+
+  const sceneCount = Math.max(requestedScenes, Math.ceil(runtime / 30));
+  if (sceneCount > 120) throw new Error('Requested runtime exceeds VisionWeaver long-form limit of 120 sequential segments');
+  return {
+    runtime,
+    sceneCount,
+    segmentSeconds: clampDuration(Math.ceil(runtime / sceneCount), defaultSegment)
+  };
 }
 
 async function stageParse(job) {
+  const plan = await productionPlan(job);
   const out = await claude(
-    'You are the Content Parser for a cinematic video pipeline. Return ONLY valid JSON, no preamble, no markdown fences.',
-    'Parse this concept into structured production intake.\n\nTITLE: ' + job.project_title +
-      '\nPLATFORM: ' + job.target_platform +
-      '\nCONCEPT: ' + job.concept +
-      '\n\nReturn JSON with keys: logline (string), characters (array of objects with name and description), locations (array of strings), emotional_arc (string), tone (string).'
+    'You are VisionWeaver Content Parser. Return only valid JSON.',
+    `Parse the production intake.\nTITLE: ${job.project_title}\nPLATFORM: ${job.target_platform}\nCONCEPT: ${job.concept}\nTARGET RUNTIME SECONDS: ${plan.runtime || 'not specified'}\nReturn {"logline":"...","characters":[{"name":"...","description":"..."}],"locations":["..."],"emotional_arc":"...","tone":"..."}.`
   );
-  await db.from('production_jobs')
-    .update({ parsed_content: parseJson(out), status: 'scene_breakdown', error_message: null })
-    .eq('id', job.id);
+  await db.from('production_jobs').update({
+    parsed_content: cleanJson(out),
+    scene_count: plan.sceneCount,
+    provenance: {
+      ...(job.provenance || {}),
+      target_duration_seconds: plan.runtime,
+      segment_duration_seconds: plan.segmentSeconds,
+      continuity_mode: 'strict_extend'
+    },
+    status: 'scene_breakdown',
+    error_message: null
+  }).eq('id', job.id);
 }
 
 async function stageBreakdown(job) {
-  const duration = await segmentDurationFor(job);
-  const runtime = targetRuntime(job);
-  const requested = runtime
-    ? `The requested total runtime is approximately ${runtime} seconds.`
-    : `Use ${duration} seconds per scene unless a beat clearly needs less time.`;
-
+  const plan = await productionPlan(job);
   const out = await claude(
-    'You are the Scene Breakdown agent. Describe emotional intent and audience experience before camera mechanics. Preserve strict continuity between adjacent scenes. Return ONLY valid JSON.',
-    'Break this into exactly ' + job.scene_count + ' sequential scenes.\n\nPARSED: ' +
-      JSON.stringify(job.parsed_content) +
-      '\n\n' + requested +
-      '\nEach scene must hand off naturally into the next scene: preserve character identity, wardrobe, location geography, time of day, light direction, screen direction, props, and the final physical action.' +
-      '\nReturn JSON shaped as {"scenes":[{"scene_id":"SC001","beat":"...","emotional_intent":"...","subject":"...","setting":"...","continuity_handoff":"...","duration_seconds":' + duration + '}]}'
+    'You are VisionWeaver Scene Breakdown. Preserve strict character, wardrobe, setting, prop, lighting, screen-direction and action continuity between adjacent scenes. Return only valid JSON.',
+    `Break the production into exactly ${plan.sceneCount} sequential scenes. Each scene is about ${plan.segmentSeconds} seconds.${plan.runtime ? ` The finished runtime target is approximately ${plan.runtime} seconds.` : ''}\nPARSED: ${JSON.stringify(job.parsed_content)}\nReturn {"scenes":[{"scene_id":"SC001","beat":"...","emotional_intent":"...","subject":"...","setting":"...","continuity_handoff":"...","duration_seconds":${plan.segmentSeconds}}]}.`
   );
-
-  const plan = parseJson(out);
-  const scenes = Array.isArray(plan.scenes) ? plan.scenes : [];
-  for (const scene of scenes) scene.duration_seconds = clampSegmentDuration(scene.duration_seconds, duration);
-
-  await db.from('production_jobs')
-    .update({
-      scene_plan: { ...plan, scenes, continuity_mode: 'strict_extend', segment_duration_seconds: duration },
-      status: 'cinematography',
-      error_message: null
-    })
-    .eq('id', job.id);
+  const parsed = cleanJson(out);
+  const scenes = Array.isArray(parsed.scenes) ? parsed.scenes : [];
+  if (scenes.length !== plan.sceneCount) throw new Error(`Scene breakdown returned ${scenes.length}; expected ${plan.sceneCount}`);
+  for (const scene of scenes) scene.duration_seconds = clampDuration(scene.duration_seconds, plan.segmentSeconds);
+  await db.from('production_jobs').update({
+    scene_plan: { ...parsed, scenes, continuity_mode: 'strict_extend', segment_duration_seconds: plan.segmentSeconds },
+    scene_count: plan.sceneCount,
+    status: 'cinematography',
+    error_message: null
+  }).eq('id', job.id);
 }
 
 async function stageCinematography(job) {
-  const tone = job.parsed_content?.tone || '';
-  const fallbackDuration = await segmentDurationFor(job);
+  const scenes = Array.isArray(job.scene_plan?.scenes) ? job.scene_plan.scenes : [];
+  if (!scenes.length) throw new Error('Scene plan is empty');
   const out = await claude(
-    'You are the Cinematic Orchestration agent. Produce final render-ready prompts with lens, lighting in Kelvin, atmosphere and movement. Every prompt after scene one must explicitly continue the prior scene without resetting the character, environment, time, wardrobe, props, or screen direction. Return ONLY valid JSON.',
-    'Convert each scene into a single render-ready prompt string.\n\nSCENES: ' +
-      JSON.stringify(job.scene_plan) +
-      '\nTONE: ' + tone +
-      '\n\nFor Scene 1, describe the opening shot completely. For Scene 2+, begin the prompt with a natural continuation instruction tied to the previous scene handoff. Avoid re-introducing subjects as if they are new.' +
-      '\nReturn JSON shaped as {"scenes":[{"scene_id":"SC001","prompt":"<one rich paragraph>","continuity_handoff":"<what must carry into next scene>","duration_seconds":' + fallbackDuration + '}]}',
-    7000
+    'You are VisionWeaver Cinematic Orchestration. Return only valid JSON. Scene 1 establishes the production. Every later scene must continue the prior scene rather than reset it.',
+    `Convert exactly ${scenes.length} scenes into render-ready prompts. Include lens, light, atmosphere and movement while preserving continuity handoffs.\nTONE: ${job.parsed_content?.tone || ''}\nSCENES: ${JSON.stringify(scenes)}\nReturn {"scenes":[{"scene_id":"SC001","prompt":"...","continuity_handoff":"...","duration_seconds":5}]}.`,
+    8000
   );
-
-  const cine = parseJson(out);
-  const list = Array.isArray(cine.scenes) ? cine.scenes : [];
-  if (!list.length) throw new Error('Cinematography returned zero scenes');
-
-  const rows = list.map((scene, index) => ({
+  const parsed = cleanJson(out);
+  const rendered = Array.isArray(parsed.scenes) ? parsed.scenes : [];
+  if (rendered.length !== scenes.length) throw new Error(`Cinematography returned ${rendered.length}; expected ${scenes.length}`);
+  const fallbackDuration = clampDuration(job.provenance?.segment_duration_seconds, 5);
+  const rows = rendered.map((scene, index) => ({
     job_id: job.id,
     scene_index: index,
-    scene_id: scene.scene_id || ('SC' + String(index + 1).padStart(3, '0')),
+    scene_id: scene.scene_id || `SC${String(index + 1).padStart(3, '0')}`,
     prompt: String(scene.prompt || '').slice(0, 15000),
     scene_spec: {
       ...scene,
-      duration_seconds: clampSegmentDuration(scene.duration_seconds, fallbackDuration),
+      duration_seconds: clampDuration(scene.duration_seconds, fallbackDuration),
       continuity_mode: index === 0 ? 'origin' : 'extend_previous_scene',
       predecessor_scene_index: index === 0 ? null : index - 1
     },
     status: 'pending',
     provider: null
   }));
-
   await db.from('production_scenes').delete().eq('job_id', job.id);
   const { error } = await db.from('production_scenes').insert(rows);
   if (error) throw new Error('scene insert failed: ' + error.message);
-
-  await db.from('production_jobs')
-    .update({ status: 'scenes_ready', error_message: null })
-    .eq('id', job.id);
+  await db.from('production_jobs').update({ status: 'scenes_ready', error_message: null }).eq('id', job.id);
 }
 
 async function previousScene(scene) {
@@ -215,64 +199,48 @@ async function previousScene(scene) {
     .order('scene_index', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error('predecessor lookup failed: ' + error.message);
+  if (error) throw new Error(error.message);
   return data || null;
 }
 
 async function submitScene(scene) {
-  const duration = clampSegmentDuration(scene.scene_spec?.duration_seconds, 15);
   const predecessor = await previousScene(scene);
+  if (predecessor && (predecessor.status !== 'complete' || !predecessor.video_url)) return { deferred: true };
+  const duration = clampDuration(scene.scene_spec?.duration_seconds, 5);
   const basePrompt = String(scene.prompt || '').slice(0, 15000);
+  const extend = Boolean(predecessor);
+  const endpoint = extend ? '/video_to_video' : '/text_to_video';
+  const payload = extend
+    ? {
+        model: RUNWAY_MODEL,
+        promptVideo: predecessor.video_url,
+        promptText: 'Continue seamlessly from the final moment of the supplied video. Preserve character identity, wardrobe, environment, lighting direction, props, geography, screen direction and motion. Do not restart or repeat the prior shot. ' + basePrompt,
+        duration,
+        mode: 'extend',
+        audio: false
+      }
+    : {
+        model: RUNWAY_MODEL,
+        promptText: basePrompt,
+        duration,
+        ratio: '1280:720',
+        audio: false
+      };
 
-  let operation;
-  let payload;
-
-  if (!predecessor) {
-    operation = 'text_to_video';
-    payload = {
-      model: RUNWAY_LONGFORM_MODEL,
-      promptText: basePrompt,
-      duration,
-      ratio: '1280:720',
-      audio: false
-    };
-  } else {
-    if (predecessor.status === 'failed') {
-      throw new Error('Continuity predecessor failed: ' + predecessor.scene_id);
-    }
-    if (predecessor.status !== 'complete' || !predecessor.video_url) {
-      return { deferred: true, reason: 'waiting_for_predecessor' };
-    }
-
-    operation = 'video_to_video_extend';
-    payload = {
-      model: RUNWAY_LONGFORM_MODEL,
-      promptVideo: predecessor.video_url,
-      promptText:
-        'Continue seamlessly from the final moment of the supplied video. Preserve the same character identity, wardrobe, environment, lighting direction, props, spatial geography and motion trajectory. Do not restart or repeat the previous shot. ' +
-        basePrompt,
-      duration,
-      mode: 'extend',
-      audio: false
-    };
-  }
-
-  const endpoint = operation === 'text_to_video' ? '/text_to_video' : '/video_to_video';
   const task = await runway(endpoint, { method: 'POST', body: JSON.stringify(payload) });
   if (!task.id) throw new Error('Runway returned no task id');
-
+  const operation = extend ? 'video_to_video_extend' : 'text_to_video';
   const provenance = {
     provider: 'runway',
-    model: RUNWAY_LONGFORM_MODEL,
+    model: RUNWAY_MODEL,
     operation,
-    prompt_version: scene.prompt_version || 1,
-    continuity_mode: predecessor ? 'extend_previous_scene' : 'origin',
+    continuity_mode: extend ? 'extend_previous_scene' : 'origin',
     predecessor_scene_id: predecessor?.id || null,
     predecessor_provider_task_id: predecessor?.provider_task_id || null,
     requested_duration_seconds: duration,
-    continuity_overlap_intent_seconds: predecessor ? 2 : 0
+    continuity_overlap_intent_seconds: extend ? 2 : 0,
+    prompt_version: scene.prompt_version || 1
   };
-
   await db.from('production_scenes').update({
     status: 'rendering',
     provider: 'runway',
@@ -281,7 +249,6 @@ async function submitScene(scene) {
     error_message: null,
     provenance
   }).eq('id', scene.id);
-
   await db.from('vw_integration_receipts').insert({
     job_id: scene.job_id,
     scene_id: scene.id,
@@ -289,15 +256,8 @@ async function submitScene(scene) {
     operation,
     external_id: task.id,
     status: 'accepted',
-    metadata: {
-      model: RUNWAY_LONGFORM_MODEL,
-      duration,
-      ratio: predecessor ? 'match_input' : '1280:720',
-      continuity_mode: provenance.continuity_mode,
-      predecessor_scene_id: provenance.predecessor_scene_id
-    }
+    metadata: { ...provenance, ratio: extend ? 'match_input' : '1280:720' }
   });
-
   return { deferred: false, operation };
 }
 
@@ -305,54 +265,17 @@ async function pollScene(scene) {
   if (!scene.provider_task_id) return;
   const task = await runway('/tasks/' + encodeURIComponent(scene.provider_task_id));
   const polls = (scene.poll_count || 0) + 1;
-  const maxPolls = scene.max_polls || 60;
   const status = String(task.status || '').toUpperCase();
-
   if (status === 'SUCCEEDED') {
     const videoUrl = Array.isArray(task.output) ? task.output.find((item) => typeof item === 'string') : null;
-    if (!videoUrl) throw new Error('Runway succeeded but returned no video output URL');
-
-    await db.from('production_scenes').update({
-      status: 'complete',
-      video_url: videoUrl,
-      poll_count: polls,
-      error_message: null
-    }).eq('id', scene.id);
-
-    await db.from('vw_integration_receipts')
-      .update({ status: 'succeeded', metadata: { ...(scene.provenance || {}), output_url: videoUrl } })
-      .eq('external_id', scene.provider_task_id);
+    if (!videoUrl) throw new Error('Runway succeeded without an output URL');
+    await db.from('production_scenes').update({ status: 'complete', video_url: videoUrl, poll_count: polls, error_message: null }).eq('id', scene.id);
   } else if (status === 'FAILED' || status === 'CANCELLED') {
-    const error = 'Runway render failed: ' + String(task.failure || task.failureCode || status).slice(0, 400);
-    await db.from('production_scenes').update({
-      status: 'failed',
-      error_message: error,
-      poll_count: polls
-    }).eq('id', scene.id);
-  } else if (polls >= maxPolls) {
-    await db.from('production_scenes').update({
-      status: 'failed',
-      error_message: 'Render watchdog: exceeded ' + maxPolls + ' polls, still ' + status,
-      poll_count: polls
-    }).eq('id', scene.id);
+    await db.from('production_scenes').update({ status: 'failed', error_message: String(task.failure || task.failureCode || status).slice(0, 500), poll_count: polls }).eq('id', scene.id);
+  } else if (polls >= (scene.max_polls || 60)) {
+    await db.from('production_scenes').update({ status: 'failed', error_message: `Render watchdog exceeded ${scene.max_polls || 60} polls`, poll_count: polls }).eq('id', scene.id);
   } else {
     await db.from('production_scenes').update({ poll_count: polls }).eq('id', scene.id);
-  }
-}
-
-async function cascadeContinuityFailure(scene) {
-  const { data: downstream } = await db.from('production_scenes')
-    .select('id,scene_id,status')
-    .eq('job_id', scene.job_id)
-    .gt('scene_index', scene.scene_index)
-    .in('status', ['pending', 'rendering']);
-
-  for (const item of downstream || []) {
-    if (item.status === 'rendering') continue;
-    await db.from('production_scenes').update({
-      status: 'failed',
-      error_message: 'Continuity chain stopped because predecessor ' + scene.scene_id + ' failed.'
-    }).eq('id', item.id);
   }
 }
 
@@ -362,38 +285,27 @@ async function stagePublish(job) {
     .eq('job_id', job.id)
     .order('scene_index');
   if (error) throw new Error(error.message);
-
   const complete = (scenes || []).filter((scene) => scene.status === 'complete' && scene.video_url);
-  const segmentSeconds = complete.reduce(
-    (total, scene) => total + clampSegmentDuration(scene.scene_spec?.duration_seconds, 15),
-    0
-  );
   const clipManifest = complete.map((scene) => ({
     scene_index: scene.scene_index,
     scene_id: scene.scene_id,
     video_url: scene.video_url,
-    duration_seconds: clampSegmentDuration(scene.scene_spec?.duration_seconds, 15),
+    duration_seconds: clampDuration(scene.scene_spec?.duration_seconds, 5),
     continuity_mode: scene.provenance?.continuity_mode || scene.scene_spec?.continuity_mode || null
   }));
-
-  const logline = job.parsed_content?.logline || '';
+  const generatedDuration = clipManifest.reduce((sum, scene) => sum + scene.duration_seconds, 0);
   const out = await claude(
-    'You are the Publish Package agent. Return ONLY valid JSON.',
-    'Create a publish package for ' + job.target_platform +
-      '.\n\nTITLE: ' + job.project_title +
-      '\nLOGLINE: ' + logline +
-      '\nGENERATED CLIPS: ' + JSON.stringify(clipManifest) +
-      '\n\nReturn JSON shaped as {"title":"...","description":"...","tags":["..."],"thumbnail_concept":"...","chapter_markers":[{"scene_id":"SC001","label":"..."}]}. '
+    'You are VisionWeaver Publish Package. Return only valid JSON.',
+    `Create publishing metadata for ${job.target_platform}. TITLE: ${job.project_title}. LOGLINE: ${job.parsed_content?.logline || ''}. CLIPS: ${JSON.stringify(clipManifest)}. Return {"title":"...","description":"...","tags":["..."],"thumbnail_concept":"...","chapter_markers":[{"scene_id":"SC001","label":"..."}]}.`
   );
-  const publish = parseJson(out);
-
   await db.from('production_jobs').update({
     publish_package: {
-      ...publish,
+      ...cleanJson(out),
       longform: {
         continuity_mode: 'strict_extend',
+        target_duration_seconds: inferRuntimeSeconds(job),
+        generated_duration_seconds: generatedDuration,
         segment_count: clipManifest.length,
-        generated_duration_seconds: segmentSeconds,
         clip_manifest: clipManifest,
         assembly_state: 'clips_ready_master_not_yet_stitched',
         master_video_url: null
@@ -405,136 +317,98 @@ async function stagePublish(job) {
   }).eq('id', job.id);
 }
 
-async function failJob(job, message) {
+async function failJob(job, error) {
   const attempts = (job.attempt_count || 0) + 1;
-  const dead = attempts >= (job.max_attempts || 3);
   await db.from('production_jobs').update({
     attempt_count: attempts,
-    error_message: String(message).slice(0, 1000),
-    status: dead ? 'failed' : job.status,
+    error_message: String(error).slice(0, 1000),
+    status: attempts >= (job.max_attempts || 3) ? 'failed' : job.status,
     locked_at: null,
     locked_by: null
   }).eq('id', job.id);
 }
 
 async function advanceJobStage(acted) {
-  const runId = crypto.randomUUID();
   const { data: jobs } = await db.from('production_jobs').select('*')
     .in('status', ['queued', 'scene_breakdown', 'cinematography', 'assembling'])
     .is('locked_at', null)
     .order('created_at')
     .limit(1);
-
   const job = jobs?.[0];
   if (!job) return;
-
-  await db.from('production_jobs')
-    .update({ locked_at: new Date().toISOString(), locked_by: runId })
-    .eq('id', job.id)
-    .is('locked_at', null);
-
+  const lock = crypto.randomUUID();
+  await db.from('production_jobs').update({ locked_at: new Date().toISOString(), locked_by: lock }).eq('id', job.id).is('locked_at', null);
   try {
-    if (job.status === 'queued') {
-      await stageParse(job);
-      acted.push('parse:' + job.id);
-    } else if (job.status === 'scene_breakdown') {
-      await stageBreakdown(job);
-      acted.push('breakdown:' + job.id);
-    } else if (job.status === 'cinematography') {
-      await stageCinematography(job);
-      acted.push('cinematography:' + job.id);
-    } else if (job.status === 'assembling') {
-      await stagePublish(job);
-      acted.push('publish:' + job.id);
-    }
+    if (job.status === 'queued') await stageParse(job);
+    else if (job.status === 'scene_breakdown') await stageBreakdown(job);
+    else if (job.status === 'cinematography') await stageCinematography(job);
+    else if (job.status === 'assembling') await stagePublish(job);
+    acted.push(`${job.status}:${job.id}`);
     await db.from('production_jobs').update({ locked_at: null, locked_by: null }).eq('id', job.id);
   } catch (error) {
     await failJob(job, error);
-    acted.push('FAILED:' + job.id + ':' + String(error).slice(0, 160));
+    acted.push(`failed:${job.id}`);
   }
 }
 
-async function pollRenderingScenes(acted) {
-  const { data: rendering } = await db.from('production_scenes')
-    .select('*')
-    .eq('status', 'rendering')
-    .order('submitted_at')
-    .limit(8);
-
-  for (const scene of rendering || []) {
-    if (outOfTime()) break;
+async function pollRendering(acted) {
+  const { data: scenes } = await db.from('production_scenes').select('*').eq('status', 'rendering').order('submitted_at').limit(8);
+  for (const scene of scenes || []) {
+    if (outOfTime()) return;
     try {
       await pollScene(scene);
       acted.push('poll:' + scene.scene_id);
     } catch (error) {
-      acted.push('poll_err:' + scene.scene_id + ':' + String(error).slice(0, 100));
+      acted.push('poll_error:' + scene.scene_id + ':' + String(error).slice(0, 100));
     }
   }
 }
 
-async function submitNextEligibleScene(acted) {
-  const { data: candidates } = await db.from('production_scenes')
+async function submitNextScene(acted) {
+  const { data: scenes } = await db.from('production_scenes')
     .select('*, production_jobs!inner(status)')
     .eq('status', 'pending')
     .in('production_jobs.status', ['scenes_ready', 'rendering'])
     .order('created_at')
-    .limit(40);
-
-  for (const scene of candidates || []) {
+    .limit(120);
+  for (const scene of scenes || []) {
     if (outOfTime()) return;
-
     const predecessor = await previousScene(scene);
     if (predecessor?.status === 'failed') {
-      await db.from('production_scenes').update({
-        status: 'failed',
-        error_message: 'Continuity chain stopped because predecessor ' + predecessor.scene_id + ' failed.'
-      }).eq('id', scene.id);
-      acted.push('blocked:' + scene.scene_id);
+      await db.from('production_scenes').update({ status: 'failed', error_message: `Continuity predecessor ${predecessor.scene_id} failed` }).eq('id', scene.id);
       continue;
     }
     if (predecessor && (predecessor.status !== 'complete' || !predecessor.video_url)) continue;
-
     try {
       const result = await submitScene(scene);
       if (result?.deferred) continue;
-      acted.push('submit:' + scene.scene_id + ':' + result.operation);
       await db.from('production_jobs').update({ status: 'rendering' }).eq('id', scene.job_id);
+      acted.push('submit:' + scene.scene_id + ':' + result.operation);
       return;
     } catch (error) {
       const attempts = (scene.attempt_count || 0) + 1;
-      const failed = attempts >= (scene.max_attempts || 3);
+      const dead = attempts >= (scene.max_attempts || 3);
       await db.from('production_scenes').update({
         attempt_count: attempts,
-        status: failed ? 'failed' : 'pending',
+        status: dead ? 'failed' : 'pending',
         error_message: String(error).slice(0, 500)
       }).eq('id', scene.id);
-
-      if (failed) await cascadeContinuityFailure(scene);
-      acted.push('submit_err:' + scene.scene_id + ':' + String(error).slice(0, 100));
+      acted.push('submit_error:' + scene.scene_id);
       return;
     }
   }
 }
 
-async function advanceCompletedJobs(acted) {
-  const { data: active } = await db.from('production_jobs')
-    .select('id')
-    .eq('status', 'rendering')
-    .limit(10);
-
-  for (const job of active || []) {
-    const { data: scenes } = await db.from('production_scenes')
-      .select('status')
-      .eq('job_id', job.id);
-
+async function finalizeJobs(acted) {
+  const { data: jobs } = await db.from('production_jobs').select('id').eq('status', 'rendering').limit(10);
+  for (const job of jobs || []) {
+    const { data: scenes } = await db.from('production_scenes').select('status').eq('job_id', job.id);
     if (!scenes?.length) continue;
-    const unresolved = scenes.filter((scene) => !['complete', 'failed'].includes(scene.status)).length;
-    if (unresolved > 0) continue;
-
+    if (scenes.some((scene) => !['complete', 'failed'].includes(scene.status))) continue;
     const allGood = scenes.every((scene) => scene.status === 'complete');
     await db.from('production_jobs').update({
       status: allGood ? 'assembling' : 'failed',
-      error_message: allGood ? null : 'Continuity chain did not complete. At least one scene failed.'
+      error_message: allGood ? null : 'Continuity chain failed before all scenes completed'
     }).eq('id', job.id);
     acted.push((allGood ? 'assemble:' : 'failed_chain:') + job.id);
   }
@@ -543,22 +417,22 @@ async function advanceCompletedJobs(acted) {
 async function tick() {
   const acted = [];
   await advanceJobStage(acted);
-  if (!outOfTime()) await pollRenderingScenes(acted);
-  if (!outOfTime()) await submitNextEligibleScene(acted);
-  if (!outOfTime()) await advanceCompletedJobs(acted);
+  if (!outOfTime()) await pollRendering(acted);
+  if (!outOfTime()) await submitNextScene(acted);
+  if (!outOfTime()) await finalizeJobs(acted);
   return acted;
 }
 
 async function secretsMatch(provided, expected) {
   const encoder = new TextEncoder();
-  const [providedHash, expectedHash] = await Promise.all([
+  const [aHash, bHash] = await Promise.all([
     crypto.subtle.digest('SHA-256', encoder.encode(provided)),
     crypto.subtle.digest('SHA-256', encoder.encode(expected))
   ]);
-  const a = new Uint8Array(providedHash);
-  const b = new Uint8Array(expectedHash);
+  const a = new Uint8Array(aHash);
+  const b = new Uint8Array(bHash);
   let mismatch = 0;
-  for (let index = 0; index < a.length; index += 1) mismatch |= a[index] ^ b[index];
+  for (let i = 0; i < a.length; i += 1) mismatch |= a[i] ^ b[i];
   return mismatch === 0;
 }
 
@@ -566,64 +440,34 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const isHealth = url.pathname.endsWith('/health');
-
     if (req.method !== 'POST' && !(req.method === 'GET' && isHealth)) {
-      return Response.json({ ok: false, error: 'method_not_allowed' }, {
-        status: 405,
-        headers: { Allow: 'POST, GET', 'Cache-Control': 'no-store' }
-      });
+      return Response.json({ ok: false, error: 'method_not_allowed' }, { status: 405, headers: { 'Cache-Control': 'no-store' } });
     }
-
-    const providedCronSecret = (req.headers.get('authorization') || '').replace(/^Bearer +/i, '');
-    const expectedCronSecret = await secret('VISIONWEAVER_CRON_SECRET');
-    if (
-      !providedCronSecret ||
-      !expectedCronSecret ||
-      !(await secretsMatch(providedCronSecret, expectedCronSecret))
-    ) {
-      return Response.json({ ok: false, error: 'unauthorized' }, {
-        status: 401,
-        headers: { 'Cache-Control': 'no-store' }
-      });
+    const provided = (req.headers.get('authorization') || '').replace(/^Bearer +/i, '');
+    const expected = await secret('VISIONWEAVER_CRON_SECRET');
+    if (!provided || !expected || !(await secretsMatch(provided, expected))) {
+      return Response.json({ ok: false, error: 'unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
     }
-
     if (isHealth) {
-      const names = ['ANTHROPIC_API_KEY', 'RUNWAY_API_ACCESS', 'KIE_API_KEY', 'GEMINI_CONNECTION', 'OPENROUTER_API_KEY'];
-      const status = {};
-      for (const name of names) {
-        const value = await secret(name);
-        if (!value) status[name] = 'NOT_SET';
-        else if (name === 'RUNWAY_API_ACCESS' && !/^key_[0-9a-f]{128}$/.test(value)) status[name] = 'SET_BUT_MALFORMED';
-        else if (name === 'ANTHROPIC_API_KEY' && !value.startsWith('sk-ant-')) status[name] = 'SET_BUT_SUSPECT (expected sk-ant-)';
-        else status[name] = 'OK';
-      }
-
+      const defaultSeconds = clampDuration(await setting('visionweaver_segment_seconds', '5'), 5);
       return Response.json({
         ok: true,
         service: 'visionweaver-orchestrator',
-        version: 6,
-        providers_configured: Object.values(status).filter((value) => value === 'OK').length,
-        runway_model: RUNWAY_LONGFORM_MODEL,
+        version: 7,
+        runway_model: RUNWAY_MODEL,
         continuity: {
           strategy: 'strict_sequential_video_extend',
-          segment_duration_seconds: { min: 4, max: 30, default: Number(await setting('visionweaver_segment_seconds', '15')) || 15 },
-          supports_target_runtime: true,
+          default_segment_seconds: defaultSeconds,
+          segment_seconds: { min: 4, max: 30 },
+          prompt_runtime_inference: true,
+          explicit_runtime_provenance: true,
           master_assembly: 'clips_ready_master_not_yet_stitched'
         }
       }, { headers: { 'Cache-Control': 'no-store' } });
     }
-
     const acted = await tick();
-    return Response.json({
-      ok: true,
-      acted,
-      elapsed_ms: Date.now() - started,
-      continuity_mode: 'strict_extend'
-    }, { headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ ok: true, acted, elapsed_ms: Date.now() - started, continuity_mode: 'strict_extend' }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
-    return Response.json({ ok: false, error: String(error) }, {
-      status: 500,
-      headers: { 'Cache-Control': 'no-store' }
-    });
+    return Response.json({ ok: false, error: String(error) }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }
 });
