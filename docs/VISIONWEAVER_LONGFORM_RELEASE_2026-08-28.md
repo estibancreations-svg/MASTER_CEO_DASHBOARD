@@ -44,3 +44,15 @@ The assembler never requires a Supabase service-role secret in Vercel. It uses t
 - Supabase `visionweaver-studio` is ACTIVE.
 - `visionweaver-studio-tick` cron is active every minute.
 - `visionweaver-orchestrator-tick` cron is active every minute.
+
+## 2026-08-29 Quality Gate addendum
+
+PR #45 synchronized the active Supabase `visionweaver-studio` v22 source into GitHub after this release. That merge exposed a packaging defect: `package.json` referenced `ffmpeg-static@5.3.0`, but `package-lock.json` had not been updated. GitHub Quality Gate failed before TypeScript, tests, release evidence, or production build could run.
+
+Failure evidence:
+
+- PR #45 Quality Gate run `33215733581` failed at `Install locked dependencies`.
+- Post-merge `main` Quality Gate run `33215745553` failed at `Install locked dependencies`.
+- Root cause: `npm ci` rejected the package/lockfile mismatch and reported `ffmpeg-static@5.3.0` plus transitive packages missing from the lockfile.
+
+Corrective rule: every VisionWeaver release that changes `package.json`, runtime assembly dependencies, Vercel function packaging, or install-script approval must update and verify `package-lock.json` in the same PR. Vercel success alone is not sufficient release evidence.
