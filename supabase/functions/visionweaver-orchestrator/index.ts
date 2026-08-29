@@ -450,11 +450,20 @@ Deno.serve(async (req) => {
     }
     if (isHealth) {
       const defaultSeconds = clampDuration(await setting('visionweaver_segment_seconds', '5'), 5);
+      const geminiConfigured = Boolean(await secret('GEMINI_CONNECTION'));
       return Response.json({
         ok: true,
         service: 'visionweaver-orchestrator',
         version: 7,
         runway_model: RUNWAY_MODEL,
+        provider_slots: {
+          gemini: {
+            credential_name: 'GEMINI_CONNECTION',
+            configured: geminiConfigured,
+            runtime_role: 'planning_or_multimodal_adapter',
+            render_route: 'not_used_for_runway_longform'
+          }
+        },
         continuity: {
           strategy: 'strict_sequential_video_extend',
           default_segment_seconds: defaultSeconds,

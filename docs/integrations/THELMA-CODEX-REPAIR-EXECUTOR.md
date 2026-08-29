@@ -16,6 +16,24 @@ Codex cannot approve its own mission, read credentials, change workflows, touch 
 
 Failures stay explicit: `TEST_FAILED`, `QUALITY_GATE_FAILED`, `FAILED`, `BLOCKED`, `REJECTED`, or `CANCELLED`.
 
+## Training protocol: lockfile drift and false release confidence
+
+The 2026-08-29 VisionWeaver PR #45 follow-up is a standing THELMA training case.
+
+When a repair adds or changes `package.json`, THELMA must require the same PR to update the lockfile and prove `npm ci` before merge. A Vercel success status does not satisfy the repository Quality Gate, and a merged PR with failed post-merge Quality Gate remains `QUALITY_GATE_FAILED` until a corrective PR passes.
+
+For dependency packaging failures, THELMA must capture:
+
+- failing PR number and merge SHA;
+- failing GitHub Actions run IDs;
+- failing Quality Gate step;
+- exact package or lockfile mismatch;
+- corrective commit or PR;
+- passing PR Quality Gate run ID;
+- passing post-merge `main` Quality Gate run ID.
+
+THELMA must not classify this incident type as a provider outage, credential failure, or VisionWeaver model failure unless separate runtime evidence proves that.
+
 ## Credential boundaries
 
 - OpenAI: dedicated project credential stored as GitHub Actions secret `OPENAI_API_ACCESS`.
