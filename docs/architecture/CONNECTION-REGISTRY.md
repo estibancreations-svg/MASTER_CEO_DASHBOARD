@@ -9,7 +9,7 @@ The CEO Dashboard consumes normalized read models and governed actions. It does 
 | GitHub | SYS-CEO-001 | Source/deployment connected | Private repository main drives Vercel deployments; work is merged through PR #20 before the runtime-hardening branch. |
 | THELMA | SYS-THELMA-001 | Control plane internally certified; intelligence deferred | ASK intake, authorization, commands, runs, incidents, containment and audit structures passed rollback-safe testing. No OpenAI, Gemini, Grok or DeepSeek provider is active. |
 | EC Integration Fabric | SYS-THELMA-001 | Internal runtime certified | Job creation, authorization, claim, execution, retry, dead letter, human requeue, event history and immutable audit boundaries passed. External connectors remain provider-gated. |
-| VisionWeaver | SYS-VISION-001 | Internal workflow certified / provider-gated | Project, scene, approval, render-state, QC and completion structures passed rollback-safe testing. Live AI/video providers remain deferred. |
+| VisionWeaver | SYS-VISION-001 | Internal workflow certified / provider-gated | Project, scene, approval, render-state, QC and completion structures passed rollback-safe testing. Runway is verified. Higgsfield adapter is implemented server-side and policy-wired, pending real Vault credential activation and authenticated smoke test. |
 | LandWeaver | SYS-LAND-001 | Internal workflow certified / synthetic data | Intake, assessment, financial scenario, diligence task and approval paths passed. Licensed live feeds remain deferred. |
 | GrantOS | SYS-GRANT-001 | Internal workflow certified / seeded data | Opportunity, application, evidence requirement, budget and drafting-state paths passed. Live discovery and submission providers remain deferred. |
 | CMGIO / MAP | SYS-ADS-001 | Internal workflow certified / manual pilot | Campaign, asset QC, signal action, authorization and completion paths passed. Social, advertising, analytics and publishing providers remain deferred. |
@@ -33,7 +33,7 @@ The CEO Dashboard consumes normalized read models and governed actions. It does 
 
 The EC connector registry now contains 19 additional governed entries:
 
-- 10 staged connections: OpenAI, Grok/xAI, DeepSeek, Claude/Anthropic, Kling AI, Slack, Honcho, Telegram, ElevenLabs and Higgsfield AI.
+- 10 staged/deferred connections: OpenAI, Grok/xAI, DeepSeek, Claude/Anthropic, Kling AI, Slack, Honcho, Telegram, ElevenLabs and Higgsfield AI (adapter implemented, credential activation pending).
 - 2 optional/deferred self-hosted connections: Paperclip and n8n.
 - 4 partner-access-required insurer templates: Allstate, The General, Progressive and State Farm.
 - 3 reusable blank templates: insurance provider, gas station/fuel provider and general external service.

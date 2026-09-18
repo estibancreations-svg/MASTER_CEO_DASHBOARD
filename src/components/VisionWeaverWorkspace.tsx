@@ -17,7 +17,7 @@ type Character = { id: string; name: string; description: string; status: string
 type StudioMode = 'image' | 'video' | 'audio' | 'book' | 'movie';
 type LiveGeneration = {
   id: string; project_id: string; media_type: StudioMode; status: string; prompt: string;
-  model: string; error?: string | null; result?: Record<string, unknown>; playable_urls?: string[];
+  model: string; provider?: string; error?: string | null; result?: Record<string, unknown>; playable_urls?: string[];
   progress?: { complete: number; failed: number; total: number } | null;
   children?: Array<{ id: string; status: string; sequence_index?: number; playable_urls?: string[] }>;
   created_at: string;
@@ -47,8 +47,8 @@ const nav = [
 ] as const;
 
 const modes: { id: StudioMode; label: string; icon: typeof Film; models: string[]; description: string }[] = [
-  { id: 'video', label: 'Video', icon: Film, models: ['Auto route · Runway → Kling'], description: 'Create 5-second shots through 10-minute productions. Long-form jobs are split into sequential Runway Seedance segments and can extend each completed shot into the next.' },
-  { id: 'image', label: 'Image', icon: Image, models: ['Auto route · Runway → Kling'], description: 'Create production stills with automatic provider failover and private output storage.' },
+  { id: 'video', label: 'Video', icon: Film, models: ['Auto route · Runway → Higgsfield → Kling'], description: 'Create 5-second shots through 10-minute productions. Long-form jobs are split into sequential continuity-aware segments and can extend each completed shot into the next.' },
+  { id: 'image', label: 'Image', icon: Image, models: ['Auto route · Runway → Higgsfield → Kling'], description: 'Create production stills with automatic provider failover and private output storage.' },
   { id: 'audio', label: 'Audio', icon: Mic2, models: ['Auto route · ElevenLabs → Runway'], description: 'Generate sound effects and atmospheres with durable private output storage.' },
   { id: 'movie', label: 'Movie', icon: Clapperboard, models: ['VisionWeaver Movie Pipeline · resilient route'], description: 'Create a treatment, characters, shot plan, audio plan and delivery package.' },
   { id: 'book', label: 'Book', icon: BookOpen, models: ['VisionWeaver Author · Claude Sonnet 4.6'], description: 'Create an outline, sample chapter, cover prompt, audiobook direction and publishing package.' }
@@ -393,7 +393,7 @@ export default function VisionWeaverWorkspace() {
 
       <section className={`vw-production-bar ${productionUser ? 'connected' : ''}`}>
         <span><ShieldCheck /></span>
-        <div><b>{productionUser ? 'Production connected' : 'Sign in to render real media'}</b><small>{productionUser ? productionUser.email : health ? `${(['image', 'video', 'audio', 'book', 'movie'] as StudioMode[]).filter((item) => health.readiness[item]).length} of 5 pipelines ready. VisionWeaver automatically routes around an unavailable provider.` : healthChecked ? 'Provider health could not be reached. Local planning remains available.' : 'Checking provider readiness…'}</small></div>
+        <div><b>{productionUser ? 'Production connected' : 'Sign in to render real media'}</b><small>{productionUser ? productionUser.email : health ? `${(['image', 'video', 'audio', 'book', 'movie'] as StudioMode[]).filter((item) => health.readiness[item]).length} of 5 pipelines ready. VisionWeaver automatically routes around an unavailable provider.` : healthChecked ? 'Provider health could not be reached. Local planning remains available.' : 'Checking provider readiness…'}</small>{health?.providers && <small>Providers: {Object.entries(health.providers).map(([name, provider]) => `${name} ${provider.verified ? 'verified' : provider.configured ? 'configured' : 'not configured'}`).join(' · ')}</small>}</div>
         {productionUser
           ? <><button onClick={() => loadLive(true)}><RefreshCw /> Sync outputs</button><button onClick={disconnectProduction}>Sign out</button></>
           : <span>Use the main dashboard login</span>}
@@ -446,7 +446,7 @@ export default function VisionWeaverWorkspace() {
               : <FileText />
             : generation.status === 'complete' && (generation.media_type === 'book' || generation.media_type === 'movie') ? <BookOpen />
             : generation.status === 'failed' ? <X /> : <RefreshCw className="spin" />}</div>
-          <small>{generation.media_type} · {generation.model}</small><h3>{generation.prompt.slice(0, 90)}</h3>
+          <small>{generation.media_type} · {generation.provider || 'automatic'} · {generation.model}</small><h3>{generation.prompt.slice(0, 90)}</h3>
           <p>{generation.error || generation.status.replaceAll('_', ' ')}</p>
           {generation.progress && <p>Shots: {generation.progress.complete}/{generation.progress.total} complete{generation.progress.failed ? ` · ${generation.progress.failed} failed` : ''}</p>}
           {generation.media_type === 'video' && (generation.playable_urls?.length || 0) > 1 && <div className="vw-agent-actions">{generation.playable_urls!.map((url, index) => <a key={`${generation.id}-${index}`} href={url} target="_blank" rel="noreferrer"><Play /> Clip {index + 1}</a>)}</div>}

@@ -26,7 +26,7 @@ After installing credentials, report only the slot names completed. Never send t
 4. Copy the value once.
 5. Open the approved Supabase Edge Function secret store or Vault location and update the matching canonical secret name.
 6. Delete the value from clipboard history, Notes, downloads and screenshots.
-7. Leave the connector staged until health, cost, privacy, fallback and kill-switch tests pass.
+7. Leave the connector in deferred/non-production state until health, cost, privacy, fallback and kill-switch tests pass.
 
 ## AI and model providers
 
@@ -41,7 +41,7 @@ After installing credentials, report only the slot names completed. Never send t
 | 7 | [xAI Console](https://console.x.ai/) | `XAI_API_KEY` | Direct Grok/xAI lane—not X social OAuth |
 | 8 | [KIE.ai](https://kie.ai/) | `KIE_API_KEY` | Optional VisionWeaver image/video/audio gateway |
 | 9 | [Kling API documentation](https://klingai.com/global/dev/document-api) | `KLING_ACCESS_KEY`, `KLING_SECRET_KEY` | Kling creative/video route |
-| 10 | [Higgsfield Cloud](https://cloud.higgsfield.ai/) | `HIGGSFIELD_API_KEY`, `HIGGSFIELD_API_SECRET` | Higgsfield creative/video route |
+| 10 | [Higgsfield Cloud](https://cloud.higgsfield.ai/) | `HIGGSFIELD_API_KEY`, `HIGGSFIELD_API_SECRET` | Higgsfield creative/video route; server adapter implemented and policy wired, credential activation + authenticated smoke test still required |
 | 11 | [ElevenLabs API Keys](https://elevenlabs.io/app/settings/api-keys) | `ELEVENLABS_API_KEY` | Voice generation; use a restricted key and credit quota |
 | 12 | [Honcho documentation](https://honcho.dev/docs) | `HONCHO_API_KEY` | Optional managed memory; not required for owned memory |
 
