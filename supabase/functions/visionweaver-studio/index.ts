@@ -305,12 +305,9 @@ async function providerHealth() {
   }
   if (higgsfieldKey && higgsfieldSecret) {
     try {
-      const result = await fetch((await setting('higgsfield_api_base', 'https://api.higgsfield.ai/v1')).replace(/\/+$/, '') + '/render-jobs/00000000-0000-0000-0000-000000000000', {
-        headers: {
-          authorization: 'Basic ' + btoa(`${higgsfieldKey}:${higgsfieldSecret}`),
-          'x-api-key': higgsfieldKey,
-          'x-api-secret': higgsfieldSecret
-        }
+      const base = (await setting('higgsfield_api_base', 'https://api.higgsfield.ai')).replace(/\/+$/, '').replace(/\/v1$/, '');
+      const result = await fetch(base + '/requests/00000000-0000-0000-0000-000000000000/status', {
+        headers: { authorization: `Key ${higgsfieldKey}:${higgsfieldSecret}` }
       });
       higgsfieldStatus = result.status;
       const body = await result.text();
@@ -387,10 +384,10 @@ async function routeFor(mediaType: string, parameters: Record<string, any> = {})
       : { provider: 'kling', model: await setting('kling_video_model', 'kling-v2-6'), operation: 'text_to_video', providerShotMaxSeconds: SHORT_PROVIDER_SHOT_MAX_SECONDS };
   }
   if (health.providers.higgsfield.verified) {
-    if (longFormVideo) throw new Error('Long-form video currently requires Runway continuity routing; Higgsfield remains short-shot fallback until certified for sequence extension.');
+    if (longFormVideo) throw new Error('Long-form video currently requires Runway continuity routing; Higgsfield extension is implemented but remains deferred until an authenticated sequence smoke test is certified.');
     return mediaType === 'image'
-      ? { provider: 'higgsfield', model: await setting('higgsfield_image_model', 'higgsfield-image-v1'), operation: 'text_to_image' }
-      : { provider: 'higgsfield', model: await setting('higgsfield_video_model', 'higgsfield-video-v1'), operation: 'text_to_video', providerShotMaxSeconds: SHORT_PROVIDER_SHOT_MAX_SECONDS };
+      ? { provider: 'higgsfield', model: await setting('higgsfield_image_model', 'higgsfield-ai/soul/v2/standard'), operation: 'text_to_image' }
+      : { provider: 'higgsfield', model: await setting('higgsfield_video_model', 'bytedance/seedance-2.5/text-to-video'), operation: 'text_to_video', providerShotMaxSeconds: SHORT_PROVIDER_SHOT_MAX_SECONDS };
   }
   throw new Error(`No verified ${mediaType} provider is available`);
 }
