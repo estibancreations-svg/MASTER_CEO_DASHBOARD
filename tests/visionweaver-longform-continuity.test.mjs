@@ -40,6 +40,15 @@ test('VisionWeaver orchestrator keeps Higgsfield as a governed fallback provider
   assert.match(orchestrator, /provider === 'higgsfield'/);
 });
 
+test('VisionWeaver Studio uses the shared official Higgsfield adapter contract', () => {
+  assert.match(studio, /createHiggsfieldAdapter/);
+  assert.match(studio, /api\.higgsfield\.ai/);
+  assert.match(studio, /Authorization|authorization/);
+  assert.doesNotMatch(studio, /\/render-jobs/);
+  assert.doesNotMatch(studio, /authorization: 'Basic '/);
+  assert.match(studio, /bytedance\/seedance-2\.5\/text-to-video/);
+});
+
 test('VisionWeaver defaults short projects to five seconds and expands explicit long-form runtimes safely', () => {
   assert.match(orchestrator, /setting\('visionweaver_segment_seconds', '5'\)/);
   assert.match(orchestrator, /source\.match\(\/\\b\(\\d\+\(\?:\\\.\\d\+\)\?\)\\s\*\(\?:minutes\?\|mins\?\|min\)\\b\/\)/);
