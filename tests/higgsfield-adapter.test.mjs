@@ -58,3 +58,14 @@ test('extractResultUrl supports official and legacy shapes', () => {
   assert.equal(extractResultUrl({ video: { url: 'https://cdn.example.com/official.mp4' } }), 'https://cdn.example.com/official.mp4');
   assert.equal(extractResultUrl({ result: { video_url: 'https://cdn.example.com/legacy.mp4' } }), 'https://cdn.example.com/legacy.mp4');
 });
+
+test('uses prompt-only payload for official Higgsfield image endpoints', async () => {
+  let request;
+  const adapter = createHiggsfieldAdapter({ apiKey: 'id', apiSecret: 'secret', fetchImpl: async (url, init) => {
+    request = { url, init };
+    return jsonResponse(200, { request_id: 'req-image' });
+  }});
+  await adapter.submitRenderJob({ model: 'higgsfield-ai/soul/v2/standard', prompt: 'editorial portrait', duration_seconds: 5 });
+  assert.equal(request.url, 'https://api.higgsfield.ai/higgsfield-ai/soul/v2/standard');
+  assert.deepEqual(JSON.parse(request.init.body), { prompt: 'editorial portrait' });
+});
