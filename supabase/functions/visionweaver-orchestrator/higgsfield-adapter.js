@@ -54,7 +54,8 @@ function modelPath(model, extend) {
   return extend ? DEFAULT_EXTEND_MODEL : DEFAULT_TEXT_MODEL;
 }
 
-function requestPayload(payload, extend) {
+function requestPayload(payload, extend, model) {
+  if (/image|soul/i.test(model)) return { prompt: String(payload?.prompt || '').trim() };
   const shared = {
     prompt: String(payload?.prompt || '').trim(),
     duration: Number(payload?.duration ?? payload?.duration_seconds ?? 5),
@@ -85,7 +86,7 @@ export function createHiggsfieldAdapter({ apiKey, apiSecret, baseUrl = DEFAULT_B
     async submitRenderJob(payload) {
       const extend = payload?.mode === 'extend' || Boolean(payload?.source_video_url || payload?.video_url);
       const endpoint = '/' + modelPath(payload?.model, extend);
-      const body = await request(endpoint, { method: 'POST', body: JSON.stringify(requestPayload(payload, extend)) });
+      const body = await request(endpoint, { method: 'POST', body: JSON.stringify(requestPayload(payload, extend, modelPath(payload?.model, extend))) });
       const id = pickString(body?.request_id, body?.id);
       if (!id) throw new Error('Higgsfield returned no request_id');
       return { id, statusUrl: pickString(body?.status_url), raw: body };
