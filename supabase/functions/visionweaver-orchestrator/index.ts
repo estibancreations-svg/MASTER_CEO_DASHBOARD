@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { createHiggsfieldAdapter } from './higgsfield-adapter.js';
 
 function namedSupabaseKey(jsonEnv, legacyEnv) {
   try {
@@ -16,6 +17,9 @@ const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: fal
 const RUNWAY_BASE = 'https://api.dev.runwayml.com/v1';
 const RUNWAY_VERSION = '2024-11-06';
 const RUNWAY_MODEL = 'seedance2_5';
+const HIGGSFIELD_MODEL = 'bytedance/seedance-2.5/text-to-video';
+const VISION_SYSTEM_KEY = 'SYS-VISION-001';
+const DEFAULT_PROVIDER_ORDER = ['runway', 'openai', 'gemini', 'kie', 'kling', 'higgsfield', 'local'];
 const DEADLINE_MS = 100000;
 const started = Date.now();
 const outOfTime = () => Date.now() - started > DEADLINE_MS;
@@ -78,6 +82,100 @@ async function runway(path, init = {}) {
   const text = await res.text();
   if (!res.ok) throw new Error('Runway ' + res.status + ': ' + text.slice(0, 400));
   return text ? JSON.parse(text) : {};
+}
+
+async function higgsfieldClient() {
+  const [apiKey, apiSecret] = await Promise.all([
+    secret('HIGGSFIELD_API_KEY'),
+    secret('HIGGSFIELD_API_SECRET')
+  ]);
+  if (!apiKey || !apiSecret) throw new Error('HIGGSFIELD_API_KEY or HIGGSFIELD_API_SECRET is not configured');
+  return createHiggsfieldAdapter({
+    apiKey,
+    apiSecret,
+    baseUrl: await setting('higgsfield_api_base', 'https://api.higgsfield.ai')
+  });
+}
+
+function unique(values) {
+  return values.filter((value, index) => values.indexOf(value) === index);
+}
+
+function rightsCleared(job) {
+  const provenance = job?.provenance && typeof job.provenance === 'object' ? job.provenance : {};
+  const direct = provenance.rights_cleared;
+  if (typeof direct === 'boolean') return direct;
+  const rightsState = String(provenance.rights_state || provenance.license_state || '').toLowerCase();
+  return ['cleared', 'approved', 'licensed', 'granted'].includes(rightsState);
+}
+
+function qualityScore(job) {
+  const provenance = job?.provenance && typeof job.provenance === 'object' ? job.provenance : {};
+  const score = Number(provenance.quality_score ?? provenance.qc_score ?? provenance.minimum_quality_score);
+  return Number.isFinite(score) ? score : null;
+}
+
+async function visionPolicy(job) {
+  let query = db.from('system_resource_policies')
+    .select('preferred_provider_order,runway_preferred,manual_override_allowed,minimum_quality_score,commercial_use_required')
+    .eq('system_key', VISION_SYSTEM_KEY)
+    .limit(1);
+  if (job?.organization_id) query = query.eq('organization_id', job.organization_id);
+  const { data } = await query.maybeSingle();
+  const preferredProviderOrder = Array.isArray(data?.preferred_provider_order)
+    ? data.preferred_provider_order.filter((value) => typeof value === 'string')
+    : DEFAULT_PROVIDER_ORDER;
+  return {
+    preferred_provider_order: preferredProviderOrder.length ? preferredProviderOrder : DEFAULT_PROVIDER_ORDER,
+    runway_preferred: data?.runway_preferred !== false,
+    manual_override_allowed: data?.manual_override_allowed !== false,
+    minimum_quality_score: Number(data?.minimum_quality_score || 0) || 0,
+    commercial_use_required: data?.commercial_use_required !== false
+  };
+}
+
+function providerSupported(provider) {
+  return provider === 'runway' || provider === 'higgsfield';
+}
+
+async function providerReady(provider) {
+  if (provider === 'runway') {
+    const key = await secret('RUNWAY_API_ACCESS');
+    return Boolean(key && /^key_[0-9a-f]{128}$/.test(key));
+  }
+  if (provider === 'higgsfield') {
+    const [key, secretValue] = await Promise.all([secret('HIGGSFIELD_API_KEY'), secret('HIGGSFIELD_API_SECRET')]);
+    return Boolean(key && secretValue);
+  }
+  return false;
+}
+
+async function selectRenderProvider(job, scene) {
+  const policy = await visionPolicy(job);
+  if (policy.commercial_use_required && !rightsCleared(job)) {
+    throw new Error('VisionWeaver rights gate blocked provider execution; rights_cleared is required');
+  }
+  const score = qualityScore(job);
+  if (score !== null && score < policy.minimum_quality_score) {
+    throw new Error(`VisionWeaver quality gate blocked provider execution (${score} < ${policy.minimum_quality_score})`);
+  }
+
+  const sceneOverride = String(scene?.scene_spec?.provider_override || scene?.scene_spec?.provider || '').toLowerCase();
+  const jobOverride = String(job?.provenance?.provider_override || '').toLowerCase();
+  const manualOverride = policy.manual_override_allowed ? (sceneOverride || jobOverride) : '';
+
+  const preferred = [...policy.preferred_provider_order.map((value) => String(value).toLowerCase())];
+  const ordered = unique([
+    ...(manualOverride ? [manualOverride] : []),
+    ...(policy.runway_preferred ? ['runway'] : []),
+    ...preferred,
+    ...DEFAULT_PROVIDER_ORDER
+  ]);
+  for (const provider of ordered) {
+    if (!providerSupported(provider)) continue;
+    if (await providerReady(provider)) return provider;
+  }
+  throw new Error('No configured VisionWeaver provider from preferred_provider_order is currently available');
 }
 
 function clampDuration(value, fallback = 5) {
@@ -209,30 +307,50 @@ async function submitScene(scene) {
   const duration = clampDuration(scene.scene_spec?.duration_seconds, 5);
   const basePrompt = String(scene.prompt || '').slice(0, 15000);
   const extend = Boolean(predecessor);
-  const endpoint = extend ? '/video_to_video' : '/text_to_video';
-  const payload = extend
-    ? {
-        model: RUNWAY_MODEL,
-        promptVideo: predecessor.video_url,
-        promptText: 'Continue seamlessly from the final moment of the supplied video. Preserve character identity, wardrobe, environment, lighting direction, props, geography, screen direction and motion. Do not restart or repeat the prior shot. ' + basePrompt,
-        duration,
-        mode: 'extend',
-        audio: false
-      }
-    : {
-        model: RUNWAY_MODEL,
-        promptText: basePrompt,
-        duration,
-        ratio: '1280:720',
-        audio: false
-      };
-
-  const task = await runway(endpoint, { method: 'POST', body: JSON.stringify(payload) });
-  if (!task.id) throw new Error('Runway returned no task id');
-  const operation = extend ? 'video_to_video_extend' : 'text_to_video';
+  const job = scene.production_jobs || {};
+  const provider = await selectRenderProvider(job, scene);
+  let taskId = '';
+  let operation = '';
+  if (provider === 'runway') {
+    const endpoint = extend ? '/video_to_video' : '/text_to_video';
+    const payload = extend
+      ? {
+          model: RUNWAY_MODEL,
+          promptVideo: predecessor.video_url,
+          promptText: 'Continue seamlessly from the final moment of the supplied video. Preserve character identity, wardrobe, environment, lighting direction, props, geography, screen direction and motion. Do not restart or repeat the prior shot. ' + basePrompt,
+          duration,
+          mode: 'extend',
+          audio: false
+        }
+      : {
+          model: RUNWAY_MODEL,
+          promptText: basePrompt,
+          duration,
+          ratio: '1280:720',
+          audio: false
+        };
+    const task = await runway(endpoint, { method: 'POST', body: JSON.stringify(payload) });
+    taskId = String(task?.id || '');
+    if (!taskId) throw new Error('Runway returned no task id');
+    operation = extend ? 'video_to_video_extend' : 'text_to_video';
+  } else {
+    const higgsfield = await higgsfieldClient();
+    const task = await higgsfield.submitRenderJob({
+      model: await setting('higgsfield_video_model', HIGGSFIELD_MODEL),
+      prompt: extend
+        ? 'Continue seamlessly from the final moment of the supplied video. Preserve character identity, wardrobe, environment, lighting direction, props, geography, screen direction and motion. Do not restart or repeat the prior shot. ' + basePrompt
+        : basePrompt,
+      duration_seconds: duration,
+      mode: extend ? 'extend' : 'origin',
+      source_video_url: predecessor?.video_url || null,
+      aspect_ratio: '16:9'
+    });
+    taskId = task.id;
+    operation = extend ? 'render_extend' : 'render';
+  }
   const provenance = {
-    provider: 'runway',
-    model: RUNWAY_MODEL,
+    provider,
+    model: provider === 'runway' ? RUNWAY_MODEL : await setting('higgsfield_video_model', HIGGSFIELD_MODEL),
     operation,
     continuity_mode: extend ? 'extend_previous_scene' : 'origin',
     predecessor_scene_id: predecessor?.id || null,
@@ -243,8 +361,8 @@ async function submitScene(scene) {
   };
   await db.from('production_scenes').update({
     status: 'rendering',
-    provider: 'runway',
-    provider_task_id: task.id,
+    provider,
+    provider_task_id: taskId,
     submitted_at: new Date().toISOString(),
     error_message: null,
     provenance
@@ -252,9 +370,9 @@ async function submitScene(scene) {
   await db.from('vw_integration_receipts').insert({
     job_id: scene.job_id,
     scene_id: scene.id,
-    provider: 'runway',
+    provider,
     operation,
-    external_id: task.id,
+    external_id: taskId,
     status: 'accepted',
     metadata: { ...provenance, ratio: extend ? 'match_input' : '1280:720' }
   });
@@ -263,15 +381,27 @@ async function submitScene(scene) {
 
 async function pollScene(scene) {
   if (!scene.provider_task_id) return;
-  const task = await runway('/tasks/' + encodeURIComponent(scene.provider_task_id));
   const polls = (scene.poll_count || 0) + 1;
-  const status = String(task.status || '').toUpperCase();
+  let status = '';
+  let videoUrl = null;
+  let failure = '';
+  if (scene.provider === 'higgsfield') {
+    const higgsfield = await higgsfieldClient();
+    const task = await higgsfield.pollRenderJob(scene.provider_task_id);
+    status = task.status;
+    videoUrl = task.resultUrl;
+    failure = String(task.raw?.error || task.raw?.message || task.status || '').slice(0, 500);
+  } else {
+    const task = await runway('/tasks/' + encodeURIComponent(scene.provider_task_id));
+    status = String(task.status || '').toUpperCase();
+    videoUrl = Array.isArray(task.output) ? task.output.find((item) => typeof item === 'string') : null;
+    failure = String(task.failure || task.failureCode || status).slice(0, 500);
+  }
   if (status === 'SUCCEEDED') {
-    const videoUrl = Array.isArray(task.output) ? task.output.find((item) => typeof item === 'string') : null;
-    if (!videoUrl) throw new Error('Runway succeeded without an output URL');
+    if (!videoUrl) throw new Error('Provider succeeded without an output URL');
     await db.from('production_scenes').update({ status: 'complete', video_url: videoUrl, poll_count: polls, error_message: null }).eq('id', scene.id);
   } else if (status === 'FAILED' || status === 'CANCELLED') {
-    await db.from('production_scenes').update({ status: 'failed', error_message: String(task.failure || task.failureCode || status).slice(0, 500), poll_count: polls }).eq('id', scene.id);
+    await db.from('production_scenes').update({ status: 'failed', error_message: failure, poll_count: polls }).eq('id', scene.id);
   } else if (polls >= (scene.max_polls || 60)) {
     await db.from('production_scenes').update({ status: 'failed', error_message: `Render watchdog exceeded ${scene.max_polls || 60} polls`, poll_count: polls }).eq('id', scene.id);
   } else {
@@ -366,7 +496,7 @@ async function pollRendering(acted) {
 
 async function submitNextScene(acted) {
   const { data: scenes } = await db.from('production_scenes')
-    .select('*, production_jobs!inner(status)')
+    .select('*, production_jobs!inner(id,status,provenance,organization_id)')
     .eq('status', 'pending')
     .in('production_jobs.status', ['scenes_ready', 'rendering'])
     .order('created_at')
@@ -443,7 +573,7 @@ Deno.serve(async (req) => {
     if (req.method !== 'POST' && !(req.method === 'GET' && isHealth)) {
       return Response.json({ ok: false, error: 'method_not_allowed' }, { status: 405, headers: { 'Cache-Control': 'no-store' } });
     }
-    const provided = (req.headers.get('authorization') || '').replace(/^Bearer +/i, '');
+    const provided = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
     const expected = await secret('VISIONWEAVER_CRON_SECRET');
     if (!provided || !expected || !(await secretsMatch(provided, expected))) {
       return Response.json({ ok: false, error: 'unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
@@ -454,7 +584,7 @@ Deno.serve(async (req) => {
       return Response.json({
         ok: true,
         service: 'visionweaver-orchestrator',
-        version: 7,
+        version: 8,
         runway_model: RUNWAY_MODEL,
         provider_slots: {
           gemini: {
@@ -462,6 +592,12 @@ Deno.serve(async (req) => {
             configured: geminiConfigured,
             runtime_role: 'planning_or_multimodal_adapter',
             render_route: 'not_used_for_runway_longform'
+          },
+          higgsfield: {
+            credential_name: 'HIGGSFIELD_API_KEY + HIGGSFIELD_API_SECRET',
+            configured: Boolean(await secret('HIGGSFIELD_API_KEY')) && Boolean(await secret('HIGGSFIELD_API_SECRET')),
+            runtime_role: 'manuscript_to_film_render_provider',
+            render_route: 'submit_render_job_and_poll_status'
           }
         },
         continuity: {

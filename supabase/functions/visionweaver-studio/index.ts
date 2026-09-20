@@ -239,18 +239,21 @@ let healthCache: { expires: number; value: any } | null = null;
 
 async function providerHealth() {
   if (healthCache && healthCache.expires > Date.now()) return healthCache.value;
-  const [anthropicKey, runwayKey, klingAccess, klingSecret, elevenLabsKey] = await Promise.all([
+  const [anthropicKey, runwayKey, klingAccess, klingSecret, elevenLabsKey, higgsfieldKey, higgsfieldSecret] = await Promise.all([
     secret('ANTHROPIC_API_KEY'), secret('RUNWAY_API_ACCESS'), secret('KLING_ACCESS_KEY'),
-    secret('KLING_SECRET_KEY'), secret('ELEVENLABS_API_KEY')
+    secret('KLING_SECRET_KEY'), secret('ELEVENLABS_API_KEY'),
+    secret('HIGGSFIELD_API_KEY'), secret('HIGGSFIELD_API_SECRET')
   ]);
   let anthropicVerified = false;
   let runwayVerified = false;
   let klingVerified = false;
   let elevenLabsVerified = false;
+  let higgsfieldVerified = false;
   let anthropicStatus: number | null = null;
   let runwayStatus: number | null = null;
   let klingStatus: number | null = null;
   let elevenLabsStatus: number | null = null;
+  let higgsfieldStatus: number | null = null;
   if (anthropicKey) {
     try {
       const result = await fetch('https://api.anthropic.com/v1/models?limit=1', {
@@ -289,8 +292,22 @@ async function providerHealth() {
       elevenLabsVerified = result.ok;
     } catch (_) {}
   }
-  const imageReady = runwayVerified || klingVerified;
-  const videoReady = runwayVerified || klingVerified;
+  if (higgsfieldKey && higgsfieldSecret) {
+    try {
+      const result = await fetch((await setting('higgsfield_api_base', 'https://api.higgsfield.ai/v1')).replace(/\/+$/, '') + '/render-jobs/00000000-0000-0000-0000-000000000000', {
+        headers: {
+          authorization: 'Basic ' + btoa(`${higgsfieldKey}:${higgsfieldSecret}`),
+          'x-api-key': higgsfieldKey,
+          'x-api-secret': higgsfieldSecret
+        }
+      });
+      higgsfieldStatus = result.status;
+      const body = await result.text();
+      higgsfieldVerified = result.status !== 401 && result.status !== 403 && !/invalid credentials|unauthorized/i.test(body);
+    } catch (_) {}
+  }
+  const imageReady = runwayVerified || klingVerified || higgsfieldVerified;
+  const videoReady = runwayVerified || klingVerified || higgsfieldVerified;
   const audioReady = elevenLabsVerified || runwayVerified;
   const value = {
     providers: {
@@ -304,6 +321,7 @@ async function providerHealth() {
         status: runwayStatus
       },
       kling: { configured: Boolean(klingAccess && klingSecret), verified: klingVerified, status: klingStatus },
+      higgsfield: { configured: Boolean(higgsfieldKey && higgsfieldSecret), verified: higgsfieldVerified, status: higgsfieldStatus },
       elevenlabs: { configured: Boolean(elevenLabsKey), verified: elevenLabsVerified, status: elevenLabsStatus }
     },
     readiness: {
@@ -321,8 +339,8 @@ async function providerHealth() {
 
 function models() {
   return {
-    image: { provider: 'automatic', model: 'Runway Gen-4 Image Turbo / Kling 2.0 fallback', operation: 'text_to_image' },
-    video: { provider: 'automatic', model: 'Runway Seedance 2.5 (up to 30s) / Gen-4.5 (up to 10s)', operation: 'duration_aware_sequence' },
+    image: { provider: 'automatic', model: 'Runway Gen-4 Image Turbo / Higgsfield / Kling 2.0 fallback', operation: 'text_to_image' },
+    video: { provider: 'automatic', model: 'Runway Seedance 2.5 (up to 30s) / Higgsfield / Gen-4.5 (up to 10s)', operation: 'duration_aware_sequence' },
     audio: { provider: 'automatic', model: 'ElevenLabs Sound Effects / Runway fallback', operation: 'sound_effect' },
     book: { provider: 'anthropic', model: 'claude-sonnet-4-6', operation: 'author_package' },
     movie: { provider: 'automatic', model: 'Claude Sonnet 4.6 + verified video provider', operation: 'runtime_bound_movie_plan' }
@@ -356,6 +374,12 @@ async function routeFor(mediaType: string, parameters: Record<string, any> = {})
     return mediaType === 'image'
       ? { provider: 'kling', model: await setting('kling_image_model', 'kling-v2'), operation: 'text_to_image' }
       : { provider: 'kling', model: await setting('kling_video_model', 'kling-v2-6'), operation: 'text_to_video', providerShotMaxSeconds: SHORT_PROVIDER_SHOT_MAX_SECONDS };
+  }
+  if (health.providers.higgsfield.verified) {
+    if (longFormVideo) throw new Error('Long-form video currently requires Runway continuity routing; Higgsfield remains short-shot fallback until certified for sequence extension.');
+    return mediaType === 'image'
+      ? { provider: 'higgsfield', model: await setting('higgsfield_image_model', 'higgsfield-image-v1'), operation: 'text_to_image' }
+      : { provider: 'higgsfield', model: await setting('higgsfield_video_model', 'higgsfield-video-v1'), operation: 'text_to_video', providerShotMaxSeconds: SHORT_PROVIDER_SHOT_MAX_SECONDS };
   }
   throw new Error(`No verified ${mediaType} provider is available`);
 }
@@ -655,6 +679,43 @@ async function submitGeneration(generation: any) {
     }).eq('id', generation.id);
     return;
   }
+  if (generation.provider === 'higgsfield') {
+    const [apiKey, apiSecret] = await Promise.all([secret('HIGGSFIELD_API_KEY'), secret('HIGGSFIELD_API_SECRET')]);
+    if (!apiKey || !apiSecret) throw new Error('Higgsfield is not configured');
+    const base = (await setting('higgsfield_api_base', 'https://api.higgsfield.ai/v1')).replace(/\/+$/, '');
+    const payload = {
+      model: generation.model || await setting(
+        generation.media_type === 'image' ? 'higgsfield_image_model' : 'higgsfield_video_model',
+        generation.media_type === 'image' ? 'higgsfield-image-v1' : 'higgsfield-video-v1'
+      ),
+      prompt: generation.prompt.slice(0, 1000),
+      duration_seconds: generation.media_type === 'video'
+        ? Math.max(2, Math.min(SHORT_PROVIDER_SHOT_MAX_SECONDS, Number(parameters.duration) || 5))
+        : undefined,
+      aspect_ratio: String(parameters.ratio || '1280:720').replace(':', 'x')
+    };
+    await db.from('vw_generations').update({ status: 'submitting', attempts: generation.attempts + 1 }).eq('id', generation.id);
+    const result = await fetch(base + '/render-jobs', {
+      method: 'POST',
+      headers: {
+        authorization: 'Basic ' + btoa(`${apiKey}:${apiSecret}`),
+        'x-api-key': apiKey,
+        'x-api-secret': apiSecret,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    const text = await result.text();
+    const task = text ? JSON.parse(text) : {};
+    if (!result.ok) throw new Error('Higgsfield ' + result.status + ': ' + text.slice(0, 400));
+    const taskId = task.id || task.job_id || task.task_id;
+    if (!taskId) throw new Error('Higgsfield returned no task id');
+    await db.from('vw_generations').update({
+      status: 'processing', external_id: taskId, model: payload.model,
+      submitted_at: new Date().toISOString(), error: null
+    }).eq('id', generation.id);
+    return;
+  }
 
   let path = '';
   let payload: any = {};
@@ -734,6 +795,25 @@ async function pollGeneration(generation: any) {
     status = String(task.task_status || '').toUpperCase();
     const outputs = generation.media_type === 'image' ? task.task_result?.images : task.task_result?.videos;
     urls = Array.isArray(outputs) ? outputs.map((item: any) => item.url).filter((item: unknown) => typeof item === 'string') : [];
+  } else if (generation.provider === 'higgsfield') {
+    const [apiKey, apiSecret] = await Promise.all([secret('HIGGSFIELD_API_KEY'), secret('HIGGSFIELD_API_SECRET')]);
+    if (!apiKey || !apiSecret) throw new Error('Higgsfield is not configured');
+    const base = (await setting('higgsfield_api_base', 'https://api.higgsfield.ai/v1')).replace(/\/+$/, '');
+    const result = await fetch(base + '/render-jobs/' + encodeURIComponent(generation.external_id), {
+      headers: {
+        authorization: 'Basic ' + btoa(`${apiKey}:${apiSecret}`),
+        'x-api-key': apiKey,
+        'x-api-secret': apiSecret
+      }
+    });
+    const text = await result.text();
+    task = text ? JSON.parse(text) : {};
+    if (!result.ok) throw new Error('Higgsfield ' + result.status + ': ' + text.slice(0, 400));
+    const rawStatus = String(task.status || task.state || task.job_status || '').toUpperCase();
+    status = ['SUCCESS', 'COMPLETED', 'DONE'].includes(rawStatus) ? 'SUCCEEDED' : rawStatus;
+    urls = [task.result_url, task.asset_url, task.video_url, task.output_url, task.result?.url]
+      .filter((item: unknown) => typeof item === 'string') as string[];
+    if (!urls.length && Array.isArray(task.output_urls)) urls = task.output_urls.filter((item: unknown) => typeof item === 'string');
   } else {
     task = await runway('/tasks/' + encodeURIComponent(generation.external_id));
     status = String(task.status || '').toUpperCase();

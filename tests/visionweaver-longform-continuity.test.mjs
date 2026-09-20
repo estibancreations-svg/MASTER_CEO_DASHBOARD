@@ -33,6 +33,13 @@ test('VisionWeaver project orchestrator uses strict sequential video extension',
   assert.match(orchestrator, /acted\.push\('submit:' \+ scene\.scene_id \+ ':' \+ result\.operation\);\s*return;/s);
 });
 
+test('VisionWeaver orchestrator keeps Higgsfield as a governed fallback provider path', () => {
+  assert.match(orchestrator, /DEFAULT_PROVIDER_ORDER = \['runway', 'openai', 'gemini', 'kie', 'kling', 'higgsfield', 'local'\]/);
+  assert.match(orchestrator, /HIGGSFIELD_API_KEY/);
+  assert.match(orchestrator, /HIGGSFIELD_API_SECRET/);
+  assert.match(orchestrator, /provider === 'higgsfield'/);
+});
+
 test('VisionWeaver defaults short projects to five seconds and expands explicit long-form runtimes safely', () => {
   assert.match(orchestrator, /setting\('visionweaver_segment_seconds', '5'\)/);
   assert.match(orchestrator, /source\.match\(\/\\b\(\\d\+\(\?:\\\.\\d\+\)\?\)\\s\*\(\?:minutes\?\|mins\?\|min\)\\b\/\)/);
