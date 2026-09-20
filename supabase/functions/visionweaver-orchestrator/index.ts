@@ -17,7 +17,7 @@ const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: fal
 const RUNWAY_BASE = 'https://api.dev.runwayml.com/v1';
 const RUNWAY_VERSION = '2024-11-06';
 const RUNWAY_MODEL = 'seedance2_5';
-const HIGGSFIELD_MODEL = 'vision-weaver-v1';
+const HIGGSFIELD_MODEL = 'bytedance/seedance-2.5/text-to-video';
 const VISION_SYSTEM_KEY = 'SYS-VISION-001';
 const DEFAULT_PROVIDER_ORDER = ['runway', 'openai', 'gemini', 'kie', 'kling', 'higgsfield', 'local'];
 const DEADLINE_MS = 100000;
@@ -93,7 +93,7 @@ async function higgsfieldClient() {
   return createHiggsfieldAdapter({
     apiKey,
     apiSecret,
-    baseUrl: await setting('higgsfield_api_base', 'https://api.higgsfield.ai/v1')
+    baseUrl: await setting('higgsfield_api_base', 'https://api.higgsfield.ai')
   });
 }
 
