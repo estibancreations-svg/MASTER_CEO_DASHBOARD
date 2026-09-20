@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { createHiggsfieldAdapter } from '../visionweaver-orchestrator/higgsfield-adapter.js';
 
 function namedSupabaseKey(jsonEnv: string, legacyEnv: string) {
   try {
@@ -142,6 +143,16 @@ async function runway(path: string, init: RequestInit = {}) {
   const text = await result.text();
   if (!result.ok) throw new Error('Runway ' + result.status + ': ' + text.slice(0, 400));
   return text ? JSON.parse(text) : {};
+}
+
+async function higgsfieldClient() {
+  const [apiKey, apiSecret] = await Promise.all([secret('HIGGSFIELD_API_KEY'), secret('HIGGSFIELD_API_SECRET')]);
+  if (!apiKey || !apiSecret) throw new Error('Higgsfield is not configured');
+  return createHiggsfieldAdapter({
+    apiKey,
+    apiSecret,
+    baseUrl: await setting('higgsfield_api_base', 'https://api.higgsfield.ai')
+  });
 }
 
 function base64Url(value: string | Uint8Array) {
@@ -680,38 +691,30 @@ async function submitGeneration(generation: any) {
     return;
   }
   if (generation.provider === 'higgsfield') {
-    const [apiKey, apiSecret] = await Promise.all([secret('HIGGSFIELD_API_KEY'), secret('HIGGSFIELD_API_SECRET')]);
-    if (!apiKey || !apiSecret) throw new Error('Higgsfield is not configured');
-    const base = (await setting('higgsfield_api_base', 'https://api.higgsfield.ai/v1')).replace(/\/+$/, '');
-    const payload = {
-      model: generation.model || await setting(
-        generation.media_type === 'image' ? 'higgsfield_image_model' : 'higgsfield_video_model',
-        generation.media_type === 'image' ? 'higgsfield-image-v1' : 'higgsfield-video-v1'
-      ),
+    const continuationMode = Boolean(continuation.url);
+    const model = generation.model || await setting(
+      generation.media_type === 'image' ? 'higgsfield_image_model' : 'higgsfield_video_model',
+      generation.media_type === 'image'
+        ? 'higgsfield/soul/v2/standard'
+        : 'bytedance/seedance-2.5/text-to-video'
+    );
+    const adapter = await higgsfieldClient();
+    await db.from('vw_generations').update({ status: 'submitting', attempts: generation.attempts + 1 }).eq('id', generation.id);
+    const task = await adapter.submitRenderJob({
+      model,
       prompt: generation.prompt.slice(0, 1000),
       duration_seconds: generation.media_type === 'video'
-        ? Math.max(2, Math.min(SHORT_PROVIDER_SHOT_MAX_SECONDS, Number(parameters.duration) || 5))
+        ? Math.max(4, Math.min(LONG_FORM_PROVIDER_SHOT_MAX_SECONDS, Number(parameters.duration) || 5))
         : undefined,
-      aspect_ratio: String(parameters.ratio || '1280:720').replace(':', 'x')
-    };
-    await db.from('vw_generations').update({ status: 'submitting', attempts: generation.attempts + 1 }).eq('id', generation.id);
-    const result = await fetch(base + '/render-jobs', {
-      method: 'POST',
-      headers: {
-        authorization: 'Basic ' + btoa(`${apiKey}:${apiSecret}`),
-        'x-api-key': apiKey,
-        'x-api-secret': apiSecret,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify(payload)
+      mode: continuationMode ? 'extend' : 'origin',
+      source_video_url: continuation.url,
+      aspect_ratio: String(parameters.ratio || '1280:720').includes(':')
+        ? String(parameters.ratio || '1280:720')
+        : '16:9',
+      generate_audio: false
     });
-    const text = await result.text();
-    const task = text ? JSON.parse(text) : {};
-    if (!result.ok) throw new Error('Higgsfield ' + result.status + ': ' + text.slice(0, 400));
-    const taskId = task.id || task.job_id || task.task_id;
-    if (!taskId) throw new Error('Higgsfield returned no task id');
     await db.from('vw_generations').update({
-      status: 'processing', external_id: taskId, model: payload.model,
+      status: 'processing', external_id: task.id, model,
       submitted_at: new Date().toISOString(), error: null
     }).eq('id', generation.id);
     return;
@@ -796,24 +799,10 @@ async function pollGeneration(generation: any) {
     const outputs = generation.media_type === 'image' ? task.task_result?.images : task.task_result?.videos;
     urls = Array.isArray(outputs) ? outputs.map((item: any) => item.url).filter((item: unknown) => typeof item === 'string') : [];
   } else if (generation.provider === 'higgsfield') {
-    const [apiKey, apiSecret] = await Promise.all([secret('HIGGSFIELD_API_KEY'), secret('HIGGSFIELD_API_SECRET')]);
-    if (!apiKey || !apiSecret) throw new Error('Higgsfield is not configured');
-    const base = (await setting('higgsfield_api_base', 'https://api.higgsfield.ai/v1')).replace(/\/+$/, '');
-    const result = await fetch(base + '/render-jobs/' + encodeURIComponent(generation.external_id), {
-      headers: {
-        authorization: 'Basic ' + btoa(`${apiKey}:${apiSecret}`),
-        'x-api-key': apiKey,
-        'x-api-secret': apiSecret
-      }
-    });
-    const text = await result.text();
-    task = text ? JSON.parse(text) : {};
-    if (!result.ok) throw new Error('Higgsfield ' + result.status + ': ' + text.slice(0, 400));
-    const rawStatus = String(task.status || task.state || task.job_status || '').toUpperCase();
-    status = ['SUCCESS', 'COMPLETED', 'DONE'].includes(rawStatus) ? 'SUCCEEDED' : rawStatus;
-    urls = [task.result_url, task.asset_url, task.video_url, task.output_url, task.result?.url]
-      .filter((item: unknown) => typeof item === 'string') as string[];
-    if (!urls.length && Array.isArray(task.output_urls)) urls = task.output_urls.filter((item: unknown) => typeof item === 'string');
+    const result = await (await higgsfieldClient()).pollRenderJob(generation.external_id);
+    task = result.raw;
+    status = result.status;
+    urls = result.resultUrl ? [result.resultUrl] : [];
   } else {
     task = await runway('/tasks/' + encodeURIComponent(generation.external_id));
     status = String(task.status || '').toUpperCase();
