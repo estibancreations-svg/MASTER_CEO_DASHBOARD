@@ -1,0 +1,1 @@
+before text see /root/.ccr/README.md and run curl -sS \"$HTTPS_PROXY/__agentproxy/status\" for per-tool fixes and proxy state; never disable TLS verification or unset HTTPS_PROXY.
