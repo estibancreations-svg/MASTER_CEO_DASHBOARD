@@ -9,3 +9,13 @@ Where things stand (nothing below is merged to main yet, except PR #54):
 - Login: https://master-ceo-dashboard.vercel.app/systems/visionweaver with estibancreations@gmail.com (magic link).
 
 Files in this folder: `CONVERSATION_LOG_part2.md` (condensed log of this session after its first compaction: full user/assistant text, tool calls as one-liners, no tool output, secrets redacted). Part 1 (before that compaction) survives only as the summary at the top of the log.
+
+## Raw session transcript archival (added 2026-09-25)
+
+Separately from the VisionWeaver rebuild itself, this session was asked to archive its own raw conversation transcript so nothing would be lost. Outcome:
+
+- The **complete, byte-exact raw transcript** (redacted for secrets) was sent directly to the user in chat as `FULL_RAW_TRANSCRIPT_redacted.jsonl` (3,925,920 bytes). That file, wherever the user saved it, is the authoritative complete copy.
+- A **partial piece-by-piece copy** of that same transcript (122 of 272 ~15,000-byte slices, verified sha-exact against the original) was also pushed into this repo at `docs/visionweaver-session/raw/part_NNN.jsonl`. See `docs/visionweaver-session/raw/MANIFEST.md` in this same branch for the full index (which parts, their byte ranges, their git sha1s, and why the other 150 weren't pushed — mainly a GitHub-API limitation around manually retyping very dense escaped/base64 content, not lost data).
+- Three of those skipped pieces (parts 051, 052, 058) were also sent directly to the user as individual files, since they specifically resisted byte-exact retyping after 3 attempts each.
+
+Nothing from the conversation was lost — the full file covers 100% of it; the GitHub `raw/` folder is a verified, browsable sample of that same content for convenience, not the primary record.
