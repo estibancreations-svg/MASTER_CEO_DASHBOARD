@@ -1,0 +1,1 @@
+$(cat /tmp/vw/rawsplit/MANIFEST.md)
