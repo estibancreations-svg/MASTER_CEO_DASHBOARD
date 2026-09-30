@@ -11,7 +11,7 @@ This document connects the CEO Dashboard to the current VisionWeaver Stock and a
 ## Canonical implementation references
 
 - [VisionWeaver advanced README](https://github.com/estibancreations-svg/VisionWeaver/blob/main/README.md)
-- [VisionWeaver Stock and Production Buildout Review](https://github.com/estibancreations-svg/VisionWeaver/blob/main/docs/VISIONWEAVER-STOCK-AND-PRODUCTION-BUILDOUT-REVIEW-2026-09-27.md)
+- [VisionWeaver Stock and Production Buildout Review](https://github.com/estibancreations-svg/VisionWeaver/pull/1) — merge this first; then the stable README and specification paths on `main` become the dashboard's canonical references.
 - [VisionWeaver Drive review copy](https://drive.google.com/file/d/1tJEpLVAKNeia4nmZRXwruuW2GqbibFVQ/view?usp=drivesdk)
 - [Private conversation and governance record PR](https://github.com/estibancreations-svg/Master-System-Buildout/pull/23)
 
