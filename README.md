@@ -66,3 +66,16 @@ npm run build
 - **THELMA (`SYS-THELMA-001`)** — requests, authorization, commands, runs, incidents and resolution.
 - **CMGIO/MAP (`SYS-ADS-001`)** — campaigns, assets, signals, authorization and optimization.
 - **EC Integration Fabric** — owned connectors, queues, workflows, retries, dead letters and audit; n8n is optional.
+
+
+## VisionWeaver character identity boards
+
+The CEO Dashboard treats character references as governed production records shared with VisionWeaver. The approved hierarchy is:
+
+1. **A Cast Board** — multi-character scene fallout and active scene cast.
+2. **Character Detail Specifications Board** — canonical physical, texture, wardrobe, injury, voice, and identity anchors.
+3. **360 View Board** — individual character generation and camera reference.
+
+The default 360 View Board is a **32-view master**: eight eye-level azimuth views, eight high-oblique views, eight low-oblique views, and eight extreme-oblique views. A **16-view state board** is the controlled variant for clothing-only or limited non-identity changes. Each active scene state is versioned and referenced by the Cast Board. This supports carousel exports and prevents identity drift across Runway, VisionWeaver, and dashboard workflows.
+
+Canonical implementation contract: [VisionWeaver Character Identity Board System](https://github.com/estibancreations-svg/VisionWeaver/blob/main/standards/character-board-system-v1.md).
