@@ -3,6 +3,11 @@ import { BookOpen, Clapperboard, Film, Image as ImageIcon, Library, Loader2, Mus
 import { supabase } from '../lib/supabase';
 import { useIdentity } from '../auth/IdentityContext';
 
+const DURATIONS: Array<[string, string]> = [
+  ['5', '5 seconds'], ['10', '10 seconds'], ['30', '30 seconds'], ['60', '1 minute'], ['120', '2 minutes'],
+  ['300', '5 minutes'], ['600', '10 minutes']
+];
+
 type Tab = 'create' | 'books' | 'characters' | 'library';
 type Media = 'image' | 'video' | 'audio';
 type Row = Record<string, any>;
@@ -69,6 +74,7 @@ export default function VisionWeaverWorkspace() {
   const [media, setMedia] = useState<Media>('video');
   const [prompt, setPrompt] = useState('');
   const [seconds, setSeconds] = useState(10);
+  const [continuityMode, setContinuityMode] = useState<'reference' | 'extend'>('extend');
   const [ratio, setRatio] = useState('1280:720');
   const [picked, setPicked] = useState<string[]>([]);
   const [master, setMaster] = useState<Record<string, string>>({});
@@ -132,10 +138,16 @@ export default function VisionWeaverWorkspace() {
   async function generate(overridePrompt?: string, refs?: string[], m?: Media) {
     const kind = m || media;
     const text = (overridePrompt ?? prompt).trim();
+    const longForm = kind === 'video' && seconds > 10;
     await run('generate', async () => {
       const res = await call({
         action: 'create', media_type: kind, prompt: text, title: text.slice(0, 60), organization_id: identity.organizationId,
-        parameters: { ratio, duration: seconds, target_duration_seconds: seconds, variant_count: 1, reference_asset_ids: (refs || picked).slice(0, 3), provider_shot_max_seconds: 10 }
+        parameters: {
+          ratio, duration: seconds, target_duration_seconds: seconds, variant_count: 1, reference_asset_ids: (refs || picked).slice(0, 3),
+          continuity_mode: longForm ? continuityMode : 'reference',
+          video_generation_profile: longForm ? 'long_form' : 'short_form',
+          provider_shot_max_seconds: longForm ? 30 : 10
+        }
       });
       setMsg(`Started. Your ${kind} will appear in the Library when it finishes (${res.generation?.status || 'queued'}).`);
       setTab('library');
@@ -206,7 +218,12 @@ export default function VisionWeaverWorkspace() {
             <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="A tall man in a burgundy tie stands in a glass office at sunrise, camera slowly pushes in…" maxLength={1000} />
             <div className="row">
               {(['video', 'image', 'audio'] as Media[]).map((m) => (<span key={m} className={'chip ' + (media === m ? 'on' : '')} onClick={() => setMedia(m)}>{m === 'video' ? <Film size={13} /> : m === 'image' ? <ImageIcon size={13} /> : <Music size={13} />} {m}</span>))}
-              {media === 'video' && [5, 10].map((s) => (<span key={s} className={'chip ' + (seconds === s ? 'on' : '')} onClick={() => setSeconds(s)}>{s}s</span>))}
+              {media === 'video' && (<select aria-label="Video length" style={{ width: 130 }} value={String(seconds)} onChange={(e) => setSeconds(Number(e.target.value))}>
+                {DURATIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>)}
+              {media === 'video' && seconds > 10 && (<select aria-label="Continuity" style={{ width: 170 }} value={continuityMode} onChange={(e) => setContinuityMode(e.target.value as 'reference' | 'extend')}>
+                <option value="extend">Extend prior shot</option><option value="reference">Reference continuity</option>
+              </select>)}
               <select style={{ width: 130 }} value={ratio} onChange={(e) => setRatio(e.target.value)}>
                 <option value="1280:720">16:9</option><option value="720:1280">9:16</option><option value="960:960">1:1</option>
               </select>
