@@ -637,7 +637,6 @@ async function submitGeneration(generation: any) {
     }).eq('id', generation.project_id);
     return;
   }
-
   const parameters = generation.parameters || {};
   const continuation = generation.media_type === 'video' && parameters.continuity_mode === 'extend'
     ? await extendSource(generation)
@@ -721,16 +720,28 @@ async function submitGeneration(generation: any) {
   let payload: any = {};
   if (generation.media_type === 'image') {
     path = '/text_to_image';
-    payload = {
+    const refs = await resolveReferences(generation);
+    payload = refs.length ? {
       model: await setting('runway_image_model', 'gen4_image_turbo'),
       promptText: generation.prompt.slice(0, 1000),
       ratio: parameters.ratio || '1360:768',
-      referenceImages: []
+      referenceImages: refs
+    } : {
+      model: await setting('runway_image_model_noref', 'gemini_2.5_flash'),
+      promptText: generation.prompt.slice(0, 1000),
+      ratio: parameters.ratio || '1344:768'
     };
   } else if (generation.media_type === 'video') {
     const isExtend = Boolean(continuation.url);
-    path = isExtend ? '/video_to_video' : '/text_to_video';
-    payload = isExtend ? {
+    const vrefs = isExtend ? [] : await resolveReferences(generation);
+    path = isExtend ? '/video_to_video' : (vrefs.length ? '/image_to_video' : '/text_to_video');
+    payload = vrefs.length ? {
+      model: await setting('runway_i2v_model', 'gen4.5'),
+      promptImage: vrefs[0].uri,
+      promptText: generation.prompt.slice(0, 1000),
+      ratio: parameters.ratio || '1280:720',
+      duration: Math.max(2, Math.min(SHORT_PROVIDER_SHOT_MAX_SECONDS, Number(parameters.duration) || 5))
+    } : isExtend ? {
       model: generation.model || await setting('runway_long_video_model', 'seedance2_5'),
       promptText: generation.prompt.slice(0, 1000),
       promptVideo: continuation.url,
@@ -1022,6 +1033,111 @@ async function retryGeneration(user: any, generationId: string) {
   return { acted, ...(await listWorkspace(user)) };
 }
 
+async function resolveReferences(generation: any) {
+  const parameters = generation.parameters || {};
+  const out: { uri: string; tag: string }[] = [];
+  const ids: string[] = Array.isArray(parameters.reference_asset_ids) ? parameters.reference_asset_ids.slice(0, 3) : [];
+  if (ids.length) {
+    const { data: rows } = await db.from('vw_assets').select('id,storage_path,source_url,title,metadata').in('id', ids).eq('owner_id', generation.owner_id);
+    for (const row of rows || []) {
+      let uri = row.source_url || '';
+      if (row.storage_path) {
+        const { data } = await db.storage.from('visionweaver-outputs').createSignedUrl(row.storage_path, 3600);
+        if (data?.signedUrl) uri = data.signedUrl;
+      }
+      if (uri) out.push({ uri, tag: String(row.metadata?.tag || 'ref' + (out.length + 1)).replace(/[^A-Za-z0-9_]/g, '').slice(0, 16) || 'ref' + (out.length + 1) });
+    }
+  }
+  for (const uri of (Array.isArray(parameters.reference_urls) ? parameters.reference_urls : []).slice(0, 3 - out.length)) {
+    if (typeof uri === 'string' && uri.startsWith('http')) out.push({ uri, tag: 'ref' + (out.length + 1) });
+  }
+  return out;
+}
+
+async function importBook(user: any, body: any) {
+  const title = String(body.title || 'Untitled book').slice(0, 160);
+  const chapters = Array.isArray(body.chapters) ? body.chapters.slice(0, 80) : [];
+  if (!chapters.length) throw new Error('No chapters supplied');
+  const { data: project, error } = await db.from('vw_projects').insert({
+    owner_id: user.id,
+    organization_id: user.membership.organization_id,
+    title,
+    medium: 'book',
+    source_concept: String(body.synopsis || title).slice(0, 4000),
+    universe: String(body.universe || 'Crossroads of Identity'),
+    status: 'active',
+    output_formats: ['book'],
+    settings: { book_import: true },
+    story_object: { source: 'book_import', chapter_count: chapters.length }
+  }).select('*').single();
+  if (error) throw new Error('Book insert: ' + error.message);
+  const rows = chapters.map((c: any, i: number) => ({
+    project_id: project.id,
+    scene_no: i + 1,
+    spec: {
+      kind: 'chapter',
+      title: String(c.title || 'Chapter ' + (i + 1)).slice(0, 200),
+      pov: c.pov ? String(c.pov).slice(0, 80) : null,
+      summary: String(c.summary || '').slice(0, 1200),
+      text: String(c.text || '').slice(0, 120000),
+      word_count: Number(c.word_count) || null
+    }
+  }));
+  const { error: sceneError } = await db.from('vw_scenes').insert(rows);
+  if (sceneError) {
+    await db.from('vw_projects').delete().eq('id', project.id).eq('owner_id', user.id);
+    throw new Error('Chapter insert: ' + sceneError.message);
+  }
+  return { project, chapters: rows.length };
+}
+
+async function saveCharacter(user: any, body: any) {
+  const name = String(body.name || '').trim().slice(0, 120);
+  if (!name) throw new Error('Character name required');
+  const universe = String(body.universe || 'Crossroads of Identity').slice(0, 120);
+  const assetIds = Array.isArray(body.reference_asset_ids) ? body.reference_asset_ids.slice(0, 6) : [];
+  let paths: string[] = [];
+  if (assetIds.length) {
+    const { data } = await db.from('vw_assets').select('storage_path').in('id', assetIds).eq('owner_id', user.id);
+    paths = (data || []).map((r: any) => r.storage_path).filter(Boolean);
+  }
+  const record = {
+    universe, name,
+    visual_anchor: String(body.visual_anchor || body.description || name).slice(0, 2000),
+    bible: { description: String(body.description || '').slice(0, 4000), role: body.role || null, reference_asset_ids: assetIds, confirmed: Boolean(body.confirmed) },
+    reference_image_urls: paths,
+    owner_id: user.id,
+    project_id: body.project_id || null,
+    updated_at: new Date().toISOString()
+  };
+  const { data: existing } = await db.from('vw_characters').select('id,version').eq('universe', universe).eq('name', name).maybeSingle();
+  if (existing) {
+    const { data, error } = await db.from('vw_characters').update({ ...record, version: (existing.version || 1) + 1 }).eq('id', existing.id).select('*').single();
+    if (error) throw new Error(error.message);
+    return { character: data };
+  }
+  const { data, error } = await db.from('vw_characters').insert(record).select('*').single();
+  if (error) throw new Error(error.message);
+  return { character: data };
+}
+
+async function registerAsset(user: any, body: any) {
+  const path = String(body.storage_path || '');
+  if (!path.startsWith(user.id + '/')) throw new Error('Path must be inside your own folder');
+  const kind = ['image', 'video', 'audio', 'document', 'book', 'movie'].includes(body.kind) ? body.kind : 'image';
+  const { data, error } = await db.from('vw_assets').insert({
+    owner_id: user.id,
+    project_id: body.project_id || null,
+    kind,
+    title: String(body.title || path.split('/').pop()).slice(0, 200),
+    storage_path: path,
+    mime_type: body.mime_type || null,
+    metadata: { ...(body.metadata && typeof body.metadata === 'object' ? body.metadata : {}), uploaded_by_user: true }
+  }).select('*').single();
+  if (error) throw new Error(error.message);
+  return { asset: data };
+}
+
 async function listWorkspace(user: any) {
   const [{ data: projects, error: projectError }, { data: generations, error: generationError }, { data: assets }] = await Promise.all([
     db.from('vw_projects').select('*').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(50),
@@ -1062,8 +1178,17 @@ async function listWorkspace(user: any) {
       } : null
     };
   });
+  const { data: characters } = await db.from('vw_characters').select('*').eq('owner_id', user.id).order('updated_at', { ascending: false }).limit(100);
+  const bookIds = (projects || []).filter((p: any) => p.medium === 'book').map((p: any) => p.id);
+  let chapters: any[] = [];
+  if (bookIds.length) {
+    const { data } = await db.from('vw_scenes').select('id,project_id,scene_no,spec').in('project_id', bookIds).order('scene_no', { ascending: true }).limit(400);
+    chapters = (data || []).filter((r: any) => r.spec?.kind === 'chapter').map((r: any) => ({ id: r.id, project_id: r.project_id, scene_no: r.scene_no, title: r.spec.title, pov: r.spec.pov, summary: r.spec.summary, word_count: r.spec.word_count, excerpt: String(r.spec.text || '').slice(0, 1500) }));
+  }
   return {
     projects,
+    characters: characters || [],
+    chapters,
     generations: topLevel,
     assets: (assets || []).map((item: any) => ({ ...item, playable_url: item.storage_path ? signed.get(item.storage_path) : item.source_url }))
   };
@@ -1079,7 +1204,7 @@ Deno.serve(async (req: Request) => {
       return response(req, {
         ok: true,
         service: 'visionweaver-studio',
-        version: 6,
+        version: 7,
         capabilities: models(),
         ...health
       });
@@ -1100,6 +1225,15 @@ Deno.serve(async (req: Request) => {
     }
     if (body.action === 'retry') {
       return response(req, { ok: true, ...(await retryGeneration(user, String(body.generation_id || ''))) });
+    }
+    if (body.action === 'import_book') return response(req, { ok: true, ...(await importBook(user, body)) }, 201);
+    if (body.action === 'save_character') return response(req, { ok: true, ...(await saveCharacter(user, body)) });
+    if (body.action === 'register_asset') return response(req, { ok: true, ...(await registerAsset(user, body)) }, 201);
+    if (body.action === 'chapter_text') {
+      const { data } = await db.from('vw_scenes').select('spec,project_id').eq('id', String(body.chapter_id || '')).maybeSingle();
+      const { data: proj } = data ? await db.from('vw_projects').select('owner_id').eq('id', data.project_id).maybeSingle() : { data: null };
+      if (!data || proj?.owner_id !== user.id) return response(req, { ok: false, error: 'not_found' }, 404);
+      return response(req, { ok: true, chapter: data.spec });
     }
     if (body.action === 'list') return response(req, { ok: true, ...(await listWorkspace(user)) });
     return response(req, { ok: false, error: 'unknown_action' }, 400);
