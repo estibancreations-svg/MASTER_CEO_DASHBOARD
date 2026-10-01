@@ -69,6 +69,7 @@ export default function VisionWeaverWorkspace() {
   const [media, setMedia] = useState<Media>('video');
   const [prompt, setPrompt] = useState('');
   const [seconds, setSeconds] = useState(10);
+  const [continuityMode, setContinuityMode] = useState<'reference' | 'extend'>('reference');
   const [ratio, setRatio] = useState('1280:720');
   const [picked, setPicked] = useState<string[]>([]);
   const [master, setMaster] = useState<Record<string, string>>({});
@@ -79,6 +80,8 @@ export default function VisionWeaverWorkspace() {
   const [charDesc, setCharDesc] = useState('');
   const [charAssets, setCharAssets] = useState<string[]>([]);
   const signedIn = Boolean(supabase && identity.user);
+  const longForm = media === 'video' && seconds > 10;
+  const durationOptions = [['5', '5 seconds'], ['10', '10 seconds'], ['60', '1 minute'], ['300', '5 minutes'], ['600', '10 minutes']] as const;
 
   const call = useCallback(async (body: Row) => {
     if (!supabase) throw new Error('Supabase is not configured');
@@ -135,7 +138,16 @@ export default function VisionWeaverWorkspace() {
     await run('generate', async () => {
       const res = await call({
         action: 'create', media_type: kind, prompt: text, title: text.slice(0, 60), organization_id: identity.organizationId,
-        parameters: { ratio, duration: seconds, target_duration_seconds: seconds, variant_count: 1, reference_asset_ids: (refs || picked).slice(0, 3), provider_shot_max_seconds: 10 }
+        parameters: {
+          ratio,
+          duration: seconds,
+          target_duration_seconds: seconds,
+          variant_count: 1,
+          reference_asset_ids: (refs || picked).slice(0, 3),
+          video_generation_profile: longForm ? 'long_form' : 'short_form',
+          continuity_mode: longForm ? continuityMode : 'reference',
+          provider_shot_max_seconds: longForm ? 30 : 10
+        }
       });
       setMsg(`Started. Your ${kind} will appear in the Library when it finishes (${res.generation?.status || 'queued'}).`);
       setTab('library');
@@ -206,7 +218,10 @@ export default function VisionWeaverWorkspace() {
             <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="A tall man in a burgundy tie stands in a glass office at sunrise, camera slowly pushes in…" maxLength={1000} />
             <div className="row">
               {(['video', 'image', 'audio'] as Media[]).map((m) => (<span key={m} className={'chip ' + (media === m ? 'on' : '')} onClick={() => setMedia(m)}>{m === 'video' ? <Film size={13} /> : m === 'image' ? <ImageIcon size={13} /> : <Music size={13} />} {m}</span>))}
-              {media === 'video' && [5, 10].map((s) => (<span key={s} className={'chip ' + (seconds === s ? 'on' : '')} onClick={() => setSeconds(s)}>{s}s</span>))}
+              {media === 'video' && durationOptions.map(([value, label]) => (<span key={value} className={'chip ' + (seconds === Number(value) ? 'on' : '')} onClick={() => setSeconds(Number(value))}>{label}</span>))}
+              {longForm && <select style={{ width: 150 }} value={continuityMode} onChange={(e) => setContinuityMode(e.target.value as 'reference' | 'extend')}>
+                <option value="reference">Reference start</option><option value="extend">Continue prior shot</option>
+              </select>}
               <select style={{ width: 130 }} value={ratio} onChange={(e) => setRatio(e.target.value)}>
                 <option value="1280:720">16:9</option><option value="720:1280">9:16</option><option value="960:960">1:1</option>
               </select>
