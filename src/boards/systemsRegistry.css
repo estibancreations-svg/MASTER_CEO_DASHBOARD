@@ -1,0 +1,24 @@
+.sr{color:var(--ec-text,#ececf1)}
+.sr *{box-sizing:border-box}
+.sr-note{margin:0 0 14px;padding:12px 14px;border:1px solid var(--ec-border,#2a2a32);border-radius:12px;font-size:13px;line-height:1.5;color:var(--ec-muted,#a9a9b8);background:#121218}
+.sr-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.sr-filters button{min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--ec-border,#2a2a32);background:#15151b;color:var(--ec-text,#ececf1);font-size:13px;cursor:pointer}
+.sr-filters button b{margin-left:6px;color:#c9b8ff}
+.sr-filters button[aria-pressed="true"]{background:#211b2e;border-color:#6f56b8;color:#fff}
+.sr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.sr-card{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid var(--ec-border,#2a2a32);border-radius:16px;background:linear-gradient(160deg,#15151b,#111116);border-left-width:4px}
+.sr-card header{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+.sr-card h3{margin:0;font-size:15px;color:var(--ec-text,#f4f4f7)}
+.sr-card small{color:#9b9bab;font-size:11px;letter-spacing:.04em}
+.sr-n{font:600 12px 'JetBrains Mono',monospace;color:#8f7bd5;padding-top:2px}
+.sr-state{grid-column:1/-1;justify-self:start;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.05em;border:1px solid currentColor}
+.sr-card p{margin:0;font-size:13px;line-height:1.5;color:#d3d3dc}
+.sr-where{color:#a9a9b8!important}
+.sr-where b{color:#d3d3dc}
+.sr-open{margin-top:auto;min-height:44px;border-radius:10px;border:1px solid #42325f;background:#211b2e;color:#d8cdff;font-weight:700;font-size:13px;cursor:pointer}
+.sr-open:hover{background:#2a2140}
+.sr-none{margin-top:auto;min-height:44px;display:flex;align-items:center;font-size:12px;color:#9b9bab}
+.sr-card[data-state="PARTIAL"]{border-left-color:#e0b04a}.sr-card[data-state="PARTIAL"] .sr-state{color:#f0c975}
+.sr-card[data-state="RECOVERY_REQUIRED"]{border-left-color:#e8825a}.sr-card[data-state="RECOVERY_REQUIRED"] .sr-state{color:#f4a584}
+.sr-card[data-state="SPECIFICATION_ONLY"]{border-left-color:#7f9bd8}.sr-card[data-state="SPECIFICATION_ONLY"] .sr-state{color:#a9c0f0}
+.sr-card[data-state="NOT_IMPLEMENTED"]{border-left-color:#8b8b99}.sr-card[data-state="NOT_IMPLEMENTED"] .sr-state{color:#bdbdc9}
