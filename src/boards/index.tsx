@@ -22,7 +22,7 @@ type Theme='standard'|'cyberpunk'|'glass'|'executive'|'neumorphic';
 const THEMES:[Theme,string][]=[['standard','Standard'],['executive','Executive Minimalist'],['cyberpunk','Cyberpunk'],['glass','Glass'],['neumorphic','Neumorphic']];
 
 export default function BoardFrame({name,live,liveLabel='Live module'}:{name:string;live:ReactNode;liveLabel?:string}):ReactElement{
-  const[tab,setTab]=useState<'board'|'live'>('board');
+  const[tab,setTab]=useState<'board'|'live'>('live');
   const[theme,setTheme]=useState<Theme>('executive');
   const Screen=SCREENS[name];
   if(!Screen)return<>{live}</>;
