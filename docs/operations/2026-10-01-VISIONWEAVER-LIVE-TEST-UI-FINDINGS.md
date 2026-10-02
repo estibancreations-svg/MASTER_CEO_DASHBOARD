@@ -20,3 +20,17 @@ Verified by user report: Create, Books, Cast, Library visible. Creation prompt e
 6. Approval and destination-specific delivery/publication evidence are separate gates.
 
 No UI modifications authorized at this checkpoint. Production certification remains open.
+
+## Authorized repair and verification
+The director subsequently authorized immediate UI updates and closed the external browser until completion.
+Implemented on commit 5a93744c92bc8b6aeb91bb86cc805819b7ae269d:
+- Ordered composer: description, reference upload/selection, output type, duration/frame size, Generate.
+- Expanded, auto-growing description field; responsive grid and wrapping navigation.
+- Visible disabled-button explanation for empty/short description, upload in progress, other work, or signed-out state.
+- Dark/Think/Logout moved into a collapsible Settings panel in the authenticated global top bar; signed-out settings stay at the top.
+- Existing uploaded files remain available; no new generation was submitted by this repair.
+
+Diagnosis evidence: at investigation time the last45minutes contained one uploaded reference asset and zero generation rows. Source disables Generate if prompt has fewer than8characters; placeholder text is not a prompt. This is a supported likely explanation, not a witnessed user-input trace.
+
+Validation: local full quality command passed (TypeScript,38tests,release evidence guard,production build). [GitHub Quality Gate](https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/actions/runs/36957003582) succeeded on the code commit. Vercel master-ceo-dashboard deployment for that same SHA succeeded. Live sign-in page visibly shows the collapsed Settings control and remains accessible.
+Remaining: signed-in tablet/mobile visual review, upload-selected reference and real Generate test, durable output reload, complete film workflow.
