@@ -13,7 +13,7 @@ html[data-theme="dark"]{color-scheme:dark;background:var(--system-bg)}
 html[data-theme="dark"] body{background:var(--system-bg);color:var(--system-text)}
 
 .system-controls{
-  position:fixed;z-index:1000;right:16px;bottom:16px;display:flex;align-items:center;gap:6px;
+  position:fixed;z-index:1000;right:16px;top:10px;display:flex;align-items:center;gap:6px;
   padding:6px;border:1px solid rgba(142,169,198,.28);border-radius:14px;
   background:rgba(8,13,20,.92);box-shadow:0 18px 48px rgba(0,0,0,.38);backdrop-filter:blur(16px)
 }
@@ -68,7 +68,15 @@ html[data-theme="notepad"] .system-controls button:hover,html[data-theme="notepa
 html[data-theme="notepad"] .system-controls .system-logout{color:#823c3c;border-left-color:#a99550}
 
 @media(max-width:720px){
-  .system-controls{right:10px;bottom:10px}
+  .system-controls{right:10px;top:10px}
   .system-controls button{min-width:42px;padding:9px}
   .system-controls button span{display:none}
 }
+
+/* Top-bar settings drawer; collapsed controls never cover workspace content. */
+.system-controls-inline{position:relative;inset:auto;flex:none;box-shadow:none;background:transparent;padding:0;border:0}
+.system-controls-panel{position:absolute;right:0;top:calc(100% + 8px);display:flex;flex-direction:column;align-items:stretch;min-width:190px;padding:8px;border:1px solid var(--system-line);border-radius:12px;background:var(--system-surface);box-shadow:0 16px 40px #0005;opacity:0;visibility:hidden;transform:translateY(-8px);transition:opacity .18s ease,transform .18s ease,visibility .18s}
+.system-controls-panel.open{opacity:1;visibility:visible;transform:translateY(0)}
+.system-controls-panel button{justify-content:flex-start;font-size:13px;min-height:44px}
+.system-controls-panel button span{display:inline!important}
+@media(prefers-reduced-motion:reduce){.system-controls-panel{transition:none}}
