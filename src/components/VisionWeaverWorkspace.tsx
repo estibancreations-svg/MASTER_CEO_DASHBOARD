@@ -22,9 +22,29 @@ const css = `
 .vwx-main{padding:clamp(16px,3vw,32px);min-width:0;overflow-wrap:anywhere}
 .vwx h2{margin:0 0 4px;font-size:22px}
 .vwx .sub{color:#8b89a0;margin:0 0 18px;font-size:14px}
-.vwx .bar{background:#15151f;border:1px solid #26263a;border-radius:16px;padding:14px}
+.vwx .bar{width:100%;max-width:none;height:auto;background:#15151f;border:1px solid #26263a;border-radius:16px;padding:14px}
 .vwx textarea,.vwx input[type=text],.vwx select{width:100%;background:#0f0f17;border:1px solid #2a2a3f;color:#eceaf4;border-radius:10px;padding:10px;font:inherit}
 .vwx textarea{min-height:160px;resize:vertical;line-height:1.6;font-size:16px;overflow-x:hidden}
+.vwx .workbench{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:24px;align-items:start;margin-top:20px}
+.vwx .workbench>div{min-width:0}
+.vwx .workbench h3{margin:0 0 12px;font-size:17px}
+.vwx .reference-stage{aspect-ratio:16/10;min-height:240px;display:flex;align-items:center;justify-content:center;border:1px solid #343449;border-radius:14px;background:#0c0c14;padding:16px;overflow:hidden}
+.vwx .reference-stage img{width:100%;height:100%;max-height:440px;object-fit:contain}
+.vwx .empty-stage{text-align:center;max-width:300px;color:#aaa7bf;line-height:1.7}
+.vwx .empty-stage svg{width:36px;height:36px;margin-bottom:12px}
+.vwx .asset-strip{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.vwx .asset-strip button{background:#10101a;border:2px solid #303045;border-radius:12px;padding:0;width:80px;height:72px;overflow:hidden;cursor:pointer}
+.vwx .asset-strip button.on{border-color:#d7ff4a}
+.vwx .asset-strip img{width:100%;height:100%;object-fit:cover}
+.vwx .form-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.vwx .form-heading span{font-size:12px;color:#aba8bf}
+.vwx .field{display:grid;gap:8px;margin:16px 0;font-size:14px;font-weight:600}
+.vwx .full-action{width:100%;justify-content:center;min-height:48px}
+.vwx .book-list{display:grid;gap:16px}
+.vwx .chap{flex-wrap:wrap}.vwx .chap>div{flex:1;min-width:160px}
+.vwx .stage-note{font-size:13px;line-height:1.6;color:#aaa7bf}
+.vwx button:focus-visible{outline:3px solid #b4a0ff;outline-offset:3px}
+@media(max-width:850px){.vwx .workbench{grid-template-columns:minmax(0,1fr);gap:18px}.vwx .reference-stage{min-height:200px;max-height:340px}}
 .vwx .step{display:block;font-weight:700;margin:16px 0 10px}.vwx .options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:14px;margin:16px 0}.vwx .options label{display:grid;gap:8px;font-size:14px}.vwx .options select{min-height:44px}.vwx .submit{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:20px}.vwx .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
 .vwx .chip{padding:7px 12px;border-radius:999px;border:1px solid #2a2a3f;background:#0f0f17;color:#b9b7cc;cursor:pointer;font-size:13px}
 .vwx .chip.on{border-color:#d7ff4a;color:#d7ff4a}
@@ -89,7 +109,7 @@ export default function VisionWeaverWorkspace() {
   const generateBlocker = !signedIn ? 'Sign in to generate.' : busy ? (busy === 'upload' ? 'Uploading your reference…' : 'Wait for the current operation to finish.') : prompt.trim().length < 8 ? 'Enter a description of at least 8 characters. Example text is not submitted.' : '';
   useEffect(() => {
     const field = promptRef.current;
-    if (field) { field.style.height = 'auto'; field.style.height = Math.max(160, field.scrollHeight) + 'px'; }
+    if (field) { field.style.height = 'auto'; field.style.height = Math.min(280, Math.max(160, field.scrollHeight)) + 'px'; }
   }, [prompt, tab]);
 
   const call = useCallback(async (body: Row) => {
@@ -219,44 +239,54 @@ export default function VisionWeaverWorkspace() {
         {err && <div className="note err">{err}</div>}
 
         {tab === 'create' && (<>
-          <h2>Create</h2><p className="sub">Describe a shot. Pick a character photo to keep the same face.</p>
-          <div className="bar">
-            <label className="step" htmlFor="vwx-description">1. Describe what should happen</label>
-            <textarea id="vwx-description" ref={promptRef} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Describe the action here—for example, the boy walks through rain holding his red balloon." rows={6} maxLength={1000} />
-            {(<>
-              <label className="step">2. Add a reference image (optional)</label><div className="row"><b style={{ fontSize: 13 }}>Reference photos</b>
-                <button className="ghost" disabled={!signedIn || !!busy} onClick={() => fileRef.current?.click()}><Upload size={14} /> Upload</button>
+          <h2>Create</h2><p className="sub">Build your next shot with an existing reference and a clear production brief.</p>
+          <label className="step" htmlFor="vwx-description">1. Describe what should happen</label>
+          <textarea id="vwx-description" ref={promptRef} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Describe the action—for example, the boy walks through rain holding his red balloon." rows={6} maxLength={1000} />
+          <div className="workbench">
+            <div className="bar">
+              <div className="form-heading"><h3>2. Reference image</h3><span>{picked.length}/3 selected</span></div>
+              <div className="reference-stage">
+                {refAssets.find((a) => picked.includes(a.id))?.playable_url
+                  ? <img src={refAssets.find((a) => picked.includes(a.id))?.playable_url} alt="Selected production reference" />
+                  : <div className="empty-stage"><ImageIcon /><div>Use artwork you already created.</div><small>Upload an image below, then select it as your reference.</small></div>}
+              </div>
+              <div className="row">
+                <button className="ghost" disabled={!signedIn || !!busy} onClick={() => fileRef.current?.click()}><Upload size={16} />{busy === 'upload' ? 'Uploading…' : 'Upload image'}</button>
                 <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(e) => void run('upload', async () => { const ids = await uploadImages(e.target.files, 'reference'); await load(); setPicked((p) => [...p, ...ids].slice(0, 3)); })} />
-                <small style={{ color: '#8b89a0' }}>Pick up to 3. Videos start from the first one. Audio does not use image references.</small></div>
-              <div className="refs">{refAssets.map((a) => (<img key={a.id} src={a.playable_url} alt={a.title} className={picked.includes(a.id) ? 'on' : ''} onClick={() => setPicked((p) => p.includes(a.id) ? p.filter((x) => x !== a.id) : [...p, a.id].slice(0, 3))} />))}</div>
-            </>)}
-            <div className="options">
-              <label>3. Output type<select aria-label="Output type" value={media} onChange={(e) => setMedia(e.target.value as Media)}>
-                <option value="video">Video</option><option value="image">Image</option><option value="audio">Audio</option>
-              </select></label>
-              {media === 'video' && <label>4. Video length<select aria-label="Video length" value={String(seconds)} onChange={(e) => setSeconds(Number(e.target.value))}>
-                {DURATIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select></label>}
-              {media === 'video' && seconds > 10 && <label>Continuity<select aria-label="Continuity" value={continuityMode} onChange={(e) => setContinuityMode(e.target.value as 'reference' | 'extend')}>
-                <option value="extend">Extend prior shot</option><option value="reference">Reference continuity</option>
-              </select></label>}
-              {media !== 'audio' && <label>Frame size<select aria-label="Frame size" value={ratio} onChange={(e) => setRatio(e.target.value)}>
-                <option value="1280:720">16:9</option><option value="720:1280">9:16</option><option value="960:960">1:1</option>
-              </select></label>}
+              </div>
+              <div className="asset-strip">{refAssets.map((a) => <button key={a.id} type="button" aria-label={'Select reference: ' + a.title} aria-pressed={picked.includes(a.id)} className={picked.includes(a.id) ? 'on' : ''} onClick={() => setPicked((p) => p.includes(a.id) ? p.filter((x) => x !== a.id) : [...p, a.id].slice(0, 3))}><img src={a.playable_url} alt={a.title} /></button>)}</div>
+              <p className="stage-note">Videos start from the first selected image. Uploading reuses your artwork; it does not generate a new image. Audio does not use image references.</p>
             </div>
-            <div className="submit">
-              <button className="go" disabled={Boolean(generateBlocker)} aria-describedby="vwx-generation-help" onClick={() => void generate()}>
+            <div className="bar">
+              <h3>Output settings</h3>
+              <div className="options">
+                <label>3. Output type<select aria-label="Output type" value={media} onChange={(e) => { setMedia(e.target.value as Media); if (e.target.value === 'audio' && seconds > 30) setSeconds(10); }}>
+                  <option value="video">Video</option><option value="image">Image</option><option value="audio">Audio</option>
+                </select></label>
+                {media === 'video' && <label>4. Video length<select aria-label="Video length" value={String(seconds)} onChange={(e) => setSeconds(Number(e.target.value))}>
+                  {DURATIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select></label>}
+                {media === 'audio' && <label>4. Audio length<select aria-label="Audio length" value={String(seconds)} onChange={(e) => setSeconds(Number(e.target.value))}>{[5,10,15,20,30].map((n) => <option key={n} value={n}>{n} seconds</option>)}</select></label>}
+                {media === 'video' && seconds > 10 && <label>Continuity<select aria-label="Continuity" value={continuityMode} onChange={(e) => setContinuityMode(e.target.value as 'reference' | 'extend')}>
+                  <option value="extend">Extend prior shot</option><option value="reference">Reference continuity</option>
+                </select></label>}
+                {media !== 'audio' && <label>Frame size<select aria-label="Frame size" value={ratio} onChange={(e) => setRatio(e.target.value)}>
+                  <option value="1280:720">16:9</option><option value="720:1280">9:16</option><option value="960:960">1:1</option>
+                </select></label>}
+              </div>
+              <div className="note">{media === 'video' ? seconds + '-second video' : media === 'audio' ? seconds + '-second audio' : 'Still image'} · {media === 'audio' ? 'Sound effects' : ratio === '1280:720' ? 'Landscape 16:9' : ratio === '720:1280' ? 'Portrait 9:16' : 'Square 1:1'}</div>
+              <button className="go full-action" disabled={Boolean(generateBlocker)} aria-describedby="vwx-generation-help" onClick={() => void generate()}>
                 {busy === 'generate' ? <Loader2 size={16} /> : <Sparkles size={16} />} {busy === 'generate' ? 'Starting…' : 'Generate'}
               </button>
-              <span id="vwx-generation-help" role="status">{generateBlocker || 'Ready to generate.'}</span>
+              <p id="vwx-generation-help" role="status" className="stage-note">{generateBlocker || 'Ready. Your result will appear in Library.'}</p>
             </div>
           </div>
         </>)}
 
         {tab === 'books' && (<>
           <h2>Books</h2><p className="sub">Bring in a book as a .md or .txt file split by chapter. Each chapter can become a clip.</p>
-          <div className="bar"><button className="go" disabled={!signedIn || !!busy} onClick={() => bookRef.current?.click()}><Upload size={16} /> Import book file</button>
-            <input ref={bookRef} type="file" accept=".md,.txt,text/markdown,text/plain" hidden onChange={(e) => void importBook(e.target.files?.[0])} /></div>
+          <div className="workbench"><div className="bar"><h3>Import your manuscript</h3><p className="stage-note">Use an existing Markdown or text file with chapter headings. Keep your original writing as the source.</p><button className="go" disabled={!signedIn || !!busy} onClick={() => bookRef.current?.click()}><Upload size={16} /> Import book file</button>
+            <input ref={bookRef} type="file" accept=".md,.txt,text/markdown,text/plain" hidden onChange={(e) => void importBook(e.target.files?.[0])} /><p className="stage-note">Use headings like “## Chapter 1: The News”. After import, choose a chapter to prepare its scene prompt.</p></div><div className="book-list">
           {(data.projects as Row[]).filter((p) => p.medium === 'book' && (data.chapters as Row[]).some((c) => c.project_id === p.id)).map((p) => (
             <div key={p.id} className="bar" style={{ marginTop: 14 }}>
               <b>{p.title}</b>
@@ -264,21 +294,31 @@ export default function VisionWeaverWorkspace() {
                 <div className="chap" key={c.id}><div>Ch {c.scene_no}: {c.title}<small>{c.pov ? c.pov + ' · ' : ''}{c.word_count || '?'} words</small></div>
                   <button className="ghost" onClick={() => chapterClip(c)}><Clapperboard size={14} /> Make clip</button></div>))}
             </div>))}
+            {!(data.chapters as Row[]).length && <div className="bar"><BookOpen size={28} /><h3>Your books and chapters</h3><p className="stage-note">Imported books appear here with their chapter lists and Make clip actions.</p></div>}
+          </div></div>
         </>)}
 
         {tab === 'characters' && (<>
           <h2>Cast</h2><p className="sub">Save each character with a look and a reference photo so every clip stays consistent.</p>
-          <div className="bar">
-            <input type="text" placeholder="Name (e.g. Marcus Reynolds)" value={charName} onChange={(e) => setCharName(e.target.value)} />
-            <div style={{ height: 8 }} />
-            <textarea placeholder="Look: age, hair, clothes, mood…" value={charDesc} onChange={(e) => setCharDesc(e.target.value)} />
-            <div className="row">
-              <button className="ghost" onClick={() => charFileRef.current?.click()}><Upload size={14} /> Add photo</button>
-              <input ref={charFileRef} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(e) => void run('upload', async () => { const ids = await uploadImages(e.target.files, 'character'); setCharAssets((a) => [...a, ...ids]); await load(); })} />
-              <small style={{ color: '#8b89a0' }}>{charAssets.length} photo(s) attached</small>
-              <button className="go" style={{ marginLeft: 'auto' }} disabled={!signedIn || !charName.trim() || !!busy} onClick={() => void saveCharacter()}>Save character</button>
+          <div className="workbench">
+            <div className="bar">
+              <h3>Character identity</h3>
+              <label className="field">Name<input type="text" placeholder="Name (e.g. BOY-001)" value={charName} onChange={(e) => setCharName(e.target.value)} /></label>
+              <label className="field">Approved appearance<textarea placeholder="Age, skin tone, hair texture, body size, wardrobe and continuity details…" value={charDesc} onChange={(e) => setCharDesc(e.target.value)} rows={6} /></label>
+              <button className="go full-action" disabled={!signedIn || !charName.trim() || !!busy} onClick={() => void saveCharacter()}>{busy === 'char' ? 'Saving…' : 'Save character'}</button>
+            </div>
+            <div className="bar">
+              <div className="form-heading"><h3>Character references</h3><span>{charAssets.length} attached</span></div>
+              <div className="reference-stage">{(data.assets as Row[]).find((a) => charAssets.includes(a.id))?.playable_url
+                ? <img src={(data.assets as Row[]).find((a) => charAssets.includes(a.id))?.playable_url} alt="Character reference preview" />
+                : <div className="empty-stage"><UserRound /><div>Attach the approved character image and boards.</div><small>Keep the same face, body, clothing and details across your production.</small></div>}</div>
+              <div className="row"><button className="ghost" disabled={!signedIn || !!busy} onClick={() => charFileRef.current?.click()}><Upload size={16} />Add character images</button>
+                <input ref={charFileRef} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(e) => void run('upload', async () => { const ids = await uploadImages(e.target.files, 'character'); setCharAssets((a) => [...a, ...ids].slice(0,6)); await load(); })} /></div>
+              <div className="asset-strip">{refAssets.map((a) => <button key={a.id} type="button" aria-label={'Attach character reference: ' + a.title} aria-pressed={charAssets.includes(a.id)} className={charAssets.includes(a.id) ? 'on' : ''} onClick={() => setCharAssets((p) => p.includes(a.id) ? p.filter((id) => id !== a.id) : [...p, a.id].slice(0,6))}><img src={a.playable_url} alt={a.title} /></button>)}</div>
+              <p className="stage-note">Select existing uploads or add files. Up to six references per character.</p>
             </div>
           </div>
+          <h3 style={{ marginTop: 28 }}>Saved cast</h3>
           <div className="grid">{(data.characters as Row[]).map((c) => {
             const a = (data.assets as Row[]).find((x) => (c.bible?.reference_asset_ids || []).includes(x.id));
             return (<div className="card" key={c.id}><div className="media">{a?.playable_url ? <img src={a.playable_url} alt={c.name} /> : 'No photo'}</div><div className="meta"><b>{c.name}</b>{c.visual_anchor}</div></div>);
