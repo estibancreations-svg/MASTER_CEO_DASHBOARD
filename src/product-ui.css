@@ -7,3 +7,10 @@
 .panel{padding:18px!important}.fabric-grid,.thelma-grid,.cmgio-grid,.grant-grid,.land-grid{gap:14px!important}.panel-title h3{font-size:15px!important}.eyebrow{color:#8f7bdd!important}.system-state{border-color:#292932!important}
 @media(max-width:900px){.ec-location{min-width:0}.ec-global-actions button span{display:none}.ec-global-actions button{width:38px;padding:0;justify-content:center}.ec-global-actions button svg:last-child{display:none}.ec-system-grid{grid-template-columns:1fr 1fr}.master-content,.workspace-only .content{padding-left:18px!important;padding-right:18px!important}}
 @media(max-width:640px){.ec-global-nav{padding:0 10px;gap:7px}.ec-location small{display:none}.ec-location b{font-size:11px;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ec-system-overlay{padding:10px}.ec-system-switcher{border-radius:16px;padding:14px}.ec-switcher-head h2{font-size:20px}.ec-system-grid{grid-template-columns:1fr}.ec-system-grid>button{min-height:108px}.ec-system-copy em{max-width:none}.ec-switcher-foot{flex-direction:column}.master-shell{display:block!important}.master-nav{top:64px!important}.master-header{top:64px!important}.master-content,.workspace-only .content{padding:18px 12px 60px!important}.control-grid{grid-template-columns:1fr!important}.master-metrics,.module-metrics,.metrics{grid-template-columns:1fr 1fr!important}}
+
+/* Keep the top bar usable on narrow screens without squeezing the workspace. */
+.ec-global-nav{gap:8px}
+.ec-global-actions{min-width:0;overflow-x:auto;scrollbar-width:none}
+.ec-global-actions>button{flex-shrink:0}
+.ec-location{flex-shrink:1}
+@media(max-width:640px){.ec-global-nav .ec-location{display:none}.ec-global-actions{margin-left:0;flex:1}.system-controls-inline>button span{display:none}}
