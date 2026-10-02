@@ -1,3 +1,4 @@
+import SystemControls from './SystemControls';
 import { PropsWithChildren, useEffect, useMemo, useState } from 'react';
 import { Activity, ArrowLeft, Bot, ChevronDown, Gauge, Grid3X3, Home, Landmark, Megaphone, PanelTop, Play, Search, Workflow, X } from 'lucide-react';
 import ThelmaAIConsole from './ThelmaAIConsole';
@@ -122,6 +123,7 @@ export default function GlobalNavigation({ children }: PropsWithChildren) {
         <button className={thelmaOpen ? 'active' : ''} onClick={() => setThelmaOpen(true)}><Bot /><span>Ask THELMA</span></button>
         <button className={open ? 'active' : ''} onClick={() => setOpen(!open)}><Grid3X3 /><span>All Systems</span><ChevronDown /></button>
       </nav>
+      <SystemControls inline signOut={identity.signOut} />
     </header>
 
     {open && <div className="ec-system-overlay" onClick={() => setOpen(false)}>
