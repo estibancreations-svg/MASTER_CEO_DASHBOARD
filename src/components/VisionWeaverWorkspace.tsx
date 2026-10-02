@@ -192,7 +192,7 @@ export default function VisionWeaverWorkspace() {
   function chapterClip(ch: Row) {
     const book = (data.projects as Row[]).find((p) => p.id === ch.project_id);
     const chars = (data.characters as Row[]).filter((c) => String(ch.pov || '').toLowerCase().includes(String(c.name).split(' ')[0].toLowerCase()));
-    const refIds: string[] = chars.flatMap((c) => c.bible?.reference_asset_ids || []).slice(0, 1);
+    const refIds: string[] = [...new Set<string>(chars.flatMap((c) => c.bible?.reference_asset_ids || []))].slice(0, 3);
     const anchor = chars.map((c) => c.visual_anchor).join(' ');
     const p = `Cinematic film scene, ${book?.title || 'novel'}, chapter "${ch.title}". ${anchor} ${String(ch.excerpt || '').replace(/\s+/g, ' ').slice(0, 520)}`.slice(0, 990);
     setPrompt(p); setPicked(refIds); setMedia('video'); setTab('create');
@@ -215,7 +215,7 @@ export default function VisionWeaverWorkspace() {
         {tab === 'create' && (<>
           <h2>Create</h2><p className="sub">Describe a shot. Pick a character photo to keep the same face.</p>
           <div className="bar">
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="A tall man in a burgundy tie stands in a glass office at sunrise, camera slowly pushes in…" maxLength={1000} />
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="A Black, fat boy in a yellow raincoat walks through realistic rain with a red balloon…" maxLength={1000} />
             <div className="row">
               {(['video', 'image', 'audio'] as Media[]).map((m) => (<span key={m} className={'chip ' + (media === m ? 'on' : '')} onClick={() => setMedia(m)}>{m === 'video' ? <Film size={13} /> : m === 'image' ? <ImageIcon size={13} /> : <Music size={13} />} {m}</span>))}
               {media === 'video' && (<select aria-label="Video length" style={{ width: 130 }} value={String(seconds)} onChange={(e) => setSeconds(Number(e.target.value))}>
@@ -285,9 +285,9 @@ export default function VisionWeaverWorkspace() {
                 <div className="meta"><b>{String(g.prompt || '').slice(0, 70)}</b>
                   <span className={'pill ' + g.status}>{g.status}</span> {g.progress ? ` ${g.progress.complete}/${g.progress.total} shots` : ''}
                   <div className="row" style={{ marginTop: 6 }}>
-                    {g.status === 'failed' && <button className="ghost" onClick={() => void run('retry', async () => { await call({ action: 'retry', generation_id: g.id }); await load(true); })}>Retry</button>}
+                    {(g.status === 'failed' || g.result?.partial) && <button className="ghost" onClick={() => void run('retry', async () => { await call({ action: 'retry', generation_id: g.id }); await load(true); })}>Retry</button>}
                     {url && <a className="ghost" href={url} target="_blank" rel="noreferrer" download>Download</a>}
-                    {g.provider === 'visionweaver' && g.operation === 'multi_shot_video' && g.status === 'complete' && <button className="ghost" onClick={() => void assemble(g.id)}>Build master</button>}
+                    {g.provider === 'visionweaver' && g.operation === 'multi_shot_video' && g.status === 'complete' && !g.result?.partial && g.result?.assembly?.state !== 'master_ready' && <button className="ghost" onClick={() => void assemble(g.id)}>Build master</button>}
                   </div></div></div>);
             })}
           </div>
