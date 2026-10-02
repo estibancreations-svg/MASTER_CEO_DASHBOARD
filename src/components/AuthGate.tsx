@@ -14,7 +14,7 @@ const AUTH_RESET_VERSION = '2026-08-24-production-login-reset-v1';
 const AUTH_RESET_KEY = 'ec-auth-reset-version';
 const OTP_COOLDOWN_SECONDS = 60;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+const SUPABASE_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
 const SOCIAL_PROVIDERS: SocialProvider[] = [
   { provider: 'google', label: 'Google', mark: 'G' },
   { provider: 'apple', label: 'Apple', mark: 'A' },
