@@ -112,7 +112,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   if (BUILDER_MODE) {
     const builder: ExecutiveIdentity = { session: null, user: null, isBuilder: true, organizationId: '20e10428-4443-4324-b36a-e68d64ec26ed', organizationName: 'Estiban Creations', organizationSlug: 'estiban-creations', role: 'viewer', scopes: ['builder:read'], signOut: async () => {} };
-    return <IdentityProvider value={builder}><SystemControls />{children}</IdentityProvider>;
+    return <IdentityProvider value={builder}>{children}</IdentityProvider>;
   }
   if (!isSupabaseConfigured) return <><SystemControls /><div className="auth-screen"><div className="auth-card"><div className="brand-mark">EC</div><span className="eyebrow">CONFIGURATION REQUIRED</span><h1>Executive sign-in is unavailable</h1><p>Configure the browser-safe Supabase URL and publishable key.</p></div></div></>;
   if (!ready) return <><SystemControls /><div className="auth-screen"><div className="auth-card"><div className="brand-mark">EC</div><h1>Verifying executive authority</h1><p>Checking workspace membership and governed access.</p></div></div></>;
@@ -132,5 +132,5 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     </form></div></>;
   }
   if (!identity) return <><SystemControls signOut={async () => { const { error: signOutError } = await supabase!.auth.signOut({ scope: 'global' }); if (signOutError) throw signOutError; }} /><div className="auth-screen"><div className="auth-card"><div className="brand-mark">EC</div><span className="eyebrow">ACCESS DENIED · MEMBERSHIP REQUIRED</span><h1>Executive workspace unavailable</h1><p>{error || 'This account is authenticated but has not been authorized for an organization.'}</p><button className="auth-submit" onClick={() => void supabase?.auth.signOut({ scope: 'global' })}>Sign out</button></div></div></>;
-  return <IdentityProvider value={identity}><SystemControls signOut={identity.signOut} />{children}</IdentityProvider>;
+  return <IdentityProvider value={identity}>{children}</IdentityProvider>;
 }
