@@ -79,3 +79,7 @@ The CEO Dashboard treats character references as governed production records sha
 The default 360 View Board is a **32-view master**: eight eye-level azimuth views, eight high-oblique views, eight low-oblique views, and eight extreme-oblique views. A **16-view state board** is the controlled variant for clothing-only or limited non-identity changes. Each active scene state is versioned and referenced by the Cast Board. This supports carousel exports and prevents identity drift across Runway, VisionWeaver, and dashboard workflows.
 
 Canonical implementation contract: [VisionWeaver Character Identity Board System](https://github.com/estibancreations-svg/VisionWeaver/blob/main/standards/character-board-system-v1.md).
+
+## Representation and historical locations
+
+The authorized [Representation and Place-Time Standard v1](docs/architecture/REPRESENTATION-AND-PLACE-TIME-STANDARD-v1.md) governs new character defaults: intentional inclusive casting, normal representation of Black and fat people, preservation of approved appearance, and evidence-backed scene location/date accuracy. The current balloon-film boy is Black and fat. Runtime enforcement and end-to-end verification remain open release gates.
