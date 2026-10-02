@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
+    "api/visionweaver-continuity.js": {
+      "maxDuration": 120
+    },
     "api/visionweaver-assemble.js": {
       "maxDuration": 300
     }

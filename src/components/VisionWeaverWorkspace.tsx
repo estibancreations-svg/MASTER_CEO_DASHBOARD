@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen, Clapperboard, Film, Image as ImageIcon, Library, Loader2, Music, RefreshCw, Sparkles, Upload, UserRound, Wand2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useIdentity } from '../auth/IdentityContext';
+import SceneSetup from './VisionWeaverSceneSetup';
 
 const DURATIONS: Array<[string, string]> = [
   ['5', '5 seconds'], ['10', '10 seconds'], ['30', '30 seconds'], ['60', '1 minute'], ['120', '2 minutes'],
   ['300', '5 minutes'], ['600', '10 minutes']
 ];
 
-type Tab = 'create' | 'books' | 'characters' | 'library';
+type Tab = 'create' | 'books' | 'characters' | 'scenes' | 'library';
 type Media = 'image' | 'video' | 'audio';
 type Row = Record<string, any>;
 
@@ -32,7 +33,8 @@ const css = `
 .vwx .reference-stage img{width:100%;height:100%;max-height:440px;object-fit:contain}
 .vwx .empty-stage{text-align:center;max-width:300px;color:#aaa7bf;line-height:1.7}
 .vwx .empty-stage svg{width:36px;height:36px;margin-bottom:12px}
-.vwx .asset-strip{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.vwx .asset-strip{display:flex;flex-wrap:nowrap;gap:10px;margin-top:16px;overflow-x:auto;scroll-snap-type:x proximity;padding:4px 4px 12px}
+.vwx .asset-strip button{flex-shrink:0;scroll-snap-align:start}
 .vwx .asset-strip button{background:#10101a;border:2px solid #303045;border-radius:12px;padding:0;width:80px;height:72px;overflow:hidden;cursor:pointer}
 .vwx .asset-strip button.on{border-color:#d7ff4a}
 .vwx .asset-strip img{width:100%;height:100%;object-fit:cover}
@@ -105,6 +107,13 @@ export default function VisionWeaverWorkspace() {
   const [charName, setCharName] = useState('');
   const [charDesc, setCharDesc] = useState('');
   const [charAssets, setCharAssets] = useState<string[]>([]);
+  const [editingChar, setEditingChar] = useState<Row | null>(null);
+  const [voice, setVoice] = useState<Record<string, string>>({});
+  const [characterId, setCharacterId] = useState('');
+  const [sceneId, setSceneId] = useState('');
+  const [continuationAssetId, setContinuationAssetId] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [syncedAt, setSyncedAt] = useState('');
   const signedIn = Boolean(supabase && identity.user);
   const generateBlocker = !signedIn ? 'Sign in to generate.' : busy ? (busy === 'upload' ? 'Uploading your reference…' : 'Wait for the current operation to finish.') : prompt.trim().length < 8 ? 'Enter a description of at least 8 characters. Example text is not submitted.' : '';
   useEffect(() => {
@@ -129,7 +138,9 @@ export default function VisionWeaverWorkspace() {
     try {
       const res = await call({ action: refresh ? 'refresh' : 'list' });
       setData({ generations: res.generations || [], assets: res.assets || [], characters: res.characters || [], chapters: res.chapters || [], projects: res.projects || [] });
-    } catch (e: any) { setErr(String(e.message || e)); }
+      setSyncedAt(new Date().toLocaleTimeString());
+      return res;
+    } catch (e: any) { setErr(String(e.message || e)); return null; }
   }, [call, signedIn]);
 
   useEffect(() => { void load(true); }, [load]);
@@ -140,7 +151,26 @@ export default function VisionWeaverWorkspace() {
     return () => clearInterval(t);
   }, [active, load, signedIn]);
 
-  const refAssets = useMemo(() => (data.assets as Row[]).filter((a) => a.kind === 'image' && a.metadata?.uploaded_by_user && a.playable_url), [data.assets]);
+  const refAssets = useMemo(() => (data.assets as Row[]).filter((a) => a.kind === 'image' && a.playable_url), [data.assets]);
+
+  async function refreshLibrary() {
+    if (refreshing || !signedIn) return;
+    setRefreshing(true); setErr(''); setMsg('Refreshing Library and checking rendering tasks…');
+    try {
+      const res = await load(true);
+      setMsg(res ? `Library refreshed. ${res.generations?.length || 0} productions and ${res.assets?.length || 0} assets loaded. Existing items may be unchanged.` : 'Refresh failed. Your displayed items have been kept.');
+    } finally { setRefreshing(false); }
+  }
+
+  function editCharacter(c: Row) {
+    setEditingChar(c); setCharName(c.name); setCharDesc(c.bible?.description || c.visual_anchor || '');
+    setCharAssets(c.bible?.reference_asset_ids || []); setVoice(c.bible?.voice || {}); setTab('characters');
+  }
+
+  function useCharacter(c: Row) {
+    setCharacterId(c.id); setTab('create');
+    setMsg(`${c.name} selected. Choose a standalone start-frame image below; character boards remain linked to the identity record.`);
+  }
 
   async function uploadImages(files: FileList | null, role: string): Promise<string[]> {
     if (!supabase || !identity.user || !files) return [];
@@ -169,7 +199,7 @@ export default function VisionWeaverWorkspace() {
       const res = await call({
         action: 'create', media_type: kind, prompt: text, title: text.slice(0, 60), organization_id: identity.organizationId,
         parameters: {
-          ratio, duration: seconds, target_duration_seconds: seconds, variant_count: 1, reference_asset_ids: (refs || picked).slice(0, 3),
+          ratio, duration: seconds, target_duration_seconds: seconds, variant_count: 1, reference_asset_ids: (refs || picked).slice(0, 3), character_id: characterId || undefined, scene_id: sceneId || undefined, continuation_asset_id: continuationAssetId && (refs || picked)[0] === continuationAssetId ? continuationAssetId : undefined,
           continuity_mode: longForm ? continuityMode : 'reference',
           video_generation_profile: longForm ? 'long_form' : 'short_form',
           provider_shot_max_seconds: longForm ? 30 : 10
@@ -188,7 +218,7 @@ export default function VisionWeaverWorkspace() {
       const chapters = parseChapters(text);
       if (!chapters.length) throw new Error('No chapters found. Use headings like "## Chapter 1: The News".');
       const title = (text.match(/^#\s+(.+)$/m)?.[1] || file.name.replace(/\.[^.]+$/, '')).slice(0, 150);
-      await call({ action: 'import_book', title, chapters, universe: 'Crossroads of Identity' });
+      await call({ action: 'import_book', title, chapters, universe: 'VisionWeaver' });
       setMsg(`Imported "${title}" with ${chapters.length} chapters.`);
       await load();
     });
@@ -196,9 +226,9 @@ export default function VisionWeaverWorkspace() {
 
   async function saveCharacter() {
     await run('char', async () => {
-      await call({ action: 'save_character', name: charName, description: charDesc, visual_anchor: charDesc, reference_asset_ids: charAssets, confirmed: true });
-      setCharName(''); setCharDesc(''); setCharAssets([]);
-      setMsg('Character saved.');
+      const res = await call({ action: 'save_character', character_id: editingChar?.id, expected_version: editingChar?.version, universe: editingChar?.universe || 'VisionWeaver', name: charName, description: charDesc, visual_anchor: charDesc, reference_asset_ids: charAssets, voice, confirmed: true });
+      setEditingChar(res.character); setCharacterId(res.character.id);
+      setMsg(`${res.character.name} saved as version ${res.character.version}. Find it in Saved cast below or select Use in Create.`);
       await load();
     });
   }
@@ -215,6 +245,19 @@ export default function VisionWeaverWorkspace() {
     });
   }
 
+  async function continueShot(g: Row) {
+    await run('continuity', async () => {
+      const { data: session } = await supabase!.auth.getSession();
+      const result = await fetch('/api/visionweaver-continuity', {method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.session?.access_token},body:JSON.stringify({generation_id:g.id})});
+      const payload = await result.json();
+      if (!result.ok) throw new Error(payload.error || 'Ending reference could not be prepared');
+      await load(); setPicked([payload.asset.id]); setContinuationAssetId(payload.asset.id);
+      setCharacterId(payload.asset.metadata?.character_snapshot?.id || ''); setSceneId(payload.asset.metadata?.scene_snapshot?.id || '');
+      setPrompt(''); setMedia('video'); setSeconds(10); setTab('create');
+      setMsg('Ending frame and final motion tail saved. Review the frame and replace the next-action description before Generate. This shot uses the ending image; the motion tail is retained for review, not automatically supplied to the image-to-video provider.');
+    });
+  }
+
   function chapterClip(ch: Row) {
     const book = (data.projects as Row[]).find((p) => p.id === ch.project_id);
     const chars = (data.characters as Row[]).filter((c) => String(ch.pov || '').toLowerCase().includes(String(c.name).split(' ')[0].toLowerCase()));
@@ -225,7 +268,7 @@ export default function VisionWeaverWorkspace() {
     setMsg('Prompt filled from the chapter. Review it, then press Generate.');
   }
 
-  const Tabs: [Tab, string, any][] = [['create', 'Create', Wand2], ['books', 'Books', BookOpen], ['characters', 'Cast', UserRound], ['library', 'Library', Library]];
+  const Tabs: [Tab, string, any][] = [['create', 'Create', Wand2], ['books', 'Books', BookOpen], ['characters', 'Cast', UserRound], ['scenes', 'Scenes', Clapperboard], ['library', 'Library', Library]];
 
   return (
     <div className="vwx">
@@ -234,14 +277,20 @@ export default function VisionWeaverWorkspace() {
         {Tabs.map(([k, label, Icon]) => (<button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}><Icon />{label}</button>))}
       </nav>
       <div className="vwx-main">
+        <p className="stage-note">VisionWeaver · production update v2.02</p>
         {!signedIn && <div className="note err">Sign in with your email link to save and see your work here. Nothing can be generated while signed out.</div>}
-        {msg && <div className="note">{msg}</div>}
+        {msg && <div className="note" role="status">{msg}</div>}
         {err && <div className="note err">{err}</div>}
 
         {tab === 'create' && (<>
           <h2>Create</h2><p className="sub">Build your next shot with an existing reference and a clear production brief.</p>
+          <div className="options">
+            <label>Saved avatar<select value={characterId} onChange={e => setCharacterId(e.target.value)}><option value="">No avatar selected</option>{data.characters.map((c: Row) => <option key={c.id} value={c.id}>{c.name} · v{c.version}</option>)}</select></label>
+            <label>Saved scene<select value={sceneId} onChange={e => setSceneId(e.target.value)}><option value="">Custom scene</option>{data.projects.filter((p: Row) => p.settings?.production_scene).map((p: Row) => <option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
+          </div>
           <label className="step" htmlFor="vwx-description">1. Describe what should happen</label>
           <textarea id="vwx-description" ref={promptRef} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Describe the action—for example, the boy walks through rain holding his red balloon." rows={6} maxLength={1000} />
+          {continuationAssetId && picked[0] === continuationAssetId && <div className="note">Continuing from a saved ending frame. Stored avatar and scene snapshots take priority. <button className="ghost" onClick={() => setContinuationAssetId('')}>Use as ordinary image instead</button></div>}
           <div className="workbench">
             <div className="bar">
               <div className="form-heading"><h3>2. Reference image</h3><span>{picked.length}/3 selected</span></div>
@@ -305,7 +354,9 @@ export default function VisionWeaverWorkspace() {
               <h3>Character identity</h3>
               <label className="field">Name<input type="text" placeholder="Name (e.g. BOY-001)" value={charName} onChange={(e) => setCharName(e.target.value)} /></label>
               <label className="field">Approved appearance<textarea placeholder="Age, skin tone, hair texture, body size, wardrobe and continuity details…" value={charDesc} onChange={(e) => setCharDesc(e.target.value)} rows={6} /></label>
-              <button className="go full-action" disabled={!signedIn || !charName.trim() || !!busy} onClick={() => void saveCharacter()}>{busy === 'char' ? 'Saving…' : 'Save character'}</button>
+              <h3>Character voice</h3>
+              <p className="stage-note">Save delivery and voice identity here. These settings preserve direction; video generation does not automatically synthesize dialogue.</p>
+              <div className="options">{[['age','Speaking age'],['language','Language'],['accent','Accent / regional influence'],['pitch','Pitch and vocal weight'],['pace','Pace and rhythm'],['emotion','Emotional range'],['pronunciation','Pronunciation notes'],['provider','Voice provider'],['voice_id','Approved provider voice ID'],['rights','Permission / usage notes']].map(([key,label]) => <label key={key}>{label}<input type="text" value={voice[key] || ''} maxLength={500} onChange={e => setVoice(v => ({...v,[key]:e.target.value}))} /></label>)}</div>
             </div>
             <div className="bar">
               <div className="form-heading"><h3>Character references</h3><span>{charAssets.length} attached</span></div>
@@ -318,15 +369,19 @@ export default function VisionWeaverWorkspace() {
               <p className="stage-note">Select existing uploads or add files. Up to six references per character.</p>
             </div>
           </div>
+          <div className="submit"><button className="go" disabled={!signedIn || !charName.trim() || !!busy} onClick={() => void saveCharacter()}>{busy === 'char' ? 'Saving…' : editingChar ? 'Save character revision' : 'Save character'}</button><button className="ghost" onClick={() => { setEditingChar(null); setCharName(''); setCharDesc(''); setCharAssets([]); setVoice({}); }}>New character</button></div>
           <h3 style={{ marginTop: 28 }}>Saved cast</h3>
           <div className="grid">{(data.characters as Row[]).map((c) => {
             const a = (data.assets as Row[]).find((x) => (c.bible?.reference_asset_ids || []).includes(x.id));
-            return (<div className="card" key={c.id}><div className="media">{a?.playable_url ? <img src={a.playable_url} alt={c.name} /> : 'No photo'}</div><div className="meta"><b>{c.name}</b>{c.visual_anchor}</div></div>);
+            return (<div className="card" key={c.id}><div className="media">{a?.playable_url ? <img src={a.playable_url} alt={c.name} /> : 'No photo'}</div><div className="meta"><b>{c.name} · v{c.version}</b>{c.visual_anchor}<p>{c.bible?.reference_asset_ids?.length || 0} references attached</p><div className="row"><button className="ghost" onClick={() => editCharacter(c)}>Open / edit</button><button className="go" onClick={() => useCharacter(c)}>Use in Create</button></div></div></div>);
           })}</div>
         </>)}
 
+        {tab === 'scenes' && <SceneSetup projects={data.projects} disabled={!signedIn || !!busy} onSave={(body) => run('scene', async () => { const res = await call({action:'save_scene',...body}); setSceneId(res.scene.id); await load(); setMsg('Scene version saved. Select it in Create to use its direction.'); })} onUse={id => { setSceneId(id); setTab('create'); }} />}
+
         {tab === 'library' && (<>
-          <h2>Library <button className="ghost" style={{ marginLeft: 10 }} onClick={() => void load(true)}><RefreshCw size={13} /> Refresh</button></h2>
+          <h2>Library <button className="ghost" disabled={!signedIn || refreshing} style={{ marginLeft: 10 }} onClick={() => void refreshLibrary()}><RefreshCw size={13} /> {refreshing ? 'Refreshing…' : 'Refresh'}</button></h2>
+          <p className="stage-note" role="status">{refreshing ? 'Checking current tasks and saved assets…' : syncedAt ? `Last synchronized ${syncedAt}` : 'Waiting for synchronization'}</p>
           <p className="sub">Everything VisionWeaver makes is saved here, not just in Runway.</p>
           <div className="grid">
             {(data.generations as Row[]).map((g) => {
@@ -339,6 +394,7 @@ export default function VisionWeaverWorkspace() {
                   <div className="row" style={{ marginTop: 6 }}>
                     {(g.status === 'failed' || g.result?.partial) && <button className="ghost" onClick={() => void run('retry', async () => { await call({ action: 'retry', generation_id: g.id }); await load(true); })}>Retry</button>}
                     {url && <a className="ghost" href={url} target="_blank" rel="noreferrer" download>Download</a>}
+                    {isVideo && g.status === 'complete' && !g.result?.partial && <button className="ghost" disabled={!!busy} onClick={() => void continueShot(g)}>{busy === 'continuity' ? 'Preparing ending…' : 'Continue from ending'}</button>}
                     {g.provider === 'visionweaver' && g.operation === 'multi_shot_video' && g.status === 'complete' && !g.result?.partial && g.result?.assembly?.state !== 'master_ready' && <button className="ghost" onClick={() => void assemble(g.id)}>Build master</button>}
                   </div></div></div>);
             })}

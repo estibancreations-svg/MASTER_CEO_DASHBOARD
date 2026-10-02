@@ -1,5 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { createHiggsfieldAdapter } from '../visionweaver-orchestrator/higgsfield-adapter.js';
+import { PRODUCTION_VERSION, voiceProfile, sceneState, compileScene, orderedUnique } from './production-state.js';
 
 function namedSupabaseKey(jsonEnv: string, legacyEnv: string) {
   try {
@@ -431,11 +432,39 @@ async function planSequence(prompt: string, contract: any) {
 
 async function createProject(user: any, body: any) {
   const mediaType = String(body.media_type || '').toLowerCase();
-  const prompt = String(body.prompt || '').trim();
+  let prompt = String(body.prompt || '').trim();
   if (!MEDIA.has(mediaType)) throw new Error('Unsupported media type');
   if (prompt.length < 8) throw new Error('Prompt must be at least 8 characters');
   const title = String(body.title || (mediaType[0].toUpperCase() + mediaType.slice(1) + ' project')).slice(0, 160);
   const requestedParameters = body.parameters && typeof body.parameters === 'object' ? body.parameters : {};
+  // Resolve all production context on the server; never trust a client-supplied snapshot.
+  delete requestedParameters.character_snapshot;
+  delete requestedParameters.scene_snapshot;
+  if (requestedParameters.continuation_asset_id) {
+    const { data: capsule, error } = await db.from('vw_assets').select('id,metadata').eq('id', requestedParameters.continuation_asset_id).eq('owner_id', user.id).maybeSingle();
+    if (error || capsule?.metadata?.role !== 'continuity_terminal_frame') throw new Error('Continuity ending is unavailable');
+    if (requestedParameters.reference_asset_ids?.[0] !== capsule.id) throw new Error('The continuity ending must be the first selected reference');
+    requestedParameters.character_snapshot = capsule.metadata.character_snapshot;
+    requestedParameters.scene_snapshot = capsule.metadata.scene_snapshot;
+    requestedParameters.continuity_source_generation_id = capsule.metadata.source_generation_id;
+    requestedParameters.continuity_method = 'terminal_image';
+    if (requestedParameters.character_snapshot) prompt += '\nApproved identity: ' + requestedParameters.character_snapshot.visual_anchor;
+    if (requestedParameters.scene_snapshot) prompt += '\n' + compileScene(requestedParameters.scene_snapshot);
+  }
+  if (requestedParameters.character_id && !requestedParameters.continuation_asset_id) {
+    const { data: character, error } = await db.from('vw_characters').select('*').eq('id', requestedParameters.character_id).eq('owner_id', user.id).maybeSingle();
+    if (error || !character) throw new Error('Saved character is unavailable to this account');
+    requestedParameters.character_snapshot = { id: character.id, version: character.version, name: character.name, visual_anchor: character.visual_anchor, bible: character.bible };
+    prompt += '\nApproved identity: ' + character.visual_anchor;
+  }
+  if (requestedParameters.scene_id && !requestedParameters.continuation_asset_id) {
+    const { data: scene, error } = await db.from('vw_projects').select('id,settings').eq('id', requestedParameters.scene_id).eq('owner_id', user.id).maybeSingle();
+    if (error || !scene?.settings?.production_scene) throw new Error('Saved scene is unavailable to this account');
+    requestedParameters.scene_snapshot = { id: scene.id, ...scene.settings.production_scene };
+    prompt += '\n' + compileScene(scene.settings.production_scene);
+  }
+  requestedParameters.production_version = PRODUCTION_VERSION;
+  if (['image', 'video', 'audio'].includes(mediaType) && prompt.length > 1000) throw new Error(`Combined action, avatar and scene direction is ${prompt.length} characters; shorten it to 1000. Locked direction will not be silently truncated.`);
   const route = await routeFor(mediaType, requestedParameters);
   const contract = productionContract(mediaType, requestedParameters, route.providerShotMaxSeconds || SHORT_PROVIDER_SHOT_MAX_SECONDS);
   const params = {
@@ -1039,7 +1068,9 @@ async function resolveReferences(generation: any) {
   const ids: string[] = Array.isArray(parameters.reference_asset_ids) ? parameters.reference_asset_ids.slice(0, 3) : [];
   if (ids.length) {
     const { data: rows } = await db.from('vw_assets').select('id,storage_path,source_url,title,metadata').in('id', ids).eq('owner_id', generation.owner_id);
-    for (const row of rows || []) {
+    for (const id of ids) {
+      const row = (rows || []).find((row: any) => row.id === id);
+      if (!row) throw new Error('Selected reference is unavailable');
       let uri = row.source_url || '';
       if (row.storage_path) {
         const { data } = await db.storage.from('visionweaver-outputs').createSignedUrl(row.storage_path, 3600);
@@ -1094,25 +1125,32 @@ async function importBook(user: any, body: any) {
 async function saveCharacter(user: any, body: any) {
   const name = String(body.name || '').trim().slice(0, 120);
   if (!name) throw new Error('Character name required');
-  const universe = String(body.universe || 'Crossroads of Identity').slice(0, 120);
-  const assetIds = Array.isArray(body.reference_asset_ids) ? body.reference_asset_ids.slice(0, 6) : [];
+  const universe = String(body.universe || 'VisionWeaver').slice(0, 120);
+  const assetIds = orderedUnique(body.reference_asset_ids, 6);
+  let query = db.from('vw_characters').select('*').eq('owner_id', user.id);
+  query = body.character_id ? query.eq('id', body.character_id) : query.eq('universe', universe).eq('name', name);
+  const { data: existing, error: lookupError } = await query.maybeSingle();
+  if (lookupError) throw new Error(lookupError.message);
+  if (body.character_id && !existing) throw new Error('Character not found');
+  if (existing && Number(body.expected_version) !== Number(existing.version)) throw new Error('Character changed or already exists. Open the saved character before editing.');
   let paths: string[] = [];
   if (assetIds.length) {
-    const { data } = await db.from('vw_assets').select('storage_path').in('id', assetIds).eq('owner_id', user.id);
+    const { data, error } = await db.from('vw_assets').select('id,storage_path').in('id', assetIds).eq('owner_id', user.id).eq('kind', 'image');
+    if (error || data?.length !== assetIds.length) throw new Error('One or more character references are unavailable');
     paths = (data || []).map((r: any) => r.storage_path).filter(Boolean);
   }
   const record = {
     universe, name,
     visual_anchor: String(body.visual_anchor || body.description || name).slice(0, 2000),
-    bible: { description: String(body.description || '').slice(0, 4000), role: body.role || null, reference_asset_ids: assetIds, confirmed: Boolean(body.confirmed) },
+    bible: { ...(existing?.bible || {}), description: String(body.description || '').slice(0, 4000), role: body.role || null, reference_asset_ids: assetIds, confirmed: Boolean(body.confirmed), voice: voiceProfile(body.voice), production_version: PRODUCTION_VERSION, previous_versions: [...(existing?.bible?.previous_versions || []), ...(existing ? [{ version: existing.version, name: existing.name, visual_anchor: existing.visual_anchor, voice: existing.bible?.voice || {}, reference_asset_ids: existing.bible?.reference_asset_ids || [], saved_at: existing.updated_at }] : [])] },
+    elevenlabs_voice_id: body.voice?.provider === 'elevenlabs' ? String(body.voice.voice_id || '').slice(0, 200) || null : null,
     reference_image_urls: paths,
     owner_id: user.id,
-    project_id: body.project_id || null,
+    project_id: existing?.project_id || null,
     updated_at: new Date().toISOString()
   };
-  const { data: existing } = await db.from('vw_characters').select('id,version').eq('universe', universe).eq('name', name).maybeSingle();
   if (existing) {
-    const { data, error } = await db.from('vw_characters').update({ ...record, version: (existing.version || 1) + 1 }).eq('id', existing.id).select('*').single();
+    const { data, error } = await db.from('vw_characters').update({ ...record, version: (existing.version || 1) + 1 }).eq('id', existing.id).eq('owner_id', user.id).eq('version', existing.version).select('*').single();
     if (error) throw new Error(error.message);
     return { character: data };
   }
@@ -1138,14 +1176,27 @@ async function registerAsset(user: any, body: any) {
   return { asset: data };
 }
 
+async function saveScene(user: any, body: any) {
+  const title = String(body.title || '').trim().slice(0, 160);
+  if (!title) throw new Error('Scene title is required');
+  if (body.parent_scene_id) {
+    const { data } = await db.from('vw_projects').select('id').eq('id', body.parent_scene_id).eq('owner_id', user.id).maybeSingle();
+    if (!data) throw new Error('Parent scene is unavailable');
+  }
+  const { data, error } = await db.from('vw_projects').insert({ owner_id: user.id, organization_id: user.membership.organization_id, title, medium: 'movie', universe: 'VisionWeaver', status: 'active', source_concept: title, settings: { production_scene: sceneState(body.scene), parent_scene_id: body.parent_scene_id || null }, story_object: { source: 'scene_setup', version: PRODUCTION_VERSION }, output_formats: ['video'] }).select('*').single();
+  if (error) throw new Error(error.message);
+  return { scene: data };
+}
+
 async function listWorkspace(user: any) {
-  const [{ data: projects, error: projectError }, { data: generations, error: generationError }, { data: assets }] = await Promise.all([
+  const [{ data: projects, error: projectError }, { data: generations, error: generationError }, { data: assets, error: assetError }] = await Promise.all([
     db.from('vw_projects').select('*').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(50),
     db.from('vw_generations').select('*').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(250),
     db.from('vw_assets').select('*').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(100)
   ]);
   if (projectError) throw new Error(projectError.message);
   if (generationError) throw new Error(generationError.message);
+  if (assetError) throw new Error(assetError.message);
   const signed = new Map<string, string>();
   const paths = [...new Set((generations || []).flatMap((item: any) => item.storage_paths || []).concat((assets || []).map((item: any) => item.storage_path).filter(Boolean)))];
   if (paths.length) {
@@ -1178,7 +1229,8 @@ async function listWorkspace(user: any) {
       } : null
     };
   });
-  const { data: characters } = await db.from('vw_characters').select('*').eq('owner_id', user.id).order('updated_at', { ascending: false }).limit(100);
+  const { data: characters, error: characterError } = await db.from('vw_characters').select('*').eq('owner_id', user.id).order('updated_at', { ascending: false }).limit(100);
+  if (characterError) throw new Error(characterError.message);
   const bookIds = (projects || []).filter((p: any) => p.medium === 'book').map((p: any) => p.id);
   let chapters: any[] = [];
   if (bookIds.length) {
@@ -1204,7 +1256,8 @@ Deno.serve(async (req: Request) => {
       return response(req, {
         ok: true,
         service: 'visionweaver-studio',
-        version: 7,
+        version: '7.02',
+        production_version: PRODUCTION_VERSION,
         capabilities: models(),
         ...health
       });
@@ -1229,6 +1282,7 @@ Deno.serve(async (req: Request) => {
     if (body.action === 'import_book') return response(req, { ok: true, ...(await importBook(user, body)) }, 201);
     if (body.action === 'save_character') return response(req, { ok: true, ...(await saveCharacter(user, body)) });
     if (body.action === 'register_asset') return response(req, { ok: true, ...(await registerAsset(user, body)) }, 201);
+    if (body.action === 'save_scene') return response(req, { ok: true, ...(await saveScene(user, body)) }, 201);
     if (body.action === 'chapter_text') {
       const { data } = await db.from('vw_scenes').select('spec,project_id').eq('id', String(body.chapter_id || '')).maybeSingle();
       const { data: proj } = data ? await db.from('vw_projects').select('owner_id').eq('id', data.project_id).maybeSingle() : { data: null };
