@@ -83,3 +83,7 @@ Canonical implementation contract: [VisionWeaver Character Identity Board System
 ## Representation and historical locations
 
 The authorized [Representation and Place-Time Standard v1](docs/architecture/REPRESENTATION-AND-PLACE-TIME-STANDARD-v1.md) governs new character defaults: intentional inclusive casting, normal representation of Black and fat people, preservation of approved appearance, and evidence-backed scene location/date accuracy. The current balloon-film boy is Black and fat. Runtime enforcement and end-to-end verification remain open release gates.
+
+## Avatar State and animation production — October 3, 2026
+
+The [repository integration contract](docs/architecture/VISIONWEAVER-AVATAR-STATE-ANIMATION-INTEGRATION.md) links Avatar State v1.1 and children's animation/teaching v1.0: three boards, reconciled coverage, actual avatar references, scoped changes, perception/contact/reaction timing, world/camera anchors, vehicle/enclosure continuity and evidence-based acceptance. Documentation is synchronized; camera calibration and runtime/production verification remain open.

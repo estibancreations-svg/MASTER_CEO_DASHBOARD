@@ -1,5 +1,7 @@
 # VisionWeaver Character Identity Board Contract
 
+**Expanded specification — October 3, 2026:** The [Avatar State/animation integration](VISIONWEAVER-AVATAR-STATE-ANIMATION-INTEGRATION.md) links the current full contract and children's extension. It adds the configured 64-slot full-height profile, performance/learning/event dependencies and AS/CA acceptance. Exact camera calibration and runtime enforcement remain unresolved; the historical 32/16 rules below do not certify full coverage.
+
 **Status:** Approved production standard · 2026-09-30
 **Owner:** Estiban Creations / VisionWeaver
 **Applies to:** MASTER_CEO_DASHBOARD, VisionWeaver, Runway reference generation, connected production records, and scene/cast workflows.
