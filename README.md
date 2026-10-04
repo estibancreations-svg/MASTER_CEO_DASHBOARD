@@ -87,3 +87,10 @@ The authorized [Representation and Place-Time Standard v1](docs/architecture/REP
 ## Avatar State and animation production — October 3, 2026
 
 The [repository integration contract](docs/architecture/VISIONWEAVER-AVATAR-STATE-ANIMATION-INTEGRATION.md) links Avatar State v1.1 and children's animation/teaching v1.0: three boards, reconciled coverage, actual avatar references, scoped changes, perception/contact/reaction timing, world/camera anchors, vehicle/enclosure continuity and evidence-based acceptance. Documentation is synchronized; camera calibration and runtime/production verification remain open.
+
+
+## VisionWeaver global reference catalog — October 4, 2026
+
+The [VisionWeaver Global Reference Catalog integration](docs/architecture/VISIONWEAVER-GLOBAL-REFERENCE-CATALOG.md) adds governance for worldwide place, people, environment and travel-reference sourcing. The dashboard tracks provider terms, rights classes, provenance completeness, stale-policy reviews, identifiable-person/minor flags, geographic coverage, Location Pack approval and blocked ingestion attempts.
+
+Canonical detail remains in Design Studio and VisionWeaver. Documentation does not certify runtime provider ingestion or permissions.
