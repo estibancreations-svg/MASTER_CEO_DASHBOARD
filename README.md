@@ -22,7 +22,7 @@ The application is deployed as a responsive builder release.
 - Provider and partner Vault slots are prepared; credentials are installed later and certified one connector at a time.
 - Recovery policies, evidence ledgers and guarded local backup/restore scripts are present.
 - The release is not production-certified until the remaining external gates in [QC-GATE.md](docs/QC-GATE.md) pass.
-- Current exact-head evidence as of October 4, 2026: both Vercel contexts are successful, but **Quality Gate run #102 failed on `2d604f96e83f0ab207ef121a4860b0898819d348`**. Remediation is active; do not collapse deploy success into Quality-Gate certification.
+- Historical pre-remediation evidence: Quality Gate run #102 failed on `2d604f96e83f0ab207ef121a4860b0898819d348`. **Superseding evidence on `94acf473a7bc0baa5eded9102bcebcdb18e2d1d9`: Quality Gate #104 passed and both Vercel production contexts reached successful/READY deployment state.** Full production certification still requires the external/provider gates in [QC-GATE.md](docs/QC-GATE.md).
 
 ## Run locally
 
