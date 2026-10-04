@@ -22,6 +22,7 @@ The application is deployed as a responsive builder release.
 - Provider and partner Vault slots are prepared; credentials are installed later and certified one connector at a time.
 - Recovery policies, evidence ledgers and guarded local backup/restore scripts are present.
 - The release is not production-certified until the remaining external gates in [QC-GATE.md](docs/QC-GATE.md) pass.
+- Current exact-head evidence as of October 4, 2026: both Vercel contexts are successful, but **Quality Gate run #102 failed on `2d604f96e83f0ab207ef121a4860b0898819d348`**. Remediation is active; do not collapse deploy success into Quality-Gate certification.
 
 ## Run locally
 
@@ -57,6 +58,7 @@ npm run build
 - [Backup and Restore Runbook](docs/operations/BACKUP-RESTORE-RUNBOOK.md)
 - [Physical Device Sign-off](docs/operations/PHYSICAL-DEVICE-SIGNOFF.md)
 - [Quality Gate](docs/QC-GATE.md)
+- [Current Workstate — 2026-10-04](docs/operations/CURRENT-WORKSTATE-2026-10-04.md)
 
 ## Attached systems
 
