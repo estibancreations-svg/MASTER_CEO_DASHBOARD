@@ -598,7 +598,13 @@ export async function runBookStep(bookId: string): Promise<{ status: string; run
     const attempts = Number(book.step_attempts || 0) + 1;
     const transient = /Anthropic (429|5\d\d)|Runway (429|5\d\d)|overloaded|timed? ?out|aborted|network/i.test(message);
     const limit = transient ? 4 : 2;
-    if (attempts >= limit) {
+    // An empty AI account will not fix itself, so stop at once with a plain reason.
+    const outOfCredit = /credit balance is too low/i.test(message);
+    if (outOfCredit) {
+      const reason = 'The Anthropic account is out of credit, so the writing team cannot work. Add credit to the account, then press Try again.';
+      await db.from('vw_books').update({ status: 'paused', paused_stage: stage, error: reason, step_attempts: 0 }).eq('id', bookId);
+      await logEvent({ book_id: bookId }, stage, 'error', 'Paused at "' + stage + '": ' + reason);
+    } else if (attempts >= limit) {
       await db.from('vw_books').update({ status: 'paused', paused_stage: stage, error: message, step_attempts: 0 }).eq('id', bookId);
       await logEvent({ book_id: bookId }, stage, 'error', 'Paused at "' + stage + '" after ' + attempts + ' attempts: ' + message);
     } else {
