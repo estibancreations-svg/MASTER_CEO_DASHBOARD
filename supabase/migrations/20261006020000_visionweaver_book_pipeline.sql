@@ -92,6 +92,7 @@ create table if not exists public.vw_book_events (
 );
 create index if not exists vw_book_events_book_idx on public.vw_book_events (book_id, at desc);
 create index if not exists vw_book_events_scan_idx on public.vw_book_events (scan_id, at desc);
+create index if not exists vw_book_events_usage_idx on public.vw_book_events (at) where stage = 'usage';
 
 -- ------------------------------------------------- idea intake (layer 1)
 create table if not exists public.vw_book_idea_queue (
@@ -246,7 +247,31 @@ as $$
 declare
   v_id uuid;
   v_stale constant interval := interval '4 minutes';
+  v_limit numeric;
+  v_since timestamptz;
+  v_spent numeric;
 begin
+  -- 0. spending limit. The Book Director writes the cost of every model call to
+  --    vw_book_events (stage 'usage'). When the total since the start mark reaches
+  --    the limit in system_settings, all work is paused and nothing more is claimed.
+  select nullif(value #>> '{}', '')::numeric into v_limit from public.system_settings where key = 'book_pipeline_budget_usd';
+  if v_limit is not null then
+    select nullif(value #>> '{}', '')::timestamptz into v_since from public.system_settings where key = 'book_pipeline_budget_since';
+    select coalesce(sum((detail ->> 'cost_usd')::numeric), 0) into v_spent
+      from public.vw_book_events where stage = 'usage' and at >= coalesce(v_since, '-infinity'::timestamptz);
+    if v_spent >= v_limit then
+      update public.vw_books
+         set paused_stage = status, status = 'paused', locked_at = null, step_attempts = 0,
+             error = format('Spending limit of $%s reached (about $%s used). Raise the limit to continue.', v_limit, round(v_spent, 2))
+       where status in ('intake','research','outline','chapters','design','cover','critic','revision','assembly');
+      update public.vw_book_trend_scans
+         set status = 'failed', completed_at = now(), locked_at = null,
+             error = 'Spending limit reached before this scan finished.'
+       where status in ('scanning','ranking');
+      return null;
+    end if;
+  end if;
+
   -- 1. a book in a runnable stage
   select id into v_id from public.vw_books
    where status in ('intake','research','outline','chapters','design','cover','critic','revision','assembly')
