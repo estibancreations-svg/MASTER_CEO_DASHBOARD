@@ -319,6 +319,13 @@ insert into public.vw_book_sources (slug, name, method, config, notes) values
   ('powells','Powell''s Books','web_search','{"domain":"powells.com","lists":"bestsellers and staff picks"}','')
 on conflict (slug) do nothing;
 
+-- ------------------------------------------------------------- storage
+-- Private bucket for book files (PDF, EPUB, Markdown, metadata, cover, fonts).
+-- Files are only handed out as short-lived signed links by the Book Director.
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('visionweaver-books', 'visionweaver-books', false, 104857600)
+on conflict (id) do nothing;
+
 -- ---------------------------------------------------------------- cron
 -- Three workers a minute. An idle tick is one cheap database call.
 select cron.schedule('visionweaver-book-director-tick', '* * * * *', $cron$
