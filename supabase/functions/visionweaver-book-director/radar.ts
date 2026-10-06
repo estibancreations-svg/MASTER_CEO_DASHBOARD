@@ -3,7 +3,7 @@
 // rising, and proposes ORIGINAL book ideas for a person to pick from.
 // Every source reports honestly: ok, no_data or failed. Nothing is invented
 // to fill a gap.
-import { claude, clip, db, fetchJson, fetchText, logEvent, parseJson, type Row, type Source } from './lib.ts';
+import { claude, clip, db, fetchJson, fetchText, logEvent, parseJson, secret, type Row, type Source } from './lib.ts';
 
 type Item = { rank: number | null; title: string; author: string; genre: string; url: string; list_name: string };
 
@@ -21,7 +21,7 @@ async function readAppleBooks(config: Row): Promise<{ items: Item[]; citations: 
   let used = '';
   let lastError = '';
   for (const host of ['https://rss.marketingtools.apple.com', 'https://rss.applemarketingtools.com']) {
-    try { json = await fetchJson(host + path); used = host + path; break; } catch (error) { lastError = String((error as Error).message); }
+    try { json = await fetchJson(host + path, 14000); used = host + path; break; } catch (error) { lastError = String((error as Error).message); }
   }
   if (!json) throw new Error(lastError || 'Apple Books feed unavailable');
   const results = Array.isArray(json.feed?.results) ? json.feed.results : [];
@@ -63,10 +63,13 @@ async function readGoogleBooks(config: Row): Promise<{ items: Item[]; citations:
   const items: Item[] = [];
   const citations: Source[] = [];
   let failures = 0;
+  let lastError = '';
+  // Without a key, Google shares one small daily allowance across everyone on the same servers.
+  const key = await secret('GOOGLE_BOOKS_API_KEY');
   for (const category of categories) {
     const url = 'https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent('subject:"' + category + '"') + '&orderBy=newest&printType=books&langRestrict=en&maxResults=' + per;
     try {
-      const json = await fetchJson(url);
+      const json = await fetchJson(url + (key ? '&key=' + encodeURIComponent(key) : ''));
       for (const volume of Array.isArray(json.items) ? json.items : []) {
         const info = volume.volumeInfo || {};
         if (!info.title) continue;
@@ -80,9 +83,13 @@ async function readGoogleBooks(config: Row): Promise<{ items: Item[]; citations:
         });
       }
       citations.push({ title: 'Google Books: ' + category, url });
-    } catch (_) { failures += 1; }
+    } catch (error) { failures += 1; lastError = String((error as Error).message); }
   }
-  if (!items.length && failures) throw new Error('Google Books did not answer (' + failures + ' of ' + categories.length + ' categories failed)');
+  if (!items.length && failures) {
+    throw new Error(/HTTP 429/.test(lastError) && !key
+      ? 'Google Books refused the request because the shared free daily allowance is used up. Add a GOOGLE_BOOKS_API_KEY secret to fix this.'
+      : 'Google Books did not answer (' + failures + ' of ' + categories.length + ' categories failed: ' + lastError + ')');
+  }
   return { items, citations };
 }
 
@@ -182,7 +189,7 @@ export async function runScanSource(id: string) {
   } catch (caught) {
     const message = String((caught as Error)?.message || caught).slice(0, 300);
     const attempts = Number(row.step_attempts || 0) + 1;
-    const fatal = /not enabled|must start with|no domain/i.test(message);
+    const fatal = /not enabled|must start with|no domain|credit balance is too low|GOOGLE_BOOKS_API_KEY/i.test(message);
     await db.from('vw_book_trend_scan_sources').update(attempts >= 2 || fatal
       ? { status: 'failed', error: message, step_attempts: attempts, finished_at: new Date().toISOString(), locked_at: null }
       : { status: 'queued', error: message, step_attempts: attempts, locked_at: null }).eq('id', id);
