@@ -13,7 +13,8 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SERVICE_KEY = namedSupabaseKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY');
 if (!SUPABASE_URL || !SERVICE_KEY) throw new Error('Supabase server credentials unavailable');
 export const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
-export const BUCKET = 'visionweaver-outputs';
+// Private bucket for book files. The shared visionweaver-outputs bucket only accepts media types.
+export const BUCKET = 'visionweaver-books';
 
 export type Row = Record<string, any>;
 export type Usage = { input_tokens: number; output_tokens: number; searches: number; calls: number };
