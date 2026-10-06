@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BookOpen, Clapperboard, Film, Image as ImageIcon, Library, Loader2, Music, RefreshCw, Sparkles, Upload, UserRound, Wand2 } from 'lucide-react';
+import { BookOpen, Clapperboard, Film, Image as ImageIcon, Library, Loader2, Music, RefreshCw, Sparkles, Upload, UserRound, Wand2, Workflow } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useIdentity } from '../auth/IdentityContext';
 import SceneSetup from './VisionWeaverSceneSetup';
+import BookPipelineWorkspace from './BookPipelineWorkspace';
 
 const DURATIONS: Array<[string, string]> = [
   ['5', '5 seconds'], ['10', '10 seconds'], ['30', '30 seconds'], ['60', '1 minute'], ['120', '2 minutes'],
   ['300', '5 minutes'], ['600', '10 minutes']
 ];
 
-type Tab = 'create' | 'books' | 'characters' | 'scenes' | 'library';
+type Tab = 'create' | 'books' | 'pipeline' | 'characters' | 'scenes' | 'library';
 type Media = 'image' | 'video' | 'audio';
 type Row = Record<string, any>;
 
@@ -268,7 +269,7 @@ export default function VisionWeaverWorkspace() {
     setMsg('Prompt filled from the chapter. Review it, then press Generate.');
   }
 
-  const Tabs: [Tab, string, any][] = [['create', 'Create', Wand2], ['books', 'Books', BookOpen], ['characters', 'Cast', UserRound], ['scenes', 'Scenes', Clapperboard], ['library', 'Library', Library]];
+  const Tabs: [Tab, string, any][] = [['create', 'Create', Wand2], ['books', 'Books', BookOpen], ['pipeline', 'Pipeline', Workflow], ['characters', 'Cast', UserRound], ['scenes', 'Scenes', Clapperboard], ['library', 'Library', Library]];
 
   return (
     <div className="vwx">
@@ -346,6 +347,8 @@ export default function VisionWeaverWorkspace() {
             {!(data.chapters as Row[]).length && <div className="bar"><BookOpen size={28} /><h3>Your books and chapters</h3><p className="stage-note">Imported books appear here with their chapter lists and Make clip actions.</p></div>}
           </div></div>
         </>)}
+
+        {tab === 'pipeline' && <BookPipelineWorkspace signedIn={signedIn} />}
 
         {tab === 'characters' && (<>
           <h2>Cast</h2><p className="sub">Save each character with a look and a reference photo so every clip stays consistent.</p>
