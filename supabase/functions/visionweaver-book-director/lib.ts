@@ -89,6 +89,28 @@ export function parseJson(raw: string, kind: 'object' | 'array' = 'object'): any
   throw new Error(problem);
 }
 
+// Spending meter. Prices are US dollars per million tokens (input, output), from
+// Anthropic's published price list on 2026-10-06. An unknown model is costed at the
+// highest listed price so the meter errs toward stopping early.
+const PRICES: Record<string, [number, number]> = {
+  'claude-sonnet-5-5': [2, 10], 'claude-sonnet-4-6': [3, 15], 'claude-haiku-4-5': [1, 5], 'claude-opus-5-5': [4, 20]
+};
+const SEARCH_PRICE = 0.01;
+
+export function costOf(model: string, inputTokens: number, outputTokens: number, searches: number) {
+  const known = Object.keys(PRICES).find((name) => model.startsWith(name));
+  const [input, output] = known ? PRICES[known] : [4, 20];
+  return Math.round(((inputTokens * input + outputTokens * output) / 1_000_000 + searches * SEARCH_PRICE) * 1_000_000) / 1_000_000;
+}
+
+// Every answered model call is written down, including ones later thrown away, so the
+// database can stop all work once the limit in system_settings is reached.
+async function recordSpend(model: string, inputTokens: number, outputTokens: number, searches: number) {
+  await logEvent({}, 'usage', 'info', 'AI call', {
+    model, input_tokens: inputTokens, output_tokens: outputTokens, searches, cost_usd: costOf(model, inputTokens, outputTokens, searches)
+  });
+}
+
 const workingModel: Record<string, string> = {};
 // Newer models think before answering unless told not to. Thinking uses up the answer
 // allowance and time, so it is switched off where the API accepts that setting.
@@ -159,10 +181,14 @@ export async function claude(options: LlmOptions): Promise<LlmResult> {
     }
     const json = JSON.parse(raw);
     workingModel[options.fast ? 'fast' : 'main'] = model;
+    const turnInput = Number(json.usage?.input_tokens || 0);
+    const turnOutput = Number(json.usage?.output_tokens || 0);
+    const turnSearches = Number(json.usage?.server_tool_use?.web_search_requests || 0);
     usage.calls += 1;
-    usage.input_tokens += Number(json.usage?.input_tokens || 0);
-    usage.output_tokens += Number(json.usage?.output_tokens || 0);
-    usage.searches += Number(json.usage?.server_tool_use?.web_search_requests || 0);
+    usage.input_tokens += turnInput;
+    usage.output_tokens += turnOutput;
+    usage.searches += turnSearches;
+    await recordSpend(model, turnInput, turnOutput, turnSearches);
     for (const part of json.content || []) {
       if (part.type === 'text') {
         text += part.text;
