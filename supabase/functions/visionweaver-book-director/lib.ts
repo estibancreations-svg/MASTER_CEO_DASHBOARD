@@ -90,6 +90,9 @@ export function parseJson(raw: string, kind: 'object' | 'array' = 'object'): any
 }
 
 const workingModel: Record<string, string> = {};
+// Newer models think before answering unless told not to. Thinking uses up the answer
+// allowance and time, so it is switched off where the API accepts that setting.
+let thinkingSwitch: 'try' | 'unsupported' = 'try';
 
 async function modelCandidates(fast: boolean) {
   const main = await setting('book_pipeline_model', 'claude-sonnet-5-5');
@@ -124,7 +127,9 @@ export async function claude(options: LlmOptions): Promise<LlmResult> {
 
   for (let turn = 0; turn < 6; turn += 1) {
     const model = candidates[modelIndex];
-    const body: Row = { model, max_tokens: options.maxTokens || 4000, system: options.system, messages };
+    // Generous ceiling: the allowance also has to cover search narration and any thinking.
+    const body: Row = { model, max_tokens: Math.min(16000, (options.maxTokens || 4000) * 2 + 4000), system: options.system, messages };
+    if (thinkingSwitch === 'try') body.thinking = { type: 'disabled' };
     if (useSearch && options.search) {
       const tool: Row = { type: 'web_search_20250305', name: 'web_search', max_uses: options.search.maxUses };
       if (options.search.allowedDomains?.length) tool.allowed_domains = options.search.allowedDomains;
@@ -139,6 +144,7 @@ export async function claude(options: LlmOptions): Promise<LlmResult> {
     const raw = await result.text();
     if (!result.ok) {
       const lowered = raw.toLowerCase();
+      if (result.status === 400 && body.thinking && lowered.includes('thinking')) { thinkingSwitch = 'unsupported'; turn -= 1; continue; }
       if (result.status === 404 && modelIndex < candidates.length - 1) { modelIndex += 1; turn -= 1; continue; }
       if (result.status === 400 && lowered.includes('model') && lowered.includes('not') && modelIndex < candidates.length - 1 && !lowered.includes('web_search')) { modelIndex += 1; turn -= 1; continue; }
       if (result.status === 400 && useSearch) {
