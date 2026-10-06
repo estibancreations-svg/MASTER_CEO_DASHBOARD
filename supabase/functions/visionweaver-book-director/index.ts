@@ -204,8 +204,8 @@ async function selfTest() {
     report.pdf_url = data?.signedUrl || null;
   }
   try {
-    const reply = await claude({ system: 'Reply with the single word READY.', user: 'Status check.', maxTokens: 20 });
-    report.model = { ok: /ready/i.test(reply.text), name: reply.model };
+    const reply = await claude({ system: 'Reply with the single word READY.', user: 'Status check.', maxTokens: 400 });
+    report.model = { ok: /ready/i.test(reply.text), name: reply.model, output_tokens: reply.usage.output_tokens };
   } catch (error) { report.model = { ok: false, error: clip((error as Error).message, 200) }; }
   try {
     const reply = await claude({ fast: true, system: 'Use web search once, then reply with one short sentence.', user: 'What is the top fiction title on the current New York Times best seller list?', maxTokens: 300, search: { maxUses: 1 } });
