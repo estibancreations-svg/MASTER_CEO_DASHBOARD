@@ -9,3 +9,8 @@ verify_jwt = false
 # OAuth providers cannot supply a Supabase JWT; the handler validates an
 # expiring, platform-bound, one-time state token and PKCE verifier.
 verify_jwt = false
+
+[functions.visionweaver-book-director]
+# Signed-in organization members are checked in code; the pg_cron worker
+# authenticates with the Vault-backed VISIONWEAVER_CRON_SECRET.
+verify_jwt = false
