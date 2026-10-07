@@ -9,7 +9,7 @@ const DURATIONS: Array<[string, string]> = [
   ['300', '5 minutes'], ['600', '10 minutes']
 ];
 
-type Tab = 'create' | 'books' | 'characters' | 'scenes' | 'library';
+type Tab = 'create' | 'books' | 'characters' | 'scenes' | 'continuity' | 'library';
 type Media = 'image' | 'video' | 'audio';
 type Row = Record<string, any>;
 
@@ -89,7 +89,7 @@ function parseChapters(md: string) {
 export default function VisionWeaverWorkspace() {
   const identity = useIdentity();
   const [tab, setTab] = useState<Tab>('create');
-  const [data, setData] = useState<Row>({ generations: [], assets: [], characters: [], chapters: [], projects: [] });
+  const [data, setData] = useState<Row>({ generations: [], assets: [], characters: [], chapters: [], projects: [], avatar_bindings: [], continuity_jobs: [], continuity_capsules: [] });
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -137,7 +137,7 @@ export default function VisionWeaverWorkspace() {
     if (!signedIn) return;
     try {
       const res = await call({ action: refresh ? 'refresh' : 'list' });
-      setData({ generations: res.generations || [], assets: res.assets || [], characters: res.characters || [], chapters: res.chapters || [], projects: res.projects || [] });
+      setData({ generations: res.generations || [], assets: res.assets || [], characters: res.characters || [], chapters: res.chapters || [], projects: res.projects || [], avatar_bindings: res.avatar_bindings || [], continuity_jobs: res.continuity_jobs || [], continuity_capsules: res.continuity_capsules || [] });
       setSyncedAt(new Date().toLocaleTimeString());
       return res;
     } catch (e: any) { setErr(String(e.message || e)); return null; }
@@ -195,6 +195,17 @@ export default function VisionWeaverWorkspace() {
     const kind = m || media;
     const text = (overridePrompt ?? prompt).trim();
     const longForm = kind === 'video' && seconds > 10;
+    if (continuationAssetId) {
+      const asset = (data.assets as Row[]).find((a) => a.id === continuationAssetId);
+      const sourceGenerationId = asset?.metadata?.source_generation_id;
+      if (sourceGenerationId) {
+        const job = (data.continuity_jobs as Row[]).find((j) => j.generation_id === sourceGenerationId);
+        const capsule = (data.continuity_capsules as Row[]).find((x) => x.source_generation_id === sourceGenerationId && x.approval_state === 'LOCKED');
+        if (!job || job.dissection_state !== 'PASSED' || job.qc_state !== 'PASS' || !capsule) {
+          throw new Error('Shot 02 is blocked until the prior shot is dissected, QC passes, and its Continuity Capsule is locked.');
+        }
+      }
+    }
     await run('generate', async () => {
       const res = await call({
         action: 'create', media_type: kind, prompt: text, title: text.slice(0, 60), organization_id: identity.organizationId,
@@ -245,6 +256,18 @@ export default function VisionWeaverWorkspace() {
     });
   }
 
+  async function prepareDissection(g: Row) {
+    await run('dissection', async () => {
+      const { data: session } = await supabase!.auth.getSession();
+      const result = await fetch('/api/visionweaver-continuity', {method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.session?.access_token},body:JSON.stringify({generation_id:g.id})});
+      const payload = await result.json();
+      if (!result.ok) throw new Error(payload.error || 'Ending reference could not be prepared');
+      await load(true);
+      setMsg(payload.reused ? 'Existing ending frame loaded for continuity review.' : 'Ending frame and final two seconds extracted. Continuity dissection is now in progress.');
+      setTab('continuity');
+    });
+  }
+
   async function continueShot(g: Row) {
     await run('continuity', async () => {
       const { data: session } = await supabase!.auth.getSession();
@@ -268,7 +291,7 @@ export default function VisionWeaverWorkspace() {
     setMsg('Prompt filled from the chapter. Review it, then press Generate.');
   }
 
-  const Tabs: [Tab, string, any][] = [['create', 'Create', Wand2], ['books', 'Books', BookOpen], ['characters', 'Cast', UserRound], ['scenes', 'Scenes', Clapperboard], ['library', 'Library', Library]];
+  const Tabs: [Tab, string, any][] = [['create', 'Create', Wand2], ['books', 'Books', BookOpen], ['characters', 'Cast', UserRound], ['scenes', 'Scenes', Clapperboard], ['continuity', 'Continuity', Film], ['library', 'Library', Library]];
 
   return (
     <div className="vwx">
@@ -378,6 +401,32 @@ export default function VisionWeaverWorkspace() {
         </>)}
 
         {tab === 'scenes' && <SceneSetup projects={data.projects} disabled={!signedIn || !!busy} onSave={(body) => run('scene', async () => { const res = await call({action:'save_scene',...body}); setSceneId(res.scene.id); await load(); setMsg('Scene version saved. Select it in Create to use its direction.'); })} onUse={id => { setSceneId(id); setTab('create'); }} />}
+
+        {tab === 'continuity' && (<>
+          <h2>Continuity & Automation</h2>
+          <p className="sub">Avatar State → ending extraction → observed-state review → QC → locked Continuity Capsule → next shot.</p>
+          <div className="grid">
+            {(data.continuity_jobs as Row[]).map((job) => {
+              const g = (data.generations as Row[]).find((x) => x.id === job.generation_id);
+              const capsule = (data.continuity_capsules as Row[]).find((x) => x.source_generation_id === job.generation_id);
+              const frame = (data.assets as Row[]).find((a) => a.metadata?.source_generation_id === job.generation_id && a.metadata?.role === 'continuity_terminal_frame');
+              const ready = job.dissection_state === 'PASSED' && job.qc_state === 'PASS' && capsule?.approval_state === 'LOCKED';
+              return <div className="card" key={job.id}>
+                <div className="media">{frame?.playable_url ? <img src={frame.playable_url} alt="Extracted ending frame for continuity review" /> : g?.playable_urls?.[0] ? <video src={g.playable_urls[0]} controls playsInline /> : 'Private source media is registered.'}</div>
+                <div className="meta"><b>{g ? String(g.prompt || 'Continuity source').slice(0, 70) : 'Continuity source'}</b>
+                  <div className="row"><span className={'pill ' + (ready ? 'complete' : '')}>{ready ? 'SHOT 02 READY' : 'SHOT 02 BLOCKED'}</span></div>
+                  <p>Media: <strong>{job.media_access_state}</strong><br/>Dissection: <strong>{job.dissection_state}</strong><br/>QC: <strong>{job.qc_state}</strong><br/>Capsule: <strong>{capsule?.approval_state || 'NOT CREATED'}</strong></p>
+                  <div className="row">
+                    {g?.status === 'complete' && !frame && <button className="ghost" disabled={!!busy} onClick={() => void prepareDissection(g)}>{busy === 'dissection' ? 'Extracting…' : 'Extract ending'}</button>}
+                    {frame && <button className="ghost" onClick={() => { setPicked([frame.id]); setContinuationAssetId(frame.id); setCharacterId(frame.metadata?.character_snapshot?.id || characterId); setSceneId(frame.metadata?.scene_snapshot?.id || sceneId); setMedia('video'); setSeconds(10); setTab('create'); }}>Use ending as next-shot reference</button>}
+                  </div>
+                  {!ready && <p className="stage-note">The system will refuse continuation generation until observed state is recorded, QC passes, and the capsule is locked.</p>}
+                </div>
+              </div>;
+            })}
+          </div>
+          {!(data.continuity_jobs as Row[]).length && <div className="note">No continuity work is registered yet. Complete a video, then prepare its ending from Library.</div>}
+        </>)}
 
         {tab === 'library' && (<>
           <h2>Library <button className="ghost" disabled={!signedIn || refreshing} style={{ marginLeft: 10 }} onClick={() => void refreshLibrary()}><RefreshCw size={13} /> {refreshing ? 'Refreshing…' : 'Refresh'}</button></h2>
