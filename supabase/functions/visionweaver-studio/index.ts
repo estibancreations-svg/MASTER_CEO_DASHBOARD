@@ -1246,6 +1246,38 @@ async function listWorkspace(user: any) {
   };
 }
 
+
+async function continuityMedia(user: any, body: any) {
+  const generationId = String(body.generation_id || '');
+  if (!generationId) throw new Error('generation_id required');
+  const { data: generation, error } = await db.from('vw_generations')
+    .select('id,project_id,owner_id,status,storage_paths')
+    .eq('id', generationId)
+    .eq('owner_id', user.id)
+    .maybeSingle();
+  if (error) throw new Error('Continuity media lookup: ' + error.message);
+  if (!generation) throw new Error('Continuity media not found');
+  if (generation.status !== 'complete') throw new Error('Continuity media is not complete');
+  const storagePath = Array.isArray(generation.storage_paths) ? generation.storage_paths[0] : null;
+  if (!storagePath) throw new Error('Continuity media has no stored output');
+  const { data: signed, error: signedError } = await db.storage.from('visionweaver-outputs').createSignedUrl(storagePath, 900);
+  if (signedError || !signed?.signedUrl) throw new Error('Continuity media signing failed');
+  await db.from('vw_continuity_dissection_jobs').update({
+    media_access_state: 'SIGNED_URL_READY',
+    dissection_state: 'READY',
+    error: null,
+    updated_at: new Date().toISOString()
+  }).eq('generation_id', generationId).eq('owner_id', user.id);
+  return {
+    generation_id: generationId,
+    project_id: generation.project_id,
+    storage_path: storagePath,
+    signed_url: signed.signedUrl,
+    expires_in_seconds: 900,
+    purpose: 'continuity_dissection'
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
   try {
@@ -1289,6 +1321,7 @@ Deno.serve(async (req: Request) => {
       if (!data || proj?.owner_id !== user.id) return response(req, { ok: false, error: 'not_found' }, 404);
       return response(req, { ok: true, chapter: data.spec });
     }
+    if (body.action === 'continuity_media') return response(req, { ok: true, media: await continuityMedia(user, body) });
     if (body.action === 'list') return response(req, { ok: true, ...(await listWorkspace(user)) });
     return response(req, { ok: false, error: 'unknown_action' }, 400);
   } catch (error) {
