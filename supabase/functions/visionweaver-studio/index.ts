@@ -1231,6 +1231,18 @@ async function listWorkspace(user: any) {
   });
   const { data: characters, error: characterError } = await db.from('vw_characters').select('*').eq('owner_id', user.id).order('updated_at', { ascending: false }).limit(100);
   if (characterError) throw new Error(characterError.message);
+  const [
+    { data: avatarBindings, error: bindingError },
+    { data: continuityJobs, error: continuityError },
+    { data: continuityCapsules, error: capsuleError }
+  ] = await Promise.all([
+    db.from('vw_avatar_runtime_bindings').select('*').eq('owner_id', user.id).order('updated_at', { ascending: false }).limit(100),
+    db.from('vw_continuity_dissection_jobs').select('*').eq('owner_id', user.id).order('updated_at', { ascending: false }).limit(100),
+    db.from('vw_continuity_capsules').select('*').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(100)
+  ]);
+  if (bindingError) throw new Error(bindingError.message);
+  if (continuityError) throw new Error(continuityError.message);
+  if (capsuleError) throw new Error(capsuleError.message);
   const bookIds = (projects || []).filter((p: any) => p.medium === 'book').map((p: any) => p.id);
   let chapters: any[] = [];
   if (bookIds.length) {
@@ -1242,6 +1254,9 @@ async function listWorkspace(user: any) {
     characters: characters || [],
     chapters,
     generations: topLevel,
+    avatar_bindings: avatarBindings || [],
+    continuity_jobs: continuityJobs || [],
+    continuity_capsules: continuityCapsules || [],
     assets: (assets || []).map((item: any) => ({ ...item, playable_url: item.storage_path ? signed.get(item.storage_path) : item.source_url }))
   };
 }
