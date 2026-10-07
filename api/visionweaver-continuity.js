@@ -46,7 +46,15 @@ export default async function handler(req,res) {
   const framePath=`${owner}/continuity/${fingerprint}/last-frame.png`;
   const tailPath=`${owner}/continuity/${fingerprint}/motion-tail.mp4`;
   const {data:existing}=await db.from('vw_assets').select('*').eq('owner_id',owner).eq('storage_path',framePath).limit(1).maybeSingle();
-  if(existing)return json(res,200,{ok:true,asset:existing,reused:true});
+  if(existing){
+    await db.from('vw_continuity_dissection_jobs').update({
+      media_access_state:'MEDIA_LOADED',
+      dissection_state:'IN_PROGRESS',
+      error:null,
+      updated_at:new Date().toISOString()
+    }).eq('generation_id',g.id).eq('owner_id',owner);
+    return json(res,200,{ok:true,asset:existing,reused:true});
+  }
   let dir;
   try {
     const {data:signed,error:signError}=await db.storage.from('visionweaver-outputs').createSignedUrl(source,600);
@@ -62,6 +70,26 @@ export default async function handler(req,res) {
     const metadata={role:'continuity_terminal_frame',production_version:'2.02',source_generation_id:g.id,source_storage_path:source,motion_tail_storage_path:tailPath,endpoint:'full_clip_end',requested_tail_seconds:2,character_snapshot:g.parameters?.character_snapshot||null,scene_snapshot:g.parameters?.scene_snapshot||null,review_status:'needs_review',extracted_at:new Date().toISOString()};
     const {data:asset,error:insertError}=await db.from('vw_assets').insert({owner_id:owner,project_id:g.project_id,generation_id:g.id,kind:'image',title:'Ending reference: '+String(g.prompt).slice(0,70),storage_path:framePath,mime_type:'image/png',metadata}).select('*').single();
     if(insertError)throw new Error('Continuity asset record could not be saved');
+    await db.from('vw_continuity_dissection_jobs').update({
+      media_access_state:'MEDIA_LOADED',
+      dissection_state:'IN_PROGRESS',
+      error:null,
+      updated_at:new Date().toISOString()
+    }).eq('generation_id',g.id).eq('owner_id',owner);
+    await db.from('production_log').insert({
+      run_id:'VW-CONTINUITY-EXTRACT-'+g.id,
+      phase:'continuity_extraction',
+      status:'terminal_frame_ready',
+      project_title:'VisionWeaver continuity extraction',
+      detail:{
+        generation_id:g.id,
+        frame_storage_path:framePath,
+        motion_tail_storage_path:tailPath,
+        source_storage_path:source,
+        provider_spend:false,
+        next:'observe frame/tail and complete continuity dissection'
+      }
+    });
     return json(res,201,{ok:true,asset,reused:false});
   } catch(e) {return json(res,500,{ok:false,error:String(e.message||e).slice(0,800)})}
   finally {if(dir)await fs.rm(dir,{recursive:true,force:true}).catch(()=>{})}
