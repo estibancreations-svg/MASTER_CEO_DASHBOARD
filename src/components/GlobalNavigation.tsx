@@ -100,6 +100,8 @@ export default function GlobalNavigation({ children }: PropsWithChildren) {
   }, [identity.isBuilder, identity.user?.id]);
 
   const location = useMemo(() => currentLocation(path), [path]);
+  if (path.startsWith('/systems/visionweaver')) return <>{children}</>;
+
   const go = (next: string) => {
     setOpen(false);
     if (window.location.pathname === next) {
