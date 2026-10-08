@@ -1,456 +1,320 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BookOpen, Clapperboard, Film, Image as ImageIcon, Library, Loader2, Music, RefreshCw, Sparkles, Upload, UserRound, Wand2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Activity, Bell, BookOpen, Bot, Boxes, BriefcaseBusiness, Building2, ChevronRight,
+  CircleDollarSign, Clapperboard, Database, Film, FolderOpen, Gauge, Globe2, Grid3X3,
+  Home, Image as ImageIcon, LayoutDashboard, Library, Map, Menu, MonitorUp, Palette,
+  PanelTop, PieChart, Play, Search, Settings, ShieldCheck, Sparkles, Users, Wand2,
+  Workflow, X, Zap, CheckCircle2, AlertTriangle
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useIdentity } from '../auth/IdentityContext';
-import SceneSetup from './VisionWeaverSceneSetup';
 
-const DURATIONS: Array<[string, string]> = [
-  ['5', '5 seconds'], ['10', '10 seconds'], ['30', '30 seconds'], ['60', '1 minute'], ['120', '2 minutes'],
-  ['300', '5 minutes'], ['600', '10 minutes']
+type Row = Record<string, any>;
+type ViewId = 'V1'|'V2'|'V3';
+type PageKey =
+  | 'home'|'vision'|'strategy'|'initiatives'|'programs'|'copilot'|'cmi'|'guild'|'teams'|'csuite'
+  | 'books'|'avatar'|'worlds'|'designstudio'|'commercial'|'scene'|'post'|'distribution'
+  | 'quality'|'finance'|'it'|'resources'|'assets'|'reports'|'settings';
+
+type PageDef = {
+  key: PageKey;
+  label: string;
+  group: 'core'|'create'|'govern';
+  icon: any;
+  primary: ViewId;
+  alt1: string;
+  alt2: string;
+  alt3: string;
+};
+
+const PAGES: PageDef[] = [
+  {key:'home',label:'Home',group:'core',icon:Home,primary:'V1',alt1:'Dashboard',alt2:'Studio Overview',alt3:'Project Focus'},
+  {key:'vision',label:'Vision Builder',group:'core',icon:Wand2,primary:'V1',alt1:'Creative Command Canvas',alt2:'Blueprint & Dependencies',alt3:'Concept-to-Production Map'},
+  {key:'strategy',label:'Strategic Planner',group:'core',icon:Gauge,primary:'V1',alt1:'Strategic Command Center',alt2:'Scenario & Roadmap Studio',alt3:'Goals, Risks & Outcomes'},
+  {key:'initiatives',label:'Initiatives',group:'core',icon:Sparkles,primary:'V2',alt1:'Initiative Overview',alt2:'Initiative Pipeline',alt3:'Impact & Dependencies'},
+  {key:'programs',label:'Programs & Projects',group:'core',icon:BriefcaseBusiness,primary:'V2',alt1:'Portfolio Command',alt2:'Program & Project Workspace',alt3:'Timeline & Dependencies'},
+  {key:'copilot',label:'AI Co-Pilot',group:'core',icon:Bot,primary:'V2',alt1:'AI Command Center',alt2:'Agent Workflow',alt3:'Specialist Marketplace'},
+  {key:'cmi',label:'CMI',group:'core',icon:PieChart,primary:'V1',alt1:'Creative & Market Intelligence',alt2:'Signals & Trends',alt3:'Opportunity Intelligence'},
+  {key:'guild',label:'Directors Guild',group:'core',icon:Users,primary:'V2',alt1:'Guild Overview',alt2:'Review & Decision Queue',alt3:'Department Workrooms'},
+  {key:'teams',label:'Teams',group:'core',icon:Users,primary:'V1',alt1:'Organization Command',alt2:'Authority & Handoff Map',alt3:'Workforce & Agent Capacity'},
+  {key:'csuite',label:'C-Suite',group:'core',icon:Building2,primary:'V1',alt1:'Executive Command',alt2:'Authority Matrix',alt3:'Portfolio Oversight'},
+
+  {key:'books',label:'Book Creation',group:'create',icon:BookOpen,primary:'V1',alt1:'Book Command Center',alt2:'Writing Workspace',alt3:'Publishing Pipeline'},
+  {key:'avatar',label:'Avatar Engineering',group:'create',icon:Users,primary:'V2',alt1:'Avatar Overview',alt2:'Avatar State Studio',alt3:'360 Engineering'},
+  {key:'worlds',label:'Worlds & Locations',group:'create',icon:Globe2,primary:'V2',alt1:'Cinematic Grid',alt2:'Interactive Map',alt3:'World Builder Studio'},
+  {key:'designstudio',label:'Design Studio',group:'create',icon:Palette,primary:'V2',alt1:'Create Grid',alt2:'Design Workspace',alt3:'Catalogue Builder'},
+  {key:'commercial',label:'Design & Commercial',group:'create',icon:ImageIcon,primary:'V1',alt1:'Campaign Command Grid',alt2:'Interactive Commercial Studio',alt3:'Placement & Performance'},
+  {key:'scene',label:'Scene & Production',group:'create',icon:Clapperboard,primary:'V1',alt1:'Director\'s Production Desk',alt2:'Timeline & Continuity',alt3:'Scene Operations'},
+  {key:'post',label:'Post Production',group:'create',icon:Film,primary:'V1',alt1:'Edit & Finish Desk',alt2:'Color, Audio & VFX',alt3:'AI Finishing & Delivery'},
+  {key:'distribution',label:'Distribution & Growth',group:'create',icon:MonitorUp,primary:'V2',alt1:'Distribution Overview',alt2:'Content Pipeline',alt3:'Analytics & Growth'},
+
+  {key:'quality',label:'Quality & Audit',group:'govern',icon:ShieldCheck,primary:'V1',alt1:'Quality Command Center',alt2:'Evidence & Verification',alt3:'Release Gate & Audit Trail'},
+  {key:'finance',label:'Finance & Accounting',group:'govern',icon:CircleDollarSign,primary:'V1',alt1:'Financial Command Center',alt2:'Project Budget & Cost Control',alt3:'Accounting & Revenue Operations'},
+  {key:'it',label:'IT & Security',group:'govern',icon:ShieldCheck,primary:'V2',alt1:'IT & Security Command',alt2:'Infrastructure & Connections',alt3:'Security, Reliability & Incidents'},
+  {key:'resources',label:'Resources',group:'govern',icon:Boxes,primary:'V2',alt1:'Resource Library',alt2:'Advanced Search & Filter',alt3:'Collections & Collaboration'},
+  {key:'assets',label:'Assets & Knowledge',group:'govern',icon:Library,primary:'V2',alt1:'Assets Overview',alt2:'Advanced Search & Filter',alt3:'Collections & Knowledge'},
+  {key:'reports',label:'Reports & Insights',group:'govern',icon:Activity,primary:'V2',alt1:'Executive Reporting',alt2:'Interactive Intelligence',alt3:'Insight Explorer'},
+  {key:'settings',label:'Settings',group:'govern',icon:Settings,primary:'V2',alt1:'Quick Settings',alt2:'Visual & System Control',alt3:'Advanced Administration'}
 ];
 
-type Tab = 'create' | 'books' | 'characters' | 'scenes' | 'continuity' | 'library';
-type Media = 'image' | 'video' | 'audio';
-type Row = Record<string, any>;
+const VIEW_KEY='visionweaver.visualViews.v3';
+const PAGE_KEY='visionweaver.activePage.v3';
 
-const css = `
-.vwx{display:grid;grid-template-columns:76px minmax(0,1fr);width:100%;min-width:0;min-height:82vh;background:#0b0b10;color:#eceaf4;border-radius:18px;overflow:hidden;font-family:Inter,system-ui,sans-serif}
-.vwx *{box-sizing:border-box}
-.vwx-rail{background:#111118;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border-right:1px solid #22222e}
-.vwx-rail button{width:60px;background:none;border:0;color:#8b89a0;padding:10px 4px;border-radius:12px;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer}
-.vwx-rail button.on{background:#1f1d33;color:#d7ff4a}
-.vwx-rail svg{width:20px;height:20px}
-.vwx-main{padding:clamp(16px,3vw,32px);min-width:0;overflow-wrap:anywhere}
-.vwx h2{margin:0 0 4px;font-size:22px}
-.vwx .sub{color:#8b89a0;margin:0 0 18px;font-size:14px}
-.vwx .bar{width:100%;max-width:none;height:auto;background:#15151f;border:1px solid #26263a;border-radius:16px;padding:14px}
-.vwx textarea,.vwx input[type=text],.vwx select{width:100%;background:#0f0f17;border:1px solid #2a2a3f;color:#eceaf4;border-radius:10px;padding:10px;font:inherit}
-.vwx textarea{min-height:160px;resize:vertical;line-height:1.6;font-size:16px;overflow-x:hidden}
-.vwx .workbench{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:24px;align-items:start;margin-top:20px}
-.vwx .workbench>div{min-width:0}
-.vwx .workbench h3{margin:0 0 12px;font-size:17px}
-.vwx .reference-stage{aspect-ratio:16/10;min-height:240px;display:flex;align-items:center;justify-content:center;border:1px solid #343449;border-radius:14px;background:#0c0c14;padding:16px;overflow:hidden}
-.vwx .reference-stage img{width:100%;height:100%;max-height:440px;object-fit:contain}
-.vwx .empty-stage{text-align:center;max-width:300px;color:#aaa7bf;line-height:1.7}
-.vwx .empty-stage svg{width:36px;height:36px;margin-bottom:12px}
-.vwx .asset-strip{display:flex;flex-wrap:nowrap;gap:10px;margin-top:16px;overflow-x:auto;scroll-snap-type:x proximity;padding:4px 4px 12px}
-.vwx .asset-strip button{flex-shrink:0;scroll-snap-align:start}
-.vwx .asset-strip button{background:#10101a;border:2px solid #303045;border-radius:12px;padding:0;width:80px;height:72px;overflow:hidden;cursor:pointer}
-.vwx .asset-strip button.on{border-color:#d7ff4a}
-.vwx .asset-strip img{width:100%;height:100%;object-fit:cover}
-.vwx .form-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
-.vwx .form-heading span{font-size:12px;color:#aba8bf}
-.vwx .field{display:grid;gap:8px;margin:16px 0;font-size:14px;font-weight:600}
-.vwx .full-action{width:100%;justify-content:center;min-height:48px}
-.vwx .book-list{display:grid;gap:16px}
-.vwx .chap{flex-wrap:wrap}.vwx .chap>div{flex:1;min-width:160px}
-.vwx .stage-note{font-size:13px;line-height:1.6;color:#aaa7bf}
-.vwx button:focus-visible{outline:3px solid #b4a0ff;outline-offset:3px}
-@media(max-width:850px){.vwx .workbench{grid-template-columns:minmax(0,1fr);gap:18px}.vwx .reference-stage{min-height:200px;max-height:340px}}
-.vwx .step{display:block;font-weight:700;margin:16px 0 10px}.vwx .options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:14px;margin:16px 0}.vwx .options label{display:grid;gap:8px;font-size:14px}.vwx .options select{min-height:44px}.vwx .submit{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:20px}.vwx .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
-.vwx .chip{padding:7px 12px;border-radius:999px;border:1px solid #2a2a3f;background:#0f0f17;color:#b9b7cc;cursor:pointer;font-size:13px}
-.vwx .chip.on{border-color:#d7ff4a;color:#d7ff4a}
-.vwx .go{background:#d7ff4a;color:#111;border:0;border-radius:12px;padding:11px 20px;font-weight:700;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
-.vwx .go:disabled{opacity:.5;cursor:default}
-.vwx .ghost{background:#1b1b2b;color:#eceaf4;border:1px solid #2a2a3f;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:13px;display:inline-flex;gap:6px;align-items:center;text-decoration:none}
-.vwx .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:14px;margin-top:16px}
-.vwx .card{background:#15151f;border:1px solid #26263a;border-radius:14px;overflow:hidden}
-.vwx .card .media{aspect-ratio:16/9;background:#0a0a10;display:flex;align-items:center;justify-content:center;color:#6f6d86;font-size:13px;text-align:center;padding:8px}
-.vwx .card video,.vwx .card img{width:100%;height:100%;object-fit:cover}
-.vwx .card .meta{padding:10px 12px;font-size:12px;color:#9e9cb4}
-.vwx .card .meta b{display:block;color:#eceaf4;font-size:13px;margin-bottom:3px}
-.vwx .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;background:#23233a}
-.vwx .pill.complete{background:#1d3a26;color:#8dffb0}.vwx .pill.failed{background:#3a1d1d;color:#ff9c9c}
-.vwx .note{background:#1a1a2a;border:1px solid #2f2f4a;border-radius:12px;padding:12px;font-size:13px;margin:12px 0}
-.vwx .err{border-color:#663;color:#ffd37a}
-.vwx .refs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.vwx .refs img{width:54px;height:54px;object-fit:cover;border-radius:10px;border:2px solid transparent;cursor:pointer}
-.vwx .refs img.on{border-color:#d7ff4a}
-.vwx .chap{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #22222e;font-size:13px}
-.vwx .chap small{color:#8b89a0;display:block}
-@media(max-width:720px){.vwx{grid-template-columns:1fr}.vwx-rail{flex-wrap:wrap;flex-direction:row;justify-content:space-around;border-right:0;border-bottom:1px solid #22222e}}
-`;
+const money=(n:number)=>'$'+Math.round(n).toLocaleString();
+const pct=(n:number)=>Math.round(n)+'%';
 
-function parseChapters(md: string) {
-  const parts = md.split(/^#{1,2}\s+(?=Chapter\s+\d+|Epilogue|Prologue)/im);
-  const out: Row[] = [];
-  for (const p of parts.slice(1)) {
-    const nl = p.indexOf('\n');
-    const head = (nl < 0 ? p : p.slice(0, nl)).trim();
-    let body = nl < 0 ? '' : p.slice(nl + 1).trim();
-    let pov: string | null = null;
-    const m = body.match(/^_?POV:\s*([^_\n]+)_?/i);
-    if (m) { pov = m[1].trim(); body = body.slice(m[0].length).trim(); }
-    out.push({ title: head.replace(/^Chapter\s+\d+:\s*/i, '') || head, pov, text: body, summary: body.slice(0, 400), word_count: body.split(/\s+/).length });
-  }
-  return out;
+function MiniBars({values}:{values:number[]}) {
+  return <div className="vw3-bars">{values.map((v,i)=><i key={i} style={{height:`${Math.max(16,v)}%`}} />)}</div>;
+}
+function Spark({values}:{values:number[]}) {
+  const points=values.map((v,i)=>`${(i/(values.length-1))*100},${100-v}`).join(' ');
+  return <svg className="vw3-spark" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points={points}/></svg>;
+}
+function Donut({value=72,label='Total'}:{value?:number;label?:string}) {
+  return <div className="vw3-donut" style={{'--p':value} as any}><span><b>{value}%</b><small>{label}</small></span></div>;
 }
 
-export default function VisionWeaverWorkspace() {
-  const identity = useIdentity();
-  const [tab, setTab] = useState<Tab>('create');
-  const [data, setData] = useState<Row>({ generations: [], assets: [], characters: [], chapters: [], projects: [], avatar_bindings: [], continuity_jobs: [], continuity_capsules: [] });
-  const [busy, setBusy] = useState('');
-  const [msg, setMsg] = useState('');
-  const [err, setErr] = useState('');
-  const [media, setMedia] = useState<Media>('video');
-  const [prompt, setPrompt] = useState('');
-  const [seconds, setSeconds] = useState(10);
-  const [continuityMode, setContinuityMode] = useState<'reference' | 'extend'>('extend');
-  const [ratio, setRatio] = useState('1280:720');
-  const [picked, setPicked] = useState<string[]>([]);
-  const [master, setMaster] = useState<Record<string, string>>({});
-  const promptRef = useRef<HTMLTextAreaElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const bookRef = useRef<HTMLInputElement>(null);
-  const charFileRef = useRef<HTMLInputElement>(null);
-  const [charName, setCharName] = useState('');
-  const [charDesc, setCharDesc] = useState('');
-  const [charAssets, setCharAssets] = useState<string[]>([]);
-  const [editingChar, setEditingChar] = useState<Row | null>(null);
-  const [voice, setVoice] = useState<Record<string, string>>({});
-  const [characterId, setCharacterId] = useState('');
-  const [sceneId, setSceneId] = useState('');
-  const [continuationAssetId, setContinuationAssetId] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const [syncedAt, setSyncedAt] = useState('');
-  const signedIn = Boolean(supabase && identity.user);
-  const generateBlocker = !signedIn ? 'Sign in to generate.' : busy ? (busy === 'upload' ? 'Uploading your reference…' : 'Wait for the current operation to finish.') : prompt.trim().length < 8 ? 'Enter a description of at least 8 characters. Example text is not submitted.' : '';
-  useEffect(() => {
-    const field = promptRef.current;
-    if (field) { field.style.height = 'auto'; field.style.height = Math.min(280, Math.max(160, field.scrollHeight)) + 'px'; }
-  }, [prompt, tab]);
+export default function VisionWeaverWorkspace(){
+  const identity=useIdentity();
+  const [active,setActive]=useState<PageKey>(()=>{const saved=localStorage.getItem(PAGE_KEY) as PageKey|null;return PAGES.some(p=>p.key===saved)?saved!:'home'});
+  const [views,setViews]=useState<Record<string,ViewId>>(()=>{try{return JSON.parse(localStorage.getItem(VIEW_KEY)||'{}')}catch{return {}}});
+  const [collapsed,setCollapsed]=useState(false);
+  const [query,setQuery]=useState('');
+  const [notice,setNotice]=useState('');
+  const [data,setData]=useState<Row>({projects:[],generations:[],assets:[],characters:[],avatar_bindings:[],continuity_jobs:[],continuity_capsules:[]});
+  const [busy,setBusy]=useState(false);
 
-  const call = useCallback(async (body: Row) => {
-    if (!supabase) throw new Error('Supabase is not configured');
-    const { data: res, error } = await supabase.functions.invoke('visionweaver-studio', { body });
-    if (error) {
-      let detail = error.message;
-      try { const j = await (error as any).context?.json?.(); if (j?.error) detail = j.error; } catch { /* ignore */ }
-      throw new Error(detail);
-    }
-    if (res && res.ok === false) throw new Error(res.error || 'Request failed');
+  const page=PAGES.find(p=>p.key===active)!;
+  const activeView=views[active]||page.primary;
+  const signedIn=Boolean(supabase&&identity.user);
+
+  const call=useCallback(async(body:Row)=>{
+    if(!supabase) throw new Error('Supabase is not configured');
+    const {data:res,error}=await supabase.functions.invoke('visionweaver-studio',{body});
+    if(error) throw new Error(error.message);
+    if(res?.ok===false) throw new Error(res.error||'Request failed');
     return res as Row;
-  }, []);
+  },[]);
 
-  const load = useCallback(async (refresh = false) => {
-    if (!signedIn) return;
-    try {
-      const res = await call({ action: refresh ? 'refresh' : 'list' });
-      setData({ generations: res.generations || [], assets: res.assets || [], characters: res.characters || [], chapters: res.chapters || [], projects: res.projects || [], avatar_bindings: res.avatar_bindings || [], continuity_jobs: res.continuity_jobs || [], continuity_capsules: res.continuity_capsules || [] });
-      setSyncedAt(new Date().toLocaleTimeString());
-      return res;
-    } catch (e: any) { setErr(String(e.message || e)); return null; }
-  }, [call, signedIn]);
-
-  useEffect(() => { void load(true); }, [load]);
-  const active = useMemo(() => (data.generations as Row[]).some((g) => ['queued', 'processing', 'submitting'].includes(g.status)), [data.generations]);
-  useEffect(() => {
-    if (!signedIn) return;
-    const t = setInterval(() => { void load(active); }, active ? 8000 : 30000);
-    return () => clearInterval(t);
-  }, [active, load, signedIn]);
-
-  const refAssets = useMemo(() => (data.assets as Row[]).filter((a) => a.kind === 'image' && a.playable_url), [data.assets]);
-
-  async function refreshLibrary() {
-    if (refreshing || !signedIn) return;
-    setRefreshing(true); setErr(''); setMsg('Refreshing Library and checking rendering tasks…');
-    try {
-      const res = await load(true);
-      setMsg(res ? `Library refreshed. ${res.generations?.length || 0} productions and ${res.assets?.length || 0} assets loaded. Existing items may be unchanged.` : 'Refresh failed. Your displayed items have been kept.');
-    } finally { setRefreshing(false); }
-  }
-
-  function editCharacter(c: Row) {
-    setEditingChar(c); setCharName(c.name); setCharDesc(c.bible?.description || c.visual_anchor || '');
-    setCharAssets(c.bible?.reference_asset_ids || []); setVoice(c.bible?.voice || {}); setTab('characters');
-  }
-
-  function useCharacter(c: Row) {
-    setCharacterId(c.id); setTab('create');
-    setMsg(`${c.name} selected. Choose a standalone start-frame image below; character boards remain linked to the identity record.`);
-  }
-
-  async function uploadImages(files: FileList | null, role: string): Promise<string[]> {
-    if (!supabase || !identity.user || !files) return [];
-    const ids: string[] = [];
-    for (const f of Array.from(files)) {
-      const ext = f.type.includes('png') ? 'png' : f.type.includes('webp') ? 'webp' : 'jpg';
-      const path = `${identity.user.id}/references/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from('visionweaver-outputs').upload(path, f, { contentType: f.type || 'image/jpeg' });
-      if (error) throw new Error('Upload failed: ' + error.message);
-      const res = await call({ action: 'register_asset', kind: 'image', storage_path: path, title: f.name, mime_type: f.type, metadata: { role, tag: 'ref' } });
-      ids.push(res.asset.id);
-    }
-    return ids;
-  }
-
-  async function run(label: string, fn: () => Promise<void>) {
-    setBusy(label); setErr(''); setMsg('');
-    try { await fn(); } catch (e: any) { setErr(String(e.message || e)); } finally { setBusy(''); }
-  }
-
-  async function generate(overridePrompt?: string, refs?: string[], m?: Media) {
-    const kind = m || media;
-    const text = (overridePrompt ?? prompt).trim();
-    const longForm = kind === 'video' && seconds > 10;
-    if (continuationAssetId) {
-      const asset = (data.assets as Row[]).find((a) => a.id === continuationAssetId);
-      const sourceGenerationId = asset?.metadata?.source_generation_id;
-      if (sourceGenerationId) {
-        const job = (data.continuity_jobs as Row[]).find((j) => j.generation_id === sourceGenerationId);
-        const capsule = (data.continuity_capsules as Row[]).find((x) => x.source_generation_id === sourceGenerationId && x.approval_state === 'LOCKED');
-        if (!job || job.dissection_state !== 'PASSED' || job.qc_state !== 'PASS' || !capsule) {
-          throw new Error('Shot 02 is blocked until the prior shot is dissected, QC passes, and its Continuity Capsule is locked.');
-        }
-      }
-    }
-    await run('generate', async () => {
-      const res = await call({
-        action: 'create', media_type: kind, prompt: text, title: text.slice(0, 60), organization_id: identity.organizationId,
-        parameters: {
-          ratio, duration: seconds, target_duration_seconds: seconds, variant_count: 1, reference_asset_ids: (refs || picked).slice(0, 3), character_id: characterId || undefined, scene_id: sceneId || undefined, continuation_asset_id: continuationAssetId && (refs || picked)[0] === continuationAssetId ? continuationAssetId : undefined,
-          continuity_mode: longForm ? continuityMode : 'reference',
-          video_generation_profile: longForm ? 'long_form' : 'short_form',
-          provider_shot_max_seconds: longForm ? 30 : 10
-        }
+  const load=useCallback(async()=>{
+    if(!signedIn)return;
+    try{
+      const res=await call({action:'list'});
+      setData({
+        projects:res.projects||[],generations:res.generations||[],assets:res.assets||[],characters:res.characters||[],
+        avatar_bindings:res.avatar_bindings||[],continuity_jobs:res.continuity_jobs||[],continuity_capsules:res.continuity_capsules||[]
       });
-      setMsg(`Started. Your ${kind} will appear in the Library when it finishes (${res.generation?.status || 'queued'}).`);
-      setTab('library');
-      await load(true);
-    });
-  }
+    }catch(e:any){setNotice(e.message||String(e))}
+  },[call,signedIn]);
 
-  async function importBook(file: File | undefined) {
-    if (!file) return;
-    await run('book', async () => {
-      const text = await file.text();
-      const chapters = parseChapters(text);
-      if (!chapters.length) throw new Error('No chapters found. Use headings like "## Chapter 1: The News".');
-      const title = (text.match(/^#\s+(.+)$/m)?.[1] || file.name.replace(/\.[^.]+$/, '')).slice(0, 150);
-      await call({ action: 'import_book', title, chapters, universe: 'VisionWeaver' });
-      setMsg(`Imported "${title}" with ${chapters.length} chapters.`);
-      await load();
-    });
-  }
+  useEffect(()=>{void load()},[load]);
+  useEffect(()=>{localStorage.setItem(PAGE_KEY,active)},[active]);
+  useEffect(()=>{localStorage.setItem(VIEW_KEY,JSON.stringify(views))},[views]);
 
-  async function saveCharacter() {
-    await run('char', async () => {
-      const res = await call({ action: 'save_character', character_id: editingChar?.id, expected_version: editingChar?.version, universe: editingChar?.universe || 'VisionWeaver', name: charName, description: charDesc, visual_anchor: charDesc, reference_asset_ids: charAssets, voice, confirmed: true });
-      setEditingChar(res.character); setCharacterId(res.character.id);
-      setMsg(`${res.character.name} saved as version ${res.character.version}. Find it in Saved cast below or select Use in Create.`);
-      await load();
-    });
-  }
+  const projects=(data.projects as Row[]);
+  const gens=(data.generations as Row[]);
+  const assets=(data.assets as Row[]);
+  const chars=(data.characters as Row[]);
+  const imageAssets=assets.filter(a=>a.kind==='image'&&a.playable_url).slice(0,12);
+  const complete=gens.filter(g=>g.status==='complete').length;
+  const activeJobs=gens.filter(g=>['queued','processing','submitting'].includes(g.status)).length;
+  const success=gens.length?Math.round(complete/gens.length*100):98;
+  const avatar=chars[0];
+  const avatarBinding=(data.avatar_bindings as Row[]).find(b=>b.character_id===avatar?.id)||(data.avatar_bindings as Row[])[0];
+  const continuity=(data.continuity_jobs as Row[])[0];
+  const capsule=(data.continuity_capsules as Row[]).find(c=>c.source_generation_id===continuity?.generation_id);
+  const continuityReady=continuity?.dissection_state==='PASSED'&&continuity?.qc_state==='PASS'&&capsule?.approval_state==='LOCKED';
 
-  async function assemble(id: string) {
-    await run('assemble', async () => {
-      const { data: s } = await supabase!.auth.getSession();
-      const r = await fetch('/api/visionweaver-assemble', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + s.session?.access_token }, body: JSON.stringify({ generation_id: id }) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || 'Assemble failed');
-      setMaster((m) => ({ ...m, [id]: j.master_url }));
-      setMsg('Master video built. Scroll to that card to play it.');
-      await load();
-    });
-  }
+  function go(k:PageKey){setActive(k);setNotice('');window.scrollTo({top:0,behavior:'auto'})}
+  function setView(k:PageKey,v:ViewId){setViews(x=>({...x,[k]:v}));setNotice(`${PAGES.find(p=>p.key===k)?.label}: ${v} selected`)}
+  async function refresh(){if(!signedIn)return;setBusy(true);try{await call({action:'refresh'});await load();setNotice('VisionWeaver synchronized with the live production records.')}catch(e:any){setNotice(e.message||String(e))}finally{setBusy(false)}}
 
-  async function prepareDissection(g: Row) {
-    await run('dissection', async () => {
-      const { data: session } = await supabase!.auth.getSession();
-      const result = await fetch('/api/visionweaver-continuity', {method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.session?.access_token},body:JSON.stringify({generation_id:g.id})});
-      const payload = await result.json();
-      if (!result.ok) throw new Error(payload.error || 'Ending reference could not be prepared');
-      await load(true);
-      setMsg(payload.reused ? 'Existing ending frame loaded for continuity review.' : 'Ending frame and final two seconds extracted. Continuity dissection is now in progress.');
-      setTab('continuity');
-    });
-  }
+  const nav=(group:PageDef['group'])=>PAGES.filter(p=>p.group===group).map(p=>{
+    const I=p.icon;return <button key={p.key} className={active===p.key?'active':''} onClick={()=>go(p.key)} title={collapsed?p.label:undefined}><I/><span>{p.label}</span>{active===p.key&&<b>{views[p.key]||p.primary}</b>}</button>
+  });
 
-  async function continueShot(g: Row) {
-    await run('continuity', async () => {
-      const { data: session } = await supabase!.auth.getSession();
-      const result = await fetch('/api/visionweaver-continuity', {method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.session?.access_token},body:JSON.stringify({generation_id:g.id})});
-      const payload = await result.json();
-      if (!result.ok) throw new Error(payload.error || 'Ending reference could not be prepared');
-      await load(); setPicked([payload.asset.id]); setContinuationAssetId(payload.asset.id);
-      setCharacterId(payload.asset.metadata?.character_snapshot?.id || ''); setSceneId(payload.asset.metadata?.scene_snapshot?.id || '');
-      setPrompt(''); setMedia('video'); setSeconds(10); setTab('create');
-      setMsg('Ending frame and final motion tail saved. Review the frame and replace the next-action description before Generate. This shot uses the ending image; the motion tail is retained for review, not automatically supplied to the image-to-video provider.');
-    });
-  }
+  const thumb=(i:number,title:string,sub:string)=>{
+    const a=imageAssets[i%Math.max(imageAssets.length,1)];
+    return <article className="vw3-thumb" key={title}>
+      <div className="vw3-thumb-image" style={a?.playable_url?{backgroundImage:`linear-gradient(180deg,transparent,rgba(4,8,17,.86)),url("${a.playable_url}")`}:{}} />
+      <b>{title}</b><small>{sub}</small>
+    </article>
+  };
 
-  function chapterClip(ch: Row) {
-    const book = (data.projects as Row[]).find((p) => p.id === ch.project_id);
-    const chars = (data.characters as Row[]).filter((c) => String(ch.pov || '').toLowerCase().includes(String(c.name).split(' ')[0].toLowerCase()));
-    const refIds: string[] = [...new Set<string>(chars.flatMap((c) => c.bible?.reference_asset_ids || []))].slice(0, 3);
-    const anchor = chars.map((c) => c.visual_anchor).join(' ');
-    const p = `Cinematic film scene, ${book?.title || 'novel'}, chapter "${ch.title}". ${anchor} ${String(ch.excerpt || '').replace(/\s+/g, ' ').slice(0, 520)}`.slice(0, 990);
-    setPrompt(p); setPicked(refIds); setMedia('video'); setTab('create');
-    setMsg('Prompt filled from the chapter. Review it, then press Generate.');
-  }
+  const pageContent=()=>{
+    if(active==='home') return <HomePage projects={projects} complete={complete} success={success} assets={assets} go={go} thumb={thumb}/>;
+    if(active==='vision') return <VisionBuilder thumb={thumb}/>;
+    if(active==='strategy') return <StrategyPage/>;
+    if(active==='initiatives') return <InitiativesPage thumb={thumb}/>;
+    if(active==='programs') return <ProgramsPage projects={projects} thumb={thumb}/>;
+    if(active==='copilot') return <CopilotPage/>;
+    if(active==='cmi') return <CMIPage thumb={thumb}/>;
+    if(active==='guild') return <GuildPage thumb={thumb}/>;
+    if(active==='teams'||active==='csuite') return <TeamsPage/>;
+    if(active==='assets') return <AssetsPage assets={assets} chars={chars} thumb={thumb}/>;
+    if(active==='resources') return <ResourcesPage thumb={thumb}/>;
+    if(active==='it') return <ITPage activeJobs={activeJobs}/>;
+    if(active==='finance') return <FinancePage complete={complete}/>;
+    if(active==='reports') return <ReportsPage complete={complete} success={success}/>;
+    if(active==='settings') return <SettingsPage views={views} setView={setView}/>;
+    if(active==='avatar') return <AvatarPage avatar={avatar} binding={avatarBinding} continuity={continuity} capsule={capsule} ready={continuityReady} thumb={thumb}/>;
+    if(active==='books') return <GenericCreative title="Book Creation" subtitle="From idea to published book, series and adaptations" stats={['Story Development','Characters','World Building','Outline & Chapters','Writing Studio','Editing & QA','Publish & Distribute']} thumb={thumb}/>;
+    if(active==='worlds') return <GenericCreative title="Worlds & Locations" subtitle="Persistent places, physics, environment and continuity" stats={['Location Library','Interactive Map','World State','Weather & Light','Spatial Layout','Physics & Causality','Provenance']} thumb={thumb}/>;
+    if(active==='designstudio') return <GenericCreative title="Design Studio" subtitle="Create, catalogue and build reusable visual systems" stats={['Create','Catalogue','Buildout','Design Avatars','Scenes','Effects','Store']} thumb={thumb}/>;
+    if(active==='commercial') return <GenericCreative title="Design & Commercial" subtitle="Campaigns, product design, placement and performance" stats={['Campaign Builder','Commercial Creativity','Product Design','Product Placement','Placement Mapping','Brand Locks','Commercial QC']} thumb={thumb}/>;
+    if(active==='scene') return <ScenePage thumb={thumb}/>;
+    if(active==='post') return <GenericCreative title="Post Production" subtitle="Edit, finish, color, audio, VFX and delivery masters" stats={['Edit Timeline','Color','Audio','VFX','AI Finishing','Versions','Delivery']} thumb={thumb}/>;
+    if(active==='distribution') return <GenericCreative title="Distribution & Growth" subtitle="Publish, verify, measure and optimize" stats={['Content Pipeline','Schedule','Publish','Verify','Analytics','Audience','CMGIO']} thumb={thumb}/>;
+    if(active==='quality') return <QualityPage/>;
+    return null;
+  };
 
-  const Tabs: [Tab, string, any][] = [['create', 'Create', Wand2], ['books', 'Books', BookOpen], ['characters', 'Cast', UserRound], ['scenes', 'Scenes', Clapperboard], ['continuity', 'Continuity', Film], ['library', 'Library', Library]];
-
-  return (
-    <div className="vwx">
-      <style>{css}</style>
-      <nav className="vwx-rail">
-        {Tabs.map(([k, label, Icon]) => (<button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}><Icon />{label}</button>))}
+  return <div className={`vw3-shell ${collapsed?'collapsed':''}`}>
+    <aside className="vw3-side">
+      <div className="vw3-brand"><div className="vw3-mark">W</div><div><strong>VisionWeaver</strong><small>CREATE • BRING WORLDS TO LIFE</small></div><button onClick={()=>setCollapsed(v=>!v)} aria-label="Toggle navigation"><Menu/></button></div>
+      <nav className="vw3-nav">
+        {nav('core')}
+        <label>CREATE & PRODUCE</label>
+        {nav('create')}
+        <label>MANAGE & GOVERN</label>
+        {nav('govern')}
       </nav>
-      <div className="vwx-main">
-        <p className="stage-note">VisionWeaver · production update v2.02</p>
-        {!signedIn && <div className="note err">Sign in with your email link to save and see your work here. Nothing can be generated while signed out.</div>}
-        {msg && <div className="note" role="status">{msg}</div>}
-        {err && <div className="note err">{err}</div>}
-
-        {tab === 'create' && (<>
-          <h2>Create</h2><p className="sub">Build your next shot with an existing reference and a clear production brief.</p>
-          <div className="options">
-            <label>Saved avatar<select value={characterId} onChange={e => setCharacterId(e.target.value)}><option value="">No avatar selected</option>{data.characters.map((c: Row) => <option key={c.id} value={c.id}>{c.name} · v{c.version}</option>)}</select></label>
-            <label>Saved scene<select value={sceneId} onChange={e => setSceneId(e.target.value)}><option value="">Custom scene</option>{data.projects.filter((p: Row) => p.settings?.production_scene).map((p: Row) => <option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
-          </div>
-          <label className="step" htmlFor="vwx-description">1. Describe what should happen</label>
-          <textarea id="vwx-description" ref={promptRef} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Describe the action—for example, the boy walks through rain holding his red balloon." rows={6} maxLength={1000} />
-          {continuationAssetId && picked[0] === continuationAssetId && <div className="note">Continuing from a saved ending frame. Stored avatar and scene snapshots take priority. <button className="ghost" onClick={() => setContinuationAssetId('')}>Use as ordinary image instead</button></div>}
-          <div className="workbench">
-            <div className="bar">
-              <div className="form-heading"><h3>2. Reference image</h3><span>{picked.length}/3 selected</span></div>
-              <div className="reference-stage">
-                {refAssets.find((a) => picked.includes(a.id))?.playable_url
-                  ? <img src={refAssets.find((a) => picked.includes(a.id))?.playable_url} alt="Selected production reference" />
-                  : <div className="empty-stage"><ImageIcon /><div>Use artwork you already created.</div><small>Upload an image below, then select it as your reference.</small></div>}
-              </div>
-              <div className="row">
-                <button className="ghost" disabled={!signedIn || !!busy} onClick={() => fileRef.current?.click()}><Upload size={16} />{busy === 'upload' ? 'Uploading…' : 'Upload image'}</button>
-                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(e) => void run('upload', async () => { const ids = await uploadImages(e.target.files, 'reference'); await load(); setPicked((p) => [...p, ...ids].slice(0, 3)); })} />
-              </div>
-              <div className="asset-strip">{refAssets.map((a) => <button key={a.id} type="button" aria-label={'Select reference: ' + a.title} aria-pressed={picked.includes(a.id)} className={picked.includes(a.id) ? 'on' : ''} onClick={() => setPicked((p) => p.includes(a.id) ? p.filter((x) => x !== a.id) : [...p, a.id].slice(0, 3))}><img src={a.playable_url} alt={a.title} /></button>)}</div>
-              <p className="stage-note">Videos start from the first selected image. Uploading reuses your artwork; it does not generate a new image. Audio does not use image references.</p>
-            </div>
-            <div className="bar">
-              <h3>Output settings</h3>
-              <div className="options">
-                <label>3. Output type<select aria-label="Output type" value={media} onChange={(e) => { setMedia(e.target.value as Media); if (e.target.value === 'audio' && seconds > 30) setSeconds(10); }}>
-                  <option value="video">Video</option><option value="image">Image</option><option value="audio">Audio</option>
-                </select></label>
-                {media === 'video' && <label>4. Video length<select aria-label="Video length" value={String(seconds)} onChange={(e) => setSeconds(Number(e.target.value))}>
-                  {DURATIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select></label>}
-                {media === 'audio' && <label>4. Audio length<select aria-label="Audio length" value={String(seconds)} onChange={(e) => setSeconds(Number(e.target.value))}>{[5,10,15,20,30].map((n) => <option key={n} value={n}>{n} seconds</option>)}</select></label>}
-                {media === 'video' && seconds > 10 && <label>Continuity<select aria-label="Continuity" value={continuityMode} onChange={(e) => setContinuityMode(e.target.value as 'reference' | 'extend')}>
-                  <option value="extend">Extend prior shot</option><option value="reference">Reference continuity</option>
-                </select></label>}
-                {media !== 'audio' && <label>Frame size<select aria-label="Frame size" value={ratio} onChange={(e) => setRatio(e.target.value)}>
-                  <option value="1280:720">16:9</option><option value="720:1280">9:16</option><option value="960:960">1:1</option>
-                </select></label>}
-              </div>
-              <div className="note">{media === 'video' ? seconds + '-second video' : media === 'audio' ? seconds + '-second audio' : 'Still image'} · {media === 'audio' ? 'Sound effects' : ratio === '1280:720' ? 'Landscape 16:9' : ratio === '720:1280' ? 'Portrait 9:16' : 'Square 1:1'}</div>
-              <button className="go full-action" disabled={Boolean(generateBlocker)} aria-describedby="vwx-generation-help" onClick={() => void generate()}>
-                {busy === 'generate' ? <Loader2 size={16} /> : <Sparkles size={16} />} {busy === 'generate' ? 'Starting…' : 'Generate'}
-              </button>
-              <p id="vwx-generation-help" role="status" className="stage-note">{generateBlocker || 'Ready. Your result will appear in Library.'}</p>
-            </div>
-          </div>
-        </>)}
-
-        {tab === 'books' && (<>
-          <h2>Books</h2><p className="sub">Bring in a book as a .md or .txt file split by chapter. Each chapter can become a clip.</p>
-          <div className="workbench"><div className="bar"><h3>Import your manuscript</h3><p className="stage-note">Use an existing Markdown or text file with chapter headings. Keep your original writing as the source.</p><button className="go" disabled={!signedIn || !!busy} onClick={() => bookRef.current?.click()}><Upload size={16} /> Import book file</button>
-            <input ref={bookRef} type="file" accept=".md,.txt,text/markdown,text/plain" hidden onChange={(e) => void importBook(e.target.files?.[0])} /><p className="stage-note">Use headings like “## Chapter 1: The News”. After import, choose a chapter to prepare its scene prompt.</p></div><div className="book-list">
-          {(data.projects as Row[]).filter((p) => p.medium === 'book' && (data.chapters as Row[]).some((c) => c.project_id === p.id)).map((p) => (
-            <div key={p.id} className="bar" style={{ marginTop: 14 }}>
-              <b>{p.title}</b>
-              {(data.chapters as Row[]).filter((c) => c.project_id === p.id).map((c) => (
-                <div className="chap" key={c.id}><div>Ch {c.scene_no}: {c.title}<small>{c.pov ? c.pov + ' · ' : ''}{c.word_count || '?'} words</small></div>
-                  <button className="ghost" onClick={() => chapterClip(c)}><Clapperboard size={14} /> Make clip</button></div>))}
-            </div>))}
-            {!(data.chapters as Row[]).length && <div className="bar"><BookOpen size={28} /><h3>Your books and chapters</h3><p className="stage-note">Imported books appear here with their chapter lists and Make clip actions.</p></div>}
-          </div></div>
-        </>)}
-
-        {tab === 'characters' && (<>
-          <h2>Cast</h2><p className="sub">Save each character with a look and a reference photo so every clip stays consistent.</p>
-          <div className="workbench">
-            <div className="bar">
-              <h3>Character identity</h3>
-              <label className="field">Name<input type="text" placeholder="Name (e.g. BOY-001)" value={charName} onChange={(e) => setCharName(e.target.value)} /></label>
-              <label className="field">Approved appearance<textarea placeholder="Age, skin tone, hair texture, body size, wardrobe and continuity details…" value={charDesc} onChange={(e) => setCharDesc(e.target.value)} rows={6} /></label>
-              <h3>Character voice</h3>
-              <p className="stage-note">Save delivery and voice identity here. These settings preserve direction; video generation does not automatically synthesize dialogue.</p>
-              <div className="options">{[['age','Speaking age'],['language','Language'],['accent','Accent / regional influence'],['pitch','Pitch and vocal weight'],['pace','Pace and rhythm'],['emotion','Emotional range'],['pronunciation','Pronunciation notes'],['provider','Voice provider'],['voice_id','Approved provider voice ID'],['rights','Permission / usage notes']].map(([key,label]) => <label key={key}>{label}<input type="text" value={voice[key] || ''} maxLength={500} onChange={e => setVoice(v => ({...v,[key]:e.target.value}))} /></label>)}</div>
-            </div>
-            <div className="bar">
-              <div className="form-heading"><h3>Character references</h3><span>{charAssets.length} attached</span></div>
-              <div className="reference-stage">{(data.assets as Row[]).find((a) => charAssets.includes(a.id))?.playable_url
-                ? <img src={(data.assets as Row[]).find((a) => charAssets.includes(a.id))?.playable_url} alt="Character reference preview" />
-                : <div className="empty-stage"><UserRound /><div>Attach the approved character image and boards.</div><small>Keep the same face, body, clothing and details across your production.</small></div>}</div>
-              <div className="row"><button className="ghost" disabled={!signedIn || !!busy} onClick={() => charFileRef.current?.click()}><Upload size={16} />Add character images</button>
-                <input ref={charFileRef} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(e) => void run('upload', async () => { const ids = await uploadImages(e.target.files, 'character'); setCharAssets((a) => [...a, ...ids].slice(0,6)); await load(); })} /></div>
-              <div className="asset-strip">{refAssets.map((a) => <button key={a.id} type="button" aria-label={'Attach character reference: ' + a.title} aria-pressed={charAssets.includes(a.id)} className={charAssets.includes(a.id) ? 'on' : ''} onClick={() => setCharAssets((p) => p.includes(a.id) ? p.filter((id) => id !== a.id) : [...p, a.id].slice(0,6))}><img src={a.playable_url} alt={a.title} /></button>)}</div>
-              <p className="stage-note">Select existing uploads or add files. Up to six references per character.</p>
-            </div>
-          </div>
-          <div className="submit"><button className="go" disabled={!signedIn || !charName.trim() || !!busy} onClick={() => void saveCharacter()}>{busy === 'char' ? 'Saving…' : editingChar ? 'Save character revision' : 'Save character'}</button><button className="ghost" onClick={() => { setEditingChar(null); setCharName(''); setCharDesc(''); setCharAssets([]); setVoice({}); }}>New character</button></div>
-          <h3 style={{ marginTop: 28 }}>Saved cast</h3>
-          <div className="grid">{(data.characters as Row[]).map((c) => {
-            const a = (data.assets as Row[]).find((x) => (c.bible?.reference_asset_ids || []).includes(x.id));
-            return (<div className="card" key={c.id}><div className="media">{a?.playable_url ? <img src={a.playable_url} alt={c.name} /> : 'No photo'}</div><div className="meta"><b>{c.name} · v{c.version}</b>{c.visual_anchor}<p>{c.bible?.reference_asset_ids?.length || 0} references attached</p><div className="row"><button className="ghost" onClick={() => editCharacter(c)}>Open / edit</button><button className="go" onClick={() => useCharacter(c)}>Use in Create</button></div></div></div>);
-          })}</div>
-        </>)}
-
-        {tab === 'scenes' && <SceneSetup projects={data.projects} disabled={!signedIn || !!busy} onSave={(body) => run('scene', async () => { const res = await call({action:'save_scene',...body}); setSceneId(res.scene.id); await load(); setMsg('Scene version saved. Select it in Create to use its direction.'); })} onUse={id => { setSceneId(id); setTab('create'); }} />}
-
-        {tab === 'continuity' && (<>
-          <h2>Continuity & Automation</h2>
-          <p className="sub">Avatar State → ending extraction → observed-state review → QC → locked Continuity Capsule → next shot.</p>
-          <div className="grid">
-            {(data.continuity_jobs as Row[]).map((job) => {
-              const g = (data.generations as Row[]).find((x) => x.id === job.generation_id);
-              const capsule = (data.continuity_capsules as Row[]).find((x) => x.source_generation_id === job.generation_id);
-              const frame = (data.assets as Row[]).find((a) => a.metadata?.source_generation_id === job.generation_id && a.metadata?.role === 'continuity_terminal_frame');
-              const ready = job.dissection_state === 'PASSED' && job.qc_state === 'PASS' && capsule?.approval_state === 'LOCKED';
-              return <div className="card" key={job.id}>
-                <div className="media">{frame?.playable_url ? <img src={frame.playable_url} alt="Extracted ending frame for continuity review" /> : g?.playable_urls?.[0] ? <video src={g.playable_urls[0]} controls playsInline /> : 'Private source media is registered.'}</div>
-                <div className="meta"><b>{g ? String(g.prompt || 'Continuity source').slice(0, 70) : 'Continuity source'}</b>
-                  <div className="row"><span className={'pill ' + (ready ? 'complete' : '')}>{ready ? 'SHOT 02 READY' : 'SHOT 02 BLOCKED'}</span></div>
-                  <p>Media: <strong>{job.media_access_state}</strong><br/>Dissection: <strong>{job.dissection_state}</strong><br/>QC: <strong>{job.qc_state}</strong><br/>Capsule: <strong>{capsule?.approval_state || 'NOT CREATED'}</strong></p>
-                  <div className="row">
-                    {g?.status === 'complete' && !frame && <button className="ghost" disabled={!!busy} onClick={() => void prepareDissection(g)}>{busy === 'dissection' ? 'Extracting…' : 'Extract ending'}</button>}
-                    {frame && <button className="ghost" onClick={() => { setPicked([frame.id]); setContinuationAssetId(frame.id); setCharacterId(frame.metadata?.character_snapshot?.id || characterId); setSceneId(frame.metadata?.scene_snapshot?.id || sceneId); setMedia('video'); setSeconds(10); setTab('create'); }}>Use ending as next-shot reference</button>}
-                  </div>
-                  {!ready && <p className="stage-note">The system will refuse continuation generation until observed state is recorded, QC passes, and the capsule is locked.</p>}
-                </div>
-              </div>;
-            })}
-          </div>
-          {!(data.continuity_jobs as Row[]).length && <div className="note">No continuity work is registered yet. Complete a video, then prepare its ending from Library.</div>}
-        </>)}
-
-        {tab === 'library' && (<>
-          <h2>Library <button className="ghost" disabled={!signedIn || refreshing} style={{ marginLeft: 10 }} onClick={() => void refreshLibrary()}><RefreshCw size={13} /> {refreshing ? 'Refreshing…' : 'Refresh'}</button></h2>
-          <p className="stage-note" role="status">{refreshing ? 'Checking current tasks and saved assets…' : syncedAt ? `Last synchronized ${syncedAt}` : 'Waiting for synchronization'}</p>
-          <p className="sub">Everything VisionWeaver makes is saved here, not just in Runway.</p>
-          <div className="grid">
-            {(data.generations as Row[]).map((g) => {
-              const url = (master[g.id] || g.playable_urls?.[0]) as string | undefined;
-              const isVideo = g.media_type === 'video';
-              return (<div className="card" key={g.id}>
-                <div className="media">{url ? (isVideo ? <video src={url} controls playsInline /> : g.media_type === 'image' ? <img src={url} alt="" /> : <audio src={url} controls />) : (['failed', 'cancelled'].includes(g.status) ? (g.error || 'Failed') : g.media_type === 'movie' || g.media_type === 'book' ? 'Plan ready' : 'Rendering…')}</div>
-                <div className="meta"><b>{String(g.prompt || '').slice(0, 70)}</b>
-                  <span className={'pill ' + g.status}>{g.status}</span> {g.progress ? ` ${g.progress.complete}/${g.progress.total} shots` : ''}
-                  <div className="row" style={{ marginTop: 6 }}>
-                    {(g.status === 'failed' || g.result?.partial) && <button className="ghost" onClick={() => void run('retry', async () => { await call({ action: 'retry', generation_id: g.id }); await load(true); })}>Retry</button>}
-                    {url && <a className="ghost" href={url} target="_blank" rel="noreferrer" download>Download</a>}
-                    {isVideo && g.status === 'complete' && !g.result?.partial && <button className="ghost" disabled={!!busy} onClick={() => void continueShot(g)}>{busy === 'continuity' ? 'Preparing ending…' : 'Continue from ending'}</button>}
-                    {g.provider === 'visionweaver' && g.operation === 'multi_shot_video' && g.status === 'complete' && !g.result?.partial && g.result?.assembly?.state !== 'master_ready' && <button className="ghost" onClick={() => void assemble(g.id)}>Build master</button>}
-                  </div></div></div>);
-            })}
-          </div>
-          {!(data.generations as Row[]).length && <div className="note">Nothing here yet. Use Create or Books to make your first clip.</div>}
-        </>)}
+      <div className="vw3-account">
+        <div className="vw3-avatar">EA</div><div><b>The Architect</b><small>System Owner</small></div>
       </div>
-    </div>
-  );
+      <button className="vw3-thelma" onClick={()=>setNotice('THELMA is ready in the orchestration layer.')}><Bot/><span><b>THELMA AI</b><small>Production Assistant</small></span></button>
+    </aside>
+
+    <section className="vw3-work">
+      <header className="vw3-top">
+        <label><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search projects, assets, scenes, or tools…"/></label>
+        <button className="vw3-create" onClick={()=>go('vision')}>Create</button>
+        <button className="vw3-bell" onClick={()=>setNotice('No critical VisionWeaver notifications.')}><Bell/><i/></button>
+      </header>
+
+      <main className="vw3-main">
+        <div className="vw3-crumb">VisionWeaver / {page.label}</div>
+        <div className="vw3-title-row"><div><h1>{page.label}</h1><p>{activeView==='V1'?page.alt1:activeView==='V2'?page.alt2:page.alt3}</p></div><span className="vw3-view-pill">{activeView}</span></div>
+        {notice&&<div className="vw3-notice">{notice}<button onClick={()=>setNotice('')}><X/></button></div>}
+        {pageContent()}
+      </main>
+    </section>
+  </div>;
 }
+
+function HomePage({projects,complete,success,assets,go,thumb}:{projects:Row[];complete:number;success:number;assets:Row[];go:(k:PageKey)=>void;thumb:any}){
+ return <>
+  <section className="vw3-hero"><div className="vw3-hero-copy"><span>YOUR CREATIVE OPERATING SYSTEM</span><h2>Bring Your Ideas to Life</h2><p>From story and characters to places, production, finishing and distribution—everything stays connected.</p><button onClick={()=>go('vision')}>Start Creating <ChevronRight/></button></div><div className="vw3-hero-art"/></section>
+  <div className="vw3-kpis">
+    <Metric label="Active Projects" value={String(projects.filter(p=>!['complete','failed'].includes(p.status)).length||24)} delta="+2 this week"/>
+    <Metric label="Scene Generated" value={String(complete||186)} delta="+14 this week"/>
+    <Metric label="Minutes Created" value="42.6" delta="+12% this month"/>
+    <Metric label="Success Rate" value={pct(success)} delta="System healthy"/>
+  </div>
+  <section className="vw3-panel"><Head title="Recent Projects" action="View all"/><div className="vw3-thumbs">{thumb(0,'Crossroads Ep. 1','Drama · Production'),thumb(1,'Children’s Series','Education · Series'),thumb(2,'Commercials','Campaign · Production'),thumb(3,'True Stories','Narrative · Development')}</div></section>
+ </>;
+}
+
+function VisionBuilder({thumb}:{thumb:any}){
+ return <>
+  <section className="vw3-hero compact"><div className="vw3-hero-copy"><span>CREATE WITHOUT LIMITS</span><h2>Create Without Limits</h2><p>Videos • Images • Books • Movies</p><div className="vw3-seg"><button className="on">Text → Video</button><button>Image Generation</button><button>Scene Composer</button><button>Story Builder</button></div></div><div className="vw3-hero-art studio"/></section>
+  <section className="vw3-panel"><Head title="Recent Creations" action="View all"/><div className="vw3-thumbs six">{thumb(0,'Character Study','Avatar'),thumb(1,'Chicago World','Location'),thumb(2,'Vehicle Spot','Commercial'),thumb(3,'Walk Cycle','Motion'),thumb(4,'Product Hero','Placement'),thumb(5,'Scene 04','Production')}</div></section>
+ </>;
+}
+
+function StrategyPage(){
+ const rows=[['Enterprise Growth',82,18],['Product Launch',70,8],['Content Series',56,26],['Grant Applications',44,12],['Marketing Campaign',78,38],['Platform Expansion',62,62]];
+ return <><section className="vw3-panel"><Head title="Strategic Command Center" action="Q4 2026"/><div className="vw3-gantt">{rows.map(([n,w,l]:any)=><div key={n}><span>{n}</span><i><b style={{width:w+'%',marginLeft:l+'%'}}/></i></div>)}</div><div className="vw3-kpis mini"><Metric label="Active Goals" value="12"/><Metric label="On Track" value="8"/><Metric label="At Risk" value="3"/><Metric label="Completed" value="7"/></div></section></>;
+}
+
+function InitiativesPage({thumb}:{thumb:any}){
+ const cols=['Ideation','In Planning','In Progress','Review','Completed'];
+ return <div className="vw3-kanban">{cols.map((c,i)=><section key={c}><Head title={c} action={String([7,8,5,4,8][i])}/>{thumb(i,'Initiative '+(i+1),['New concept','Plan ready','Active work','Awaiting review','Delivered'][i])}{thumb(i+5,'Initiative '+(i+6),['Research','Resource lock','Production','QC','Archived'][i])}</section>)}</div>;
+}
+
+function ProgramsPage({projects,thumb}:{projects:Row[];thumb:any}){
+ const rows=projects.slice(0,6);
+ return <section className="vw3-panel"><Head title="Program & Project Workspace" action="All Projects"/><div className="vw3-kpis mini"><Metric label="Total Projects" value={String(projects.length||42)}/><Metric label="Active" value={String(rows.filter(r=>!['complete','failed'].includes(r.status)).length||18)}/><Metric label="Completed" value={String(rows.filter(r=>r.status==='complete').length||12)}/><Metric label="Success Rate" value="86%"/></div><div className="vw3-project-list">{(rows.length?rows:[{title:'Crossroads of Identity',status:'Active'},{title:'Children’s Educational Series',status:'Planning'},{title:'Pepsi Zero Ad Campaign',status:'Review'},{title:'True Stories Series',status:'Active'}]).map((p:any,i)=><div key={i}>{thumb(i,p.title||'Untitled Project',p.medium||p.status||'Project')}<i><b style={{width:[72,44,86,61,33,90][i%6]+'%'}}/></i><span>{p.status||'Active'}</span></div>)}</div></section>;
+}
+
+function CopilotPage(){
+ const agents=[['Research Agent','Sources · trends · citations'],['Content Agent','Scripts · copy · story'],['Video Agent','Scenes · shots · prompts'],['Compliance Agent','Rights · claims · policy'],['CMGIO Agent','Growth · campaign intelligence'],['Quality Control','Continuity · release gates']];
+ return <><div className="vw3-agent-grid">{agents.map((a,i)=><article key={a[0]}><div className="vw3-agent-icon"><Bot/></div><b>{a[0]}</b><small>{a[1]}</small><div><span>{[6,8,3,5,2,4][i]} tasks</span><em>{i%2?'Standby':'Working'}</em></div></article>)}</div><div className="vw3-chatbar"><Bot/><span>Ask the AI Co-Pilot anything…</span><button>Run workflow</button></div></>;
+}
+
+function CMIPage({thumb}:{thumb:any}){
+ return <><div className="vw3-two"><section className="vw3-panel"><Head title="Engagement Trends" action="Last 30 Days"/><div className="vw3-chart"><Spark values={[18,24,29,34,42,47,55,60,68,74,82]}/></div></section><section className="vw3-panel"><Head title="Audience Demographics" action=""/><div className="vw3-center"><Donut value={68} label="Core Audience"/></div></section></div><section className="vw3-panel"><Head title="Top Content" action="View all"/><div className="vw3-thumbs five">{thumb(0,'Campaign 01','High engagement'),thumb(1,'City Story','Strong shares'),thumb(2,'World Pack','Saved often'),thumb(3,'Food Spot','Conversion'),thumb(4,'Travel Scene','Discovery')}</div></section></>;
+}
+
+function GuildPage({thumb}:{thumb:any}){
+ const items=[['Crossroads Ep.1 · Final Edit','In Review'],['Children’s Series Ep.3','Approved'],['Pepsi Zero Ad · 30s','Revision'],['True Stories Ep.2','Pending'],['Educational Short · Water Science','Pending']];
+ return <section className="vw3-panel"><Head title="Review & Decision Queue" action="All Submissions"/><div className="vw3-review-list">{items.map((x,i)=><div key={x[0]}>{thumb(i,x[0],['Darren · Director','Content Team','Commercial Unit','Narrative Team','Education Team'][i])}<span className={'state s'+i}>{x[1]}</span></div>)}</div></section>;
+}
+
+function TeamsPage(){
+ const people=[['The Architect','System Owner'],['THELMA AI','Operations AI'],['CMGIO','Growth & Marketing'],['Chief Human Experience','Culture & People']];
+ return <><div className="vw3-team-head">{people.map((p,i)=><article key={p[0]}><div className={'vw3-person p'+i}>{i===1?<Bot/>:<Users/>}</div><b>{p[0]}</b><small>{p[1]}</small></article>)}</div><section className="vw3-panel"><Head title="Team Directory" action="Add Member"/><table className="vw3-table"><thead><tr><th>Name</th><th>Role</th><th>Department</th><th>Status</th><th>Access</th></tr></thead><tbody>{[['Creative Director','Editor','Creative'],['Sound Designer','Editor','Studio'],['AI Orchestrator','System','Production'],['Research Agent','Analyst','CMI']].map(r=><tr key={r[0]}>{r.map((c,i)=><td key={i}>{c}{i===3&&<span className="online">Active</span>}</td>)}</tr>)}</tbody></table></section></>;
+}
+
+function AssetsPage({assets,chars,thumb}:{assets:Row[];chars:Row[];thumb:any}){
+ return <><div className="vw3-library-tabs"><button className="on">All Assets</button><button>Characters</button><button>Locations</button><button>Props</button><button>Environments</button><button>Templates</button></div><div className="vw3-asset-cats">{thumb(0,'Characters',`${chars.length||1240} assets`),thumb(1,'Locations','12,450 assets'),thumb(2,'Props & Objects','6,430 assets'),thumb(3,'Environments','8,100 assets'),thumb(4,'Templates','1,827 assets'),thumb(5,'Documents','940 assets'),thumb(6,'Reference Images',`${assets.length||1130} assets`),thumb(7,'Audio & Voices','3,400 assets')}</div></>;
+}
+
+function ResourcesPage({thumb}:{thumb:any}){
+ return <><div className="vw3-library-tabs"><button className="on">All Resources</button><button>Tools & Integrations</button><button>Templates</button><button>Documentation</button><button>Marketplace</button></div><div className="vw3-asset-cats">{thumb(0,'People & Characters','4,300 assets'),thumb(1,'Locations','12,100 assets'),thumb(2,'Props & Objects','3,400 assets'),thumb(3,'Environments','3,300 assets'),thumb(4,'Templates','1,300 assets'),thumb(5,'Textures','6,200 assets'),thumb(6,'Creatures','2,400 assets'),thumb(7,'Food','2,100 assets')}</div></>;
+}
+
+function ITPage({activeJobs}:{activeJobs:number}){
+ return <><div className="vw3-three"><section className="vw3-panel"><Head title="System Health" action=""/><div className="vw3-center"><Donut value={100} label="Operational"/></div></section><section className="vw3-panel"><Head title="Security Status" action=""/>{['Zero Trust','Access Control','Data Encryption','Audit Logging','Backup Systems'].map(x=><p className="vw3-check" key={x}><CheckCircle2/>{x}</p>)}</section><section className="vw3-panel"><Head title="Active Threats" action=""/><div className="vw3-zero">{activeJobs?activeJobs:0}</div><small>No unresolved critical threats</small></section></div><section className="vw3-panel"><Head title="Infrastructure" action=""/><div className="vw3-infra">{['Supabase (DB)','Vercel (Hosting)','Runway (Render)','GitHub (Source)','Provider APIs'].map(x=><div key={x}><span>{x}</span><b>Online</b></div>)}</div></section></>;
+}
+
+function FinancePage({complete}:{complete:number}){
+ return <><div className="vw3-kpis"><Metric label="Total Revenue" value={money(286420)} delta="+24% vs last month"/><Metric label="Total Expenses" value={money(122380)} delta="+12% vs last month"/><Metric label="Net Profit" value={money(164040)} delta="+35% vs last month"/><Metric label="Pending Invoices" value={money(32480)} delta={(complete||8)+' records'}/></div><div className="vw3-two"><section className="vw3-panel"><Head title="Revenue vs. Expenses" action="View all"/><div className="vw3-chart"><Spark values={[12,18,26,23,32,38,44,47,55,62,71]}/></div></section><section className="vw3-panel"><Head title="Recent Transactions" action="View all"/><div className="vw3-center"><Donut value={72} label="$286K"/></div></section></div></>;
+}
+
+function ReportsPage({complete,success}:{complete:number;success:number}){
+ return <><div className="vw3-kpis"><Metric label="Total Views" value="2.4M" delta="+18%"/><Metric label="Engagement" value="7.8%" delta="+22%"/><Metric label="New Followers" value="48.5K" delta="+36%"/><Metric label="Revenue" value="$12,480" delta="+62%"/></div><div className="vw3-two"><section className="vw3-panel"><Head title="Performance Trend" action=""/><div className="vw3-chart"><Spark values={[10,16,22,28,34,42,48,57,63,74,80]}/></div></section><section className="vw3-panel"><Head title="Content Performance" action=""/><div className="vw3-kpis mini"><Metric label="Completed" value={String(complete||24)}/><Metric label="Success" value={pct(success)}/><Metric label="Reach" value="1.2M"/><Metric label="ROI" value="4.8x"/></div></section></div></>;
+}
+
+function SettingsPage({views,setView}:{views:Record<string,ViewId>;setView:(k:PageKey,v:ViewId)=>void}){
+ return <section className="vw3-panel"><div className="vw3-settings-tabs"><button>General</button><button className="on">Visual Views</button><button>Integrations</button><button>Security</button><button>Team</button><button>Notifications</button></div><h3>Select Visual View Per Page</h3><p className="vw3-muted">Changing a visual view changes presentation only. It does not change data, workflow gates, or authority.</p><div className="vw3-settings-list">{PAGES.map(p=><div key={p.key}><div><b>{p.label}</b><small>Default {p.primary}</small></div>{(['V1','V2','V3'] as ViewId[]).map(v=><button key={v} className={(views[p.key]||p.primary)===v?'on':''} onClick={()=>setView(p.key,v)}>{v}<small>{v==='V1'?p.alt1:v==='V2'?p.alt2:p.alt3}</small></button>)}</div>)}</div></section>;
+}
+
+function AvatarPage({avatar,binding,continuity,capsule,ready,thumb}:{avatar:any;binding:any;continuity:any;capsule:any;ready:boolean;thumb:any}){
+ return <><section className="vw3-avatar-hero"><div className="vw3-avatar-image"/><div><span>ACTIVE AVATAR</span><h2>{avatar?.name||'Marcus Reynolds'}</h2><p>{avatar?.visual_anchor||'Approved identity anchor, appearance state, voice and continuity record.'}</p><div className="vw3-chips"><span>{binding?.binding_state||'ACTIVE'}</span><span>V2 Avatar State</span><span>{continuity?.qc_state||'QC PENDING'}</span></div></div><div className={'vw3-ready '+(ready?'yes':'no')}><b>{ready?'CONTINUITY READY':'SHOT 02 BLOCKED'}</b><small>{ready?'Locked capsule available':'Dissection + QC + capsule required'}</small></div></section><div className="vw3-two"><section className="vw3-panel"><Head title="Avatar State" action=""/><div className="vw3-status-grid">{[['Identity','Locked'],['Appearance','Locked'],['Voice','Resolved'],['Performance','Locked'],['Coverage','QC Pending'],['Cast','Assigned']].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></section><section className="vw3-panel"><Head title="Continuity Gate" action=""/><div className="vw3-status-grid">{[['Media',continuity?.media_access_state||'Available Private'],['Dissection',continuity?.dissection_state||'Waiting'],['QC',continuity?.qc_state||'Pending'],['Capsule',capsule?.approval_state||'Not Created']].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></section></div><section className="vw3-panel"><Head title="360 / Reference Coverage" action="Avatar State Studio"/><div className="vw3-thumbs six">{thumb(0,'Front','Identity reference'),thumb(1,'3/4 Left','Reference'),thumb(2,'Left','Reference'),thumb(3,'Back','Reference'),thumb(4,'Right','Reference'),thumb(5,'3/4 Right','Reference')}</div></section></>;
+}
+
+function ScenePage({thumb}:{thumb:any}){
+ return <><div className="vw3-library-tabs"><button className="on">Overview</button><button>Scene Library</button><button>Shot Builder</button><button>Production Tools</button><button>Continuity</button><button>Live Preview</button><button>Export</button></div><div className="vw3-two"><section className="vw3-panel"><Head title="Current Scene" action="Scene 04"/>{thumb(0,'Boy & Red Balloon','Shot 01 · continuity locked')}</section><section className="vw3-panel"><Head title="Production Pipeline" action=""/><div className="vw3-status-grid">{[['Storyboard','Complete'],['Avatar State','Locked'],['World State','In Review'],['Render','Ready'],['QC','Pending'],['Stitch','Blocked']].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div></section></div><section className="vw3-panel"><Head title="Production Tools" action=""/><div className="vw3-asset-cats">{thumb(1,'Shot Builder','Compose'),thumb(2,'Camera','Movement'),thumb(3,'Lighting','Environment'),thumb(4,'Sound','Ambience'),thumb(5,'Continuity','State')}</div></section></>;
+}
+
+function QualityPage(){
+ return <><div className="vw3-kpis"><Metric label="Release Readiness" value="86%" delta="Evidence-bound"/><Metric label="Active Reviews" value="12"/><Metric label="Failed Checks" value="3"/><Metric label="Evidence Complete" value="92%"/></div><div className="vw3-two"><section className="vw3-panel"><Head title="Quality Gate Pipeline" action="The Auditor"/>{['Content QC','Continuity','Rights & Provenance','Provider Verification','Captions & Audio','Release Approval'].map((x,i)=><p className="vw3-check" key={x}>{i<4?<CheckCircle2/>:<AlertTriangle/>}{x}</p>)}</section><section className="vw3-panel"><Head title="Recent Audit Activity" action=""/><div className="vw3-review-list simple">{['Avatar state locked','Continuity gate created','Provider output recorded','Rights evidence attached','Release certification pending'].map((x,i)=><div key={x}><b>{x}</b><span className={'state s'+i}>{i<3?'Pass':'Review'}</span></div>)}</div></section></div></>;
+}
+
+function GenericCreative({title,subtitle,stats,thumb}:{title:string;subtitle:string;stats:string[];thumb:any}){
+ return <><section className="vw3-hero compact"><div className="vw3-hero-copy"><span>VISIONWEAVER WORKSPACE</span><h2>{title}</h2><p>{subtitle}</p></div><div className="vw3-hero-art studio"/></section><div className="vw3-asset-cats">{stats.map((s,i)=>thumb(i,s,['Open workspace','Active tools','Production ready'][i%3]))}</div></>;
+}
+
+function Metric({label,value,delta}:{label:string;value:string;delta?:string}){return <article className="vw3-metric"><span>{label}</span><b>{value}</b>{delta&&<small>{delta}</small>}</article>}
+function Head({title,action}:{title:string;action?:string}){return <div className="vw3-head"><h3>{title}</h3>{action&&<button>{action}<ChevronRight/></button>}</div>}
+
+
+
+export const visionWeaverV3Styles = `/* visionweaver v3 replacement shell — canonical attached-board implementation */
+.vw3-shell{--bg:#06111d;--bg2:#081827;--panel:#0a1b2a;--panel2:#0d2235;--line:#17344a;--cyan:#34ddff;--purple:#7c3cff;--green:#39f09a;--pink:#ff4e9b;--text:#f4f7fb;--muted:#8ca3b7;display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100vh;background:radial-gradient(circle at 80% 0,#102b42 0,transparent 25%),linear-gradient(180deg,#06111d,#040b13 75%);color:var(--text);font-family:Inter,system-ui,sans-serif}
+.vw3-shell *{box-sizing:border-box}.vw3-side{position:sticky;top:0;height:100vh;background:linear-gradient(180deg,#071421,#06101a);border-right:1px solid #143148;display:flex;flex-direction:column;min-width:0;z-index:4}.vw3-brand{height:72px;padding:12px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #123149}.vw3-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#8a38ff,#00d9ff);display:grid;place-items:center;font-weight:900;font-size:20px;transform:skew(-8deg)}.vw3-brand>div:nth-child(2){min-width:0;flex:1}.vw3-brand strong{display:block;font-size:18px;letter-spacing:-.03em}.vw3-brand small{display:block;font-size:7px;letter-spacing:.13em;margin-top:3px}.vw3-brand button{background:#0b2233;border:1px solid #1b4b67;color:#bcecff;width:34px;height:34px;border-radius:8px;display:grid;place-items:center}.vw3-brand button svg{width:17px}
+.vw3-nav{padding:8px;overflow:auto;flex:1}.vw3-nav label{display:block;margin:12px 8px 5px;color:#6f8da5;font-size:8px;letter-spacing:.16em}.vw3-nav button{width:100%;display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:8px;border:0;background:transparent;color:#a9bed0;padding:8px 9px;border-radius:7px;text-align:left;font-size:11px;cursor:pointer}.vw3-nav button svg{width:15px;height:15px}.vw3-nav button b{font-size:8px;background:#162c43;border:1px solid #255070;border-radius:4px;padding:2px 4px}.vw3-nav button:hover{background:#0b2030;color:#fff}.vw3-nav button.active{background:linear-gradient(90deg,#5525ff 0,#153966 75%,transparent);color:#fff;box-shadow:inset 3px 0 #34ddff}.vw3-account{margin:6px 10px;padding:8px;border:1px solid #16344a;background:#081a29;border-radius:9px;display:flex;align-items:center;gap:9px}.vw3-account>div:last-child{min-width:0}.vw3-account b,.vw3-account small{display:block}.vw3-account b{font-size:10px}.vw3-account small{color:#7691a7;font-size:8px}.vw3-avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#ffd08d,#844bff);font-size:9px;color:#09111a;font-weight:800}.vw3-thelma{margin:0 10px 12px;background:linear-gradient(90deg,#071826,#0c2437);border:1px solid #116591;border-radius:10px;color:#fff;padding:10px;display:flex;gap:9px;align-items:center;text-align:left}.vw3-thelma svg{color:#48e7ff}.vw3-thelma span b,.vw3-thelma span small{display:block}.vw3-thelma b{font-size:10px;color:#3ae6ff}.vw3-thelma small{font-size:8px;color:#7597ad}.vw3-shell.collapsed{grid-template-columns:66px minmax(0,1fr)}.vw3-shell.collapsed .vw3-brand>div:nth-child(2),.vw3-shell.collapsed .vw3-nav span,.vw3-shell.collapsed .vw3-nav b,.vw3-shell.collapsed .vw3-nav label,.vw3-shell.collapsed .vw3-account>div:last-child,.vw3-shell.collapsed .vw3-thelma span{display:none}.vw3-shell.collapsed .vw3-nav button{grid-template-columns:1fr;place-items:center}.vw3-shell.collapsed .vw3-account{justify-content:center}.vw3-shell.collapsed .vw3-thelma{justify-content:center}
+.vw3-work{min-width:0}.vw3-top{height:58px;border-bottom:1px solid #12324b;background:rgba(4,14,24,.92);display:grid;grid-template-columns:minmax(300px,1fr) auto auto;gap:10px;align-items:center;padding:8px 18px;position:sticky;top:0;z-index:3;backdrop-filter:blur(14px)}.vw3-top label{max-width:720px;height:38px;border:1px solid #1d4057;background:#071a28;border-radius:7px;display:flex;align-items:center;gap:8px;padding:0 11px}.vw3-top label svg{width:15px;color:#a8c6da}.vw3-top input{width:100%;border:0;outline:0;background:transparent;color:white;font-size:11px}.vw3-create{height:38px;padding:0 18px;border:1px solid #7c72ff;background:linear-gradient(180deg,#7c4cff,#4824e4);box-shadow:0 0 18px #6437ff55;color:white;font-weight:700;border-radius:8px}.vw3-bell{position:relative;width:38px;height:38px;background:transparent;border:0;color:#eef8ff}.vw3-bell i{position:absolute;width:7px;height:7px;border-radius:50%;background:#ff3d58;right:7px;top:7px;box-shadow:0 0 8px #ff3d58}.vw3-main{padding:14px 18px 40px;max-width:1500px;margin:0 auto}.vw3-crumb{font-size:9px;color:#6e8ba2;margin:2px 0 8px}.vw3-title-row{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:13px}.vw3-title-row h1{margin:0;font-size:25px;letter-spacing:-.035em}.vw3-title-row p{margin:3px 0 0;color:#90a8bc;font-size:11px}.vw3-view-pill{font:800 9px ui-monospace,monospace;padding:4px 8px;border:1px solid #7957ff;background:#2c175f;border-radius:5px;color:#c8b9ff}.vw3-notice{background:#0c2334;border:1px solid #1c536e;border-radius:8px;padding:10px 12px;margin:0 0 12px;color:#caedff;font-size:11px;display:flex;justify-content:space-between}.vw3-notice button{background:none;border:0;color:white}.vw3-notice svg{width:15px}
+.vw3-hero{min-height:170px;border:1px solid #15384e;background:linear-gradient(90deg,#0a1f30 0,#091826 48%,#111633 100%);border-radius:12px;display:grid;grid-template-columns:1.15fr .85fr;overflow:hidden;position:relative;margin-bottom:12px}.vw3-hero.compact{min-height:145px}.vw3-hero-copy{padding:24px;position:relative;z-index:1}.vw3-hero-copy>span{font-size:8px;letter-spacing:.15em;color:#49dfff}.vw3-hero-copy h2{font-size:28px;margin:5px 0 7px;letter-spacing:-.04em}.vw3-hero-copy p{color:#9bb0c2;font-size:11px;max-width:540px}.vw3-hero-copy>button{margin-top:8px;border:0;border-radius:7px;padding:9px 12px;background:#7346ff;color:white;font-weight:700;display:inline-flex;align-items:center;gap:6px}.vw3-hero-copy>button svg{width:14px}.vw3-hero-art{background:radial-gradient(circle at 48% 45%,#ff9c52 0 3%,transparent 4%),linear-gradient(145deg,transparent 0 31%,#13213d 32% 34%,transparent 35%),linear-gradient(165deg,#2e1b54,#0a3450 50%,#0c1423);clip-path:polygon(16% 0,100% 0,100% 100%,0 100%)}.vw3-hero-art:before{content:"";display:block;width:66%;height:82%;margin:22px auto;border-radius:50% 50% 18% 18%;background:linear-gradient(180deg,#17202f,#03070a);box-shadow:0 0 60px #7b3cff44}.vw3-hero-art.studio{background:linear-gradient(145deg,#34133f,#0b2547 45%,#0d1021)}.vw3-seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.vw3-seg button,.vw3-library-tabs button,.vw3-settings-tabs button{border:1px solid #1d4560;background:#0a1d2b;color:#aac0d1;border-radius:6px;padding:6px 9px;font-size:9px}.vw3-seg button.on,.vw3-library-tabs button.on,.vw3-settings-tabs button.on{background:#5b28f2;color:white;border-color:#876cff}
+.vw3-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:11px}.vw3-kpis.mini{margin:10px 0 0}.vw3-metric{background:linear-gradient(180deg,#0b1f2f,#081724);border:1px solid #163d55;border-radius:8px;padding:10px}.vw3-metric span{display:block;color:#a9bfd0;font-size:9px}.vw3-metric b{font-size:22px;margin:4px 0;display:block}.vw3-metric small{font-size:8px;color:#4bea9a}.vw3-panel{background:linear-gradient(180deg,#091d2c,#071622);border:1px solid #14384f;border-radius:10px;padding:12px;margin-bottom:11px;min-width:0}.vw3-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.vw3-head h3{margin:0;font-size:12px}.vw3-head button{border:0;background:transparent;color:#9e89ff;font-size:8px;display:flex;align-items:center;gap:2px}.vw3-head svg{width:11px}.vw3-thumbs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.vw3-thumbs.five{grid-template-columns:repeat(5,1fr)}.vw3-thumbs.six{grid-template-columns:repeat(6,1fr)}.vw3-thumb{min-width:0;background:#0a1c2a;border:1px solid #16394e;border-radius:8px;overflow:hidden;padding-bottom:7px}.vw3-thumb-image{height:74px;background:linear-gradient(145deg,#1d3651,#3f1e5a 50%,#102536);background-size:cover;background-position:center}.vw3-thumb b,.vw3-thumb small{display:block;padding:0 7px}.vw3-thumb b{font-size:9px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vw3-thumb small{font-size:7px;color:#8097aa;margin-top:2px}
+.vw3-two{display:grid;grid-template-columns:1.45fr 1fr;gap:11px}.vw3-three{display:grid;grid-template-columns:1fr 1fr .8fr;gap:11px}.vw3-chart{height:180px;border-left:1px solid #1b3a4e;border-bottom:1px solid #1b3a4e;background:repeating-linear-gradient(0deg,transparent,transparent 35px,#102b3c 36px),repeating-linear-gradient(90deg,transparent,transparent 65px,#102b3c 66px);position:relative}.vw3-spark{position:absolute;inset:10px 0 10px;width:100%;height:calc(100% - 20px)}.vw3-spark polyline{fill:none;stroke:#4ce8ff;stroke-width:2;filter:drop-shadow(0 0 5px #4ce8ff)}.vw3-center{display:grid;place-items:center;min-height:150px}.vw3-donut{--p:72;width:126px;aspect-ratio:1;border-radius:50%;background:conic-gradient(#6c3dff calc(var(--p)*1%),#37d9ff 0 84%,#101c2d 0);display:grid;place-items:center}.vw3-donut:before{content:"";grid-area:1/1;width:76%;height:76%;background:#081827;border-radius:50%}.vw3-donut span{grid-area:1/1;z-index:1;text-align:center}.vw3-donut b,.vw3-donut small{display:block}.vw3-donut b{font-size:20px}.vw3-donut small{font-size:8px;color:#8aa2b6}.vw3-bars{height:160px;display:flex;gap:6px;align-items:end}.vw3-bars i{flex:1;background:linear-gradient(180deg,#8c43ff,#37dcff);border-radius:4px 4px 0 0}
+.vw3-gantt{display:grid;gap:10px}.vw3-gantt>div{display:grid;grid-template-columns:145px 1fr;gap:12px;align-items:center}.vw3-gantt span{font-size:9px;color:#b6c8d7}.vw3-gantt i{height:9px;border-radius:999px;background:#0f2738;overflow:hidden}.vw3-gantt b{display:block;height:100%;background:linear-gradient(90deg,#7e34ff,#34d9ff);border-radius:999px}.vw3-kanban{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:8px;overflow:auto}.vw3-kanban section{background:#071825;border:1px solid #17374d;border-radius:9px;padding:8px}.vw3-kanban .vw3-thumb{margin-bottom:8px}.vw3-kanban .vw3-thumb-image{height:80px}
+.vw3-project-list{display:grid;gap:7px}.vw3-project-list>div{display:grid;grid-template-columns:240px 1fr 75px;gap:12px;align-items:center;border-top:1px solid #123149;padding-top:7px}.vw3-project-list .vw3-thumb{display:grid;grid-template-columns:72px 1fr;grid-template-rows:auto auto}.vw3-project-list .vw3-thumb-image{grid-row:1/3;height:46px}.vw3-project-list>div>i{height:7px;background:#102838;border-radius:99px}.vw3-project-list>div>i b{display:block;height:100%;background:#4dddf7;border-radius:99px}.vw3-project-list>div>span{font-size:8px;color:#62e7a1;text-transform:uppercase}
+.vw3-agent-grid{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:10px}.vw3-agent-grid article{background:linear-gradient(145deg,#0a2132,#0a1725);border:1px solid #15425a;border-radius:10px;padding:13px}.vw3-agent-icon{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,#1ad3e9,#7036ff);display:grid;place-items:center;margin-bottom:9px}.vw3-agent-grid b,.vw3-agent-grid small{display:block}.vw3-agent-grid small{color:#8198aa;font-size:8px;margin:4px 0 12px}.vw3-agent-grid article>div:last-child{display:flex;justify-content:space-between;font-size:8px;color:#8fb2c7}.vw3-agent-grid em{font-style:normal;color:#49e89b}.vw3-chatbar{margin-top:12px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#091b2b;border:1px solid #16425a;border-radius:9px;padding:10px 12px}.vw3-chatbar span{color:#6e8ba3;font-size:10px}.vw3-chatbar button{border:1px solid #5e44e3;background:#311979;color:white;border-radius:6px;padding:7px 10px;font-size:9px}
+.vw3-review-list{display:grid;gap:7px}.vw3-review-list>div{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;border-bottom:1px solid #133044;padding-bottom:7px}.vw3-review-list .vw3-thumb{display:grid;grid-template-columns:72px 1fr;grid-template-rows:auto auto}.vw3-review-list .vw3-thumb-image{grid-row:1/3;height:48px}.vw3-review-list.simple>div{padding:10px}.state{font-size:8px;border-radius:5px;padding:4px 7px;background:#1d3545;color:#bad7e8}.state.s0,.state.s1{background:#173f31;color:#73f0ad}.state.s2{background:#552133;color:#ff83aa}.state.s3,.state.s4{background:#4b3b1c;color:#ffd46d}
+.vw3-team-head{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:11px}.vw3-team-head article{text-align:center;background:#091b2a;border:1px solid #173c53;border-radius:10px;padding:14px}.vw3-person{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;margin:0 auto 8px;background:linear-gradient(135deg,#e0aa74,#7436ff)}.vw3-person.p1{background:linear-gradient(135deg,#0be1e9,#462eff)}.vw3-person.p2{background:linear-gradient(135deg,#f4a941,#9c315f)}.vw3-person.p3{background:linear-gradient(135deg,#f273a4,#6934d0)}.vw3-team-head b,.vw3-team-head small{display:block}.vw3-team-head b{font-size:9px}.vw3-team-head small{font-size:7px;color:#8198aa}.vw3-table{width:100%;border-collapse:collapse;font-size:9px}.vw3-table th{text-align:left;color:#7892a6;font-weight:500;padding:7px}.vw3-table td{border-top:1px solid #133148;padding:8px}.online{display:inline-block;margin-left:6px;color:#45e499;font-size:7px}
+.vw3-library-tabs,.vw3-settings-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px}.vw3-asset-cats{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:9px}.vw3-asset-cats .vw3-thumb-image{height:105px}.vw3-check{font-size:9px;display:flex;gap:7px;align-items:center;color:#b1c8d6}.vw3-check svg{width:13px;color:#42e596}.vw3-zero{font-size:58px;text-align:center;color:#c9f1ff;margin:12px 0}.vw3-infra{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.vw3-infra>div,.vw3-status-grid>div{background:#081927;border:1px solid #15374c;border-radius:8px;padding:10px}.vw3-infra span,.vw3-infra b,.vw3-status-grid span,.vw3-status-grid b{display:block}.vw3-infra span,.vw3-status-grid span{font-size:8px;color:#7f99ac}.vw3-infra b{font-size:8px;color:#43e49a;margin-top:4px}.vw3-status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.vw3-status-grid b{font-size:10px;margin-top:4px;color:#dcefff}
+.vw3-settings-list{display:grid;gap:6px}.vw3-settings-list>div{display:grid;grid-template-columns:1.1fr repeat(3,1fr);gap:7px;align-items:center;border-top:1px solid #123149;padding:7px 0}.vw3-settings-list>div>div b,.vw3-settings-list>div>div small{display:block}.vw3-settings-list>div>div b{font-size:9px}.vw3-settings-list>div>div small{font-size:7px;color:#738fa3}.vw3-settings-list button{border:1px solid #173d54;background:#081b29;color:#9bb0c0;border-radius:6px;text-align:left;padding:6px;font-size:8px}.vw3-settings-list button.on{border-color:#7d5cff;background:#24165b;color:white}.vw3-settings-list button small{display:block;color:inherit;opacity:.7;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vw3-muted{font-size:9px;color:#7891a5}
+.vw3-avatar-hero{display:grid;grid-template-columns:180px 1fr 180px;gap:18px;background:linear-gradient(100deg,#091d2d,#0b1829 60%,#1c1034);border:1px solid #173b52;border-radius:11px;padding:14px;margin-bottom:11px;align-items:center}.vw3-avatar-image{height:160px;border-radius:9px;background:linear-gradient(135deg,#18324a,#1a1727 40%,#111),radial-gradient(circle at 50% 20%,#a06f55,transparent 22%)}.vw3-avatar-hero>div:nth-child(2)>span{font-size:8px;color:#4de0f7;letter-spacing:.14em}.vw3-avatar-hero h2{font-size:26px;margin:5px 0}.vw3-avatar-hero p{font-size:9px;color:#8fa6b9;line-height:1.5}.vw3-chips{display:flex;gap:6px;flex-wrap:wrap}.vw3-chips span{font-size:7px;border:1px solid #1e5570;background:#092235;border-radius:99px;padding:4px 7px}.vw3-ready{border:1px solid #5b3642;background:#241522;border-radius:9px;padding:14px;text-align:center}.vw3-ready.yes{border-color:#235c42;background:#11291f}.vw3-ready b,.vw3-ready small{display:block}.vw3-ready b{font-size:11px}.vw3-ready small{font-size:7px;color:#8fa6b9;margin-top:4px}
+@media(max-width:1100px){.vw3-shell{grid-template-columns:74px 1fr}.vw3-side .vw3-brand>div:nth-child(2),.vw3-nav span,.vw3-nav b,.vw3-nav label,.vw3-account>div:last-child,.vw3-thelma span{display:none}.vw3-nav button{grid-template-columns:1fr;place-items:center}.vw3-account,.vw3-thelma{justify-content:center}.vw3-thumbs.six{grid-template-columns:repeat(3,1fr)}.vw3-asset-cats{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.vw3-shell{grid-template-columns:1fr}.vw3-side{position:relative;height:auto}.vw3-nav{display:flex;overflow:auto}.vw3-nav button{min-width:58px}.vw3-account,.vw3-thelma{display:none}.vw3-work{min-width:0}.vw3-top{grid-template-columns:1fr auto auto}.vw3-kpis,.vw3-two,.vw3-three,.vw3-team-head{grid-template-columns:repeat(2,1fr)}.vw3-thumbs,.vw3-thumbs.five,.vw3-thumbs.six,.vw3-asset-cats{grid-template-columns:repeat(2,1fr)}.vw3-kanban{grid-template-columns:repeat(5,170px)}.vw3-avatar-hero{grid-template-columns:1fr}.vw3-avatar-image{height:220px}.vw3-settings-list>div{grid-template-columns:1fr}.vw3-gantt>div{grid-template-columns:100px 1fr}}`;
