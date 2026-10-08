@@ -51,6 +51,7 @@ export function parseDashboardRoute(pathname:string):DashboardRoute{
   }
   if(parts[0]==='systems'){
     const surface=systemsBySlug[parts[1]||''];
+    if(surface==='vision')return{surface,page:parts[2]||'home'};
     if(surface)return{surface};
   }
   return{surface:'master',page:'Dashboard'};
@@ -59,3 +60,4 @@ export function parseDashboardRoute(pathname:string):DashboardRoute{
 export const routeForModule=(name:string)=>name==='Dashboard'?'/dashboard':name==='Agent Hub'||name==='Agent Logs'?'/systems/thelma':`/modules/${slugify(name)}`;
 export const routeForSuitePage=(name:string)=>`/c-suite/${slugify(name)}`;
 export const routeForSystem=(surface:Exclude<DashboardSurface,'master'|'suite'>)=>systemPaths[surface];
+export const routeForVisionWeaverPage=(page:string)=>`/systems/visionweaver/${slugify(page)}`;
