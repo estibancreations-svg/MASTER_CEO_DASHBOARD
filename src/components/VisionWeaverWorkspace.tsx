@@ -169,7 +169,7 @@ export default function VisionWeaverWorkspace(){
     return null;
   };
 
-  return <div className={`vw3-shell ${collapsed?'collapsed':''}`}>
+  return <><style>{visionWeaverV3Styles}</style><div className={`vw3-shell ${collapsed?'collapsed':''}`}>
     <aside className="vw3-side">
       <div className="vw3-brand"><div className="vw3-mark">W</div><div><strong>VisionWeaver</strong><small>CREATE • BRING WORLDS TO LIFE</small></div><button onClick={()=>setCollapsed(v=>!v)} aria-label="Toggle navigation"><Menu/></button></div>
       <nav className="vw3-nav">
@@ -199,7 +199,7 @@ export default function VisionWeaverWorkspace(){
         {pageContent()}
       </main>
     </section>
-  </div>;
+  </div></>;
 }
 
 function HomePage({projects,complete,success,assets,go,thumb}:{projects:Row[];complete:number;success:number;assets:Row[];go:(k:PageKey)=>void;thumb:any}){
