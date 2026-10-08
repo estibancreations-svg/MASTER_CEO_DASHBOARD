@@ -74,9 +74,18 @@ function Donut({value=72,label='Total'}:{value?:number;label?:string}) {
   return <div className="vw3-donut" style={{'--p':value} as any}><span><b>{value}%</b><small>{label}</small></span></div>;
 }
 
-export default function VisionWeaverWorkspace(){
+const PAGE_ALIASES:Record<string,PageKey>={
+  'home':'home','home-dashboard':'home','vision-builder':'vision','strategic-planner':'strategy','initiatives':'initiatives',
+  'programs-and-projects':'programs','programs-projects':'programs','ai-co-pilot':'copilot','cmi':'cmi','directors-guild':'guild',
+  'teams':'teams','c-suite':'csuite','book-creation':'books','avatar-engineering':'avatar','worlds-and-locations':'worlds',
+  'design-studio':'designstudio','design-and-commercial':'commercial','scene-and-production':'scene','post-production':'post',
+  'distribution-and-growth':'distribution','quality-and-audit':'quality','finance-and-accounting':'finance','it-and-security':'it',
+  'resources':'resources','assets-and-knowledge':'assets','reports-and-insights':'reports','settings':'settings'
+};
+
+export default function VisionWeaverWorkspace({initialPage='home',onNavigatePage}:{initialPage?:string;onNavigatePage?:(page:string)=>void}){
   const identity=useIdentity();
-  const [active,setActive]=useState<PageKey>(()=>{const saved=localStorage.getItem(PAGE_KEY) as PageKey|null;return PAGES.some(p=>p.key===saved)?saved!:'home'});
+  const [active,setActive]=useState<PageKey>(()=>PAGE_ALIASES[initialPage]||'home');
   const [views,setViews]=useState<Record<string,ViewId>>(()=>{try{return JSON.parse(localStorage.getItem(VIEW_KEY)||'{}')}catch{return {}}});
   const [collapsed,setCollapsed]=useState(false);
   const [query,setQuery]=useState('');
@@ -108,6 +117,7 @@ export default function VisionWeaverWorkspace(){
   },[call,signedIn]);
 
   useEffect(()=>{void load()},[load]);
+  useEffect(()=>{const next=PAGE_ALIASES[initialPage]||'home';if(next!==active)setActive(next)},[initialPage]);
   useEffect(()=>{localStorage.setItem(PAGE_KEY,active)},[active]);
   useEffect(()=>{localStorage.setItem(VIEW_KEY,JSON.stringify(views))},[views]);
 
@@ -125,7 +135,7 @@ export default function VisionWeaverWorkspace(){
   const capsule=(data.continuity_capsules as Row[]).find(c=>c.source_generation_id===continuity?.generation_id);
   const continuityReady=continuity?.dissection_state==='PASSED'&&continuity?.qc_state==='PASS'&&capsule?.approval_state==='LOCKED';
 
-  function go(k:PageKey){setActive(k);setNotice('');window.scrollTo({top:0,behavior:'auto'})}
+  function go(k:PageKey){setActive(k);setNotice('');const p=PAGES.find(x=>x.key===k);if(onNavigatePage&&p)onNavigatePage(p.label.toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''));window.scrollTo({top:0,behavior:'auto'})}
   function setView(k:PageKey,v:ViewId){setViews(x=>({...x,[k]:v}));setNotice(`${PAGES.find(p=>p.key===k)?.label}: ${v} selected`)}
   async function refresh(){if(!signedIn)return;setBusy(true);try{await call({action:'refresh'});await load();setNotice('VisionWeaver synchronized with the live production records.')}catch(e:any){setNotice(e.message||String(e))}finally{setBusy(false)}}
 
