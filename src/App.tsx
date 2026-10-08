@@ -56,7 +56,7 @@ export default function App(){
  const navigate=(path:string)=>{if(window.location.pathname!==path)window.history.pushState({},'',path);setRoute(parseDashboardRoute(path));window.scrollTo({top:0,behavior:'auto'})};
  if(route.surface==='master')return <MasterDashboard initialActive={route.page||'Dashboard'} onNavigateModule={name=>navigate(routeForModule(name))} onOpenSuite={()=>navigate(routeForSuitePage('Executive Overview'))} onOpenLandWeaver={()=>navigate(routeForSystem('land'))} onOpenVisionWeaver={()=>navigate(routeForSystem('vision'))} onOpenGrantOS={()=>navigate(routeForSystem('grant'))} onOpenThelma={()=>navigate(routeForSystem('thelma'))} onOpenCmgio={()=>navigate(routeForSystem('cmgio'))} onOpenFabric={()=>navigate(routeForSystem('fabric'))}/>;
  if(route.surface==='suite')return <><button className="return-master" onClick={()=>navigate('/dashboard')}><LayoutDashboard/> Master Dashboard</button><CSuiteDashboard initialActive={route.page||'Executive Overview'} navigate={navigate}/></>;
- if(route.surface==='vision') return <VisionWeaverWorkspace/>;
+ if(route.surface==='vision') return <VisionWeaverWorkspace initialPage={route.page||'home'} onNavigatePage={page=>navigate(`/systems/visionweaver/${page}`)}/>;
  const workspace=route.surface==='land'?<LandWeaverWorkspace/>:route.surface==='grant'?<GrantOSWorkspace/>:route.surface==='thelma'?<ThelmaWorkspace/>:route.surface==='cmgio'?<CmgioWorkspace/>:<IntegrationFabricWorkspace/>;
  return <><button className="return-master" onClick={()=>navigate('/dashboard')}><LayoutDashboard/> Master Dashboard</button><div className="app-shell workspace-only"><main><section className="content">{workspace}</section></main></div></>;
 }
