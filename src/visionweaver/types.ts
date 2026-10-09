@@ -1,6 +1,6 @@
 export type ViewId='V1'|'V2'|'V3';
 export type PageKey=
-|'home'|'vision-builder'|'strategic-planner'|'initiatives'|'programs-projects'|'ai-co-pilot'|'cmi'|'directors-guild'|'teams-csuite'
+|'home'|'production-studio'|'vision-builder'|'strategic-planner'|'initiatives'|'programs-projects'|'ai-co-pilot'|'cmi'|'directors-guild'|'teams-csuite'
 |'book-creation'|'avatar-engineering'|'worlds-locations'|'design-studio'|'design-commercial'|'scene-production'|'post-production'|'distribution-growth'
 |'quality-audit'|'finance-accounting'|'it-security'|'resources'|'assets-knowledge'|'reports-insights'|'settings';
 
