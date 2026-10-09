@@ -7,6 +7,8 @@ import type{PageKey,ViewId}from'./types';
 import{PAGES,PAGE_MAP,loadViews,saveViews,safePage}from'./registry';
 import{useVisionWeaverData}from'./data';
 import VisionWeaverPage from'./pages';
+import ProductionStudio from'./ProductionStudio';
+import{ThelmaDiagnostic}from'./ThelmaDiagnostic';
 import'./visionweaver.css';
 
 const ICONS:any={
@@ -73,7 +75,7 @@ export default function VisionWeaverRuntime({initialPage='home',onNavigatePage}:
    </nav>
    <div className="vw-sidebar-footer">
     <button type="button" className="vw-account" onClick={()=>open('settings')}><span className="vw-account-avatar">EA</span><span><b>The Architect</b><small>System Owner</small></span></button>
-    <button type="button" className="vw-thelma" onClick={()=>setNotice('THELMA is available as the governed operations/orchestration layer.')}><Bot/><span><b>THELMA AI</b><small>Production Assistant</small></span></button>
+    <button type="button" className="vw-thelma" onClick={()=>window.location.assign('/systems/thelma')}><Bot/><span><b>THELMA AI</b><small>Production Assistant</small></span></button>
    </div>
   </aside>
 
@@ -97,7 +99,8 @@ export default function VisionWeaverRuntime({initialPage='home',onNavigatePage}:
     </header>
     {(notice||dataApi.error)&&<div className="vw-notice">{notice||dataApi.error}<button onClick={()=>setNotice('')}>×</button></div>}
     {!dataApi.signedIn&&<div className="vw-system-note"><b>Sign-in required for live production data.</b><span>The interface remains available, but project records, generation history and private assets stay protected.</span></div>}
-    <VisionWeaverPage page={page} data={dataApi.data} view={view} setView={setView} open={open} assetForName={dataApi.assetForName} projectForName={dataApi.projectForName}/>
+    <ThelmaDiagnostic/>
+    {page==='production-studio'?<ProductionStudio data={dataApi.data} refresh={dataApi.load}/>:<VisionWeaverPage page={page} data={dataApi.data} view={view} setView={setView} open={open} assetForName={dataApi.assetForName} projectForName={dataApi.projectForName}/>}
    </main>
   </section>
  </div>;
