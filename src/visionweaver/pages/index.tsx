@@ -1,9 +1,10 @@
+import type{ReactElement}from'react';
 import type{PageKey,PageProps}from'../types';
 import{HomePage,VisionBuilderPage,StrategicPlannerPage,InitiativesPage,ProgramsPage,CopilotPage,CMIPage,GuildPage,TeamsPage}from'./core';
 import{BookCreationPage,AvatarEngineeringPage,WorldsLocationsPage,DesignStudioPage,DesignCommercialPage,SceneProductionPage,PostProductionPage,DistributionGrowthPage}from'./create';
 import{QualityAuditPage,FinanceAccountingPage,ITSecurityPage,ResourcesPage,AssetsKnowledgePage,ReportsInsightsPage,SettingsPage}from'./govern';
 
-const PAGE_COMPONENTS:Record<PageKey,(p:PageProps)=>JSX.Element>={
+const PAGE_COMPONENTS:Record<PageKey,(p:PageProps)=>ReactElement>={
  'home':HomePage,
  'vision-builder':VisionBuilderPage,
  'strategic-planner':StrategicPlannerPage,
