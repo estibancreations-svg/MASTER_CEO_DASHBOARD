@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const studio = readFileSync('supabase/functions/visionweaver-studio/index.ts','utf8');
 const continuity = readFileSync('api/visionweaver-continuity.js','utf8');
-const workspace = readFileSync('src/components/VisionWeaverWorkspace.tsx','utf8');
+const workspace = readFileSync('src/visionweaver/ProductionStudio.tsx','utf8');
 const avatarMigration = readFileSync('supabase/migrations/20261008170000_visionweaver_avatar_state_runtime_phase2.sql','utf8');
 const gateMigration = readFileSync('supabase/migrations/20261008171500_visionweaver_continuity_dissection_gate.sql','utf8');
 

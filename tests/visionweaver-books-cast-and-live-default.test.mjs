@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const studio = readFileSync('supabase/functions/visionweaver-studio/index.ts', 'utf8');
-const workspace = readFileSync('src/components/VisionWeaverWorkspace.tsx', 'utf8');
+const workspace = readFileSync('src/visionweaver/ProductionStudio.tsx', 'utf8');
 const boards = readFileSync('src/boards/index.tsx', 'utf8');
 
 test('Studio function handles every action the VisionWeaver workspace calls', () => {
