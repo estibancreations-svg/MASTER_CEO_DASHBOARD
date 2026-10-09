@@ -4,7 +4,7 @@ import{HomePage,VisionBuilderPage,StrategicPlannerPage,InitiativesPage,ProgramsP
 import{BookCreationPage,AvatarEngineeringPage,WorldsLocationsPage,DesignStudioPage,DesignCommercialPage,SceneProductionPage,PostProductionPage,DistributionGrowthPage}from'./create';
 import{QualityAuditPage,FinanceAccountingPage,ITSecurityPage,ResourcesPage,AssetsKnowledgePage,ReportsInsightsPage,SettingsPage}from'./govern';
 
-const PAGE_COMPONENTS:Record<PageKey,(p:PageProps)=>ReactElement>={
+const PAGE_COMPONENTS:Partial<Record<PageKey,(p:PageProps)=>ReactElement>={
  'home':HomePage,
  'vision-builder':VisionBuilderPage,
  'strategic-planner':StrategicPlannerPage,
@@ -32,5 +32,5 @@ const PAGE_COMPONENTS:Record<PageKey,(p:PageProps)=>ReactElement>={
 };
 export default function VisionWeaverPage({page,...props}:PageProps&{page:PageKey}){
  const C=PAGE_COMPONENTS[page];
- return <C {...props}/>;
+ return C?<C {...props}/>:null;
 }
