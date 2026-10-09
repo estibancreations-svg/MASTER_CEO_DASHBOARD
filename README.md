@@ -62,7 +62,7 @@ npm run build
 
 ## Attached systems
 
-- **VisionWeaver (`SYS-VISION-001`)** — durable production, scenes, rendering state, QC and provenance.
+- **VisionWeaver (`SYS-VISION-001`)** — durable production, scenes, rendering state, QC and provenance. The advanced Stock, rights, long-form assembly and approval reference is documented in [VisionWeaver Stock & Production Update](docs/VISIONWEAVER-STOCK-PRODUCTION-UPDATE-REFERENCE-2026-09-30.md); it is not yet a production-certification claim.
 - **LandWeaver (`SYS-LAND-001`)** — governed property intake, assessment, diligence, financial review and approval.
 - **GrantOS (`SYS-GRANT-001`)** — opportunities, evidence requirements, budgets and application workflow.
 - **THELMA (`SYS-THELMA-001`)** — requests, authorization, commands, runs, incidents and resolution.
