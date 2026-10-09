@@ -17,11 +17,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 const SOCIAL_PROVIDERS: SocialProvider[] = [
   { provider: 'google', label: 'Google', mark: 'G' },
-  { provider: 'apple', label: 'Apple', mark: 'A' },
-  { provider: 'azure', label: 'Microsoft', mark: 'M', scopes: 'email' },
-  { provider: 'github', label: 'GitHub', mark: 'GH' },
-  { provider: 'facebook', label: 'Facebook', mark: 'f' },
-  { provider: 'linkedin_oidc', label: 'LinkedIn', mark: 'in' }
+  { provider: 'apple', label: 'Apple', mark: 'A' }
 ];
 
 export default function AuthGate({ children }: { children: ReactNode }) {
@@ -117,17 +113,20 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   if (!isSupabaseConfigured) return <><SystemControls /><div className="auth-screen"><div className="auth-card"><div className="brand-mark">EC</div><span className="eyebrow">CONFIGURATION REQUIRED</span><h1>Executive sign-in is unavailable</h1><p>Configure the browser-safe Supabase URL and publishable key.</p></div></div></>;
   if (!ready) return <><SystemControls /><div className="auth-screen"><div className="auth-card"><div className="brand-mark">EC</div><h1>Verifying executive authority</h1><p>Checking workspace membership and governed access.</p></div></div></>;
   if (!session) {
-    const visibleProviders = SOCIAL_PROVIDERS.filter((option) => enabledProviders.has(option.provider));
+    const visibleProviders = SOCIAL_PROVIDERS;
     return <><SystemControls /><div className="auth-screen"><form className="auth-card" onSubmit={login}>
       <div className="brand-mark">EC</div><span className="eyebrow">SYS-CEO-001 · ZERO-TRUST ENTRY</span><h1>CEO Command Center</h1>
       <p>Sign in to enter the governed dashboard. Authentication verifies identity; your active organization membership determines authority.</p>
       {!providerCheckComplete && <small>Checking available sign-in providers…</small>}
-      {providerCheckComplete && visibleProviders.length > 0 && <div className="social-auth" aria-label="Social sign-in options">{visibleProviders.map((option) => <button key={option.provider} type="button" onClick={() => void socialLogin(option)} disabled={Boolean(submitting)}><span>{option.mark}</span>{submitting === option.provider ? 'Connecting…' : `Continue with ${option.label}`}</button>)}</div>}
-      {providerCheckComplete && visibleProviders.length > 0 && <div className="auth-divider"><span>or use a secure email link</span></div>}
+      {providerCheckComplete && <div className="social-auth" aria-label="Social sign-in options">{visibleProviders.map((option) => {
+        const configured = enabledProviders.has(option.provider);
+        return <button key={option.provider} type="button" onClick={() => void socialLogin(option)} disabled={!configured || Boolean(submitting)} aria-label={`Continue with ${option.label}${configured ? '' : ' (setup required)'}`}><span>{option.mark}</span>{submitting === option.provider ? 'Connecting…' : configured ? `Continue with ${option.label}` : `${option.label} — setup required`}</button>;
+      })}</div>}
+      {providerCheckComplete && <div className="auth-divider"><span>or use a secure email link</span></div>}
       <label className="auth-email">Executive email<input type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" /></label>
       <button className="auth-submit" type="submit" disabled={Boolean(submitting) || cooldown > 0}>{submitting === 'email' ? 'Requesting secure link…' : cooldown > 0 ? `Try again in ${cooldown}s` : 'Send secure sign-in link'}</button>
       {sent && <small>Check your email for the secure link. This screen does not create unapproved executive access.</small>}
-      {providerCheckComplete && visibleProviders.length === 0 && <small>Social sign-in providers are not configured yet. Secure email login remains available.</small>}
+      {providerCheckComplete && SOCIAL_PROVIDERS.some((provider) => !enabledProviders.has(provider.provider)) && <small>Social providers marked “setup required” need credentials in Supabase Authentication → Sign In / Providers. Secure email login remains available.</small>}
       {error && <small className="auth-error" role="alert">{error}</small>}
     </form></div></>;
   }
