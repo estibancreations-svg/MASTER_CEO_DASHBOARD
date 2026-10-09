@@ -2,6 +2,7 @@ import type{PageDef,PageKey,ViewId}from'./types';
 
 export const PAGES:PageDef[]=[
  {key:'home',label:'Home Dashboard',group:'CORE',primary:'V1',views:{V1:'Dashboard',V2:'Studio Overview',V3:'Project Focus'},icon:'home'},
+ {key:'production-studio',label:'Production Studio',group:'CREATE & PRODUCE',primary:'V1',views:{V1:'Live Production Controls',V2:'Backend Operations',V3:'Production Diagnostics'},icon:'clapper'},
  {key:'vision-builder',label:'Vision Builder',group:'CORE',primary:'V1',views:{V1:'Creative Command Canvas',V2:'Blueprint & Dependencies',V3:'Concept-to-Production Map'},icon:'wand'},
  {key:'strategic-planner',label:'Strategic Planner',group:'CORE',primary:'V1',views:{V1:'Strategic Command Center',V2:'Scenario & Roadmap Studio',V3:'Goals, Risks & Outcomes'},icon:'gauge'},
  {key:'initiatives',label:'Initiatives',group:'CORE',primary:'V2',views:{V1:'Initiative Overview',V2:'Initiative Pipeline',V3:'Impact & Dependencies'},icon:'sparkles'},
