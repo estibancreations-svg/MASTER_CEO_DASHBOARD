@@ -3,7 +3,7 @@ import{ChevronRight,Image as ImageIcon}from'lucide-react';
 import type{ViewId}from'../types';
 
 export function Panel({title,action,children,className=''}:{title?:string;action?:string;children:ReactNode;className?:string}){
- return <section className={'vw-panel '+className}>{title&&<header className="vw-panel-head"><h3>{title}</h3>{action&&<button type="button">{action}<ChevronRight/></button>}</header>}{children}</section>
+ return <section className={'vw-panel '+className}>{title&&<header className="vw-panel-head"><h3>{title}</h3>{action&&<span>{action}<ChevronRight/></span>}</header>}{children}</section>
 }
 export function Metric({label,value,delta,tone='cyan'}:{label:string;value:string|number;delta?:string;tone?:'cyan'|'purple'|'green'|'pink'|'amber'}){
  return <article className={'vw-metric '+tone}><span>{label}</span><strong>{value}</strong>{delta&&<small>{delta}</small>}</article>
