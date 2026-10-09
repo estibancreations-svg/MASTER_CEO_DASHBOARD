@@ -28,4 +28,6 @@ export type PageProps={
  view:ViewId;
  setView:(view:ViewId)=>void;
  open:(page:PageKey)=>void;
+ assetForName?:(needles:string[])=>any;
+ projectForName?:(needles:string[])=>any;
 };
