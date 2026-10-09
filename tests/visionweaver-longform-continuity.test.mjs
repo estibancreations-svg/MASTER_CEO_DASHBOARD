@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const studio = readFileSync('supabase/functions/visionweaver-studio/index.ts', 'utf8');
 const orchestrator = readFileSync('supabase/functions/visionweaver-orchestrator/index.ts', 'utf8');
-const workspace = readFileSync('src/components/VisionWeaverWorkspace.tsx', 'utf8');
+const workspace = readFileSync('src/visionweaver/ProductionStudio.tsx', 'utf8');
 const watcher = readFileSync('src/components/VisionWeaverAssemblyWatcher.tsx', 'utf8');
 const assembler = readFileSync('api/visionweaver-assemble.js', 'utf8');
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
