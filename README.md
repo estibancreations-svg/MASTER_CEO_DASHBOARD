@@ -59,6 +59,7 @@ npm run build
 - [Physical Device Sign-off](docs/operations/PHYSICAL-DEVICE-SIGNOFF.md)
 - [Quality Gate](docs/QC-GATE.md)
 - [Current Workstate — 2026-10-04](docs/operations/CURRENT-WORKSTATE-2026-10-04.md)
+- [Current Workstate — 2026-10-11 (VisionWeaver Prime)](docs/operations/CURRENT-WORKSTATE-2026-10-11.md)
 
 ## Attached systems
 
@@ -96,3 +97,8 @@ The [repository integration contract](docs/architecture/VISIONWEAVER-AVATAR-STAT
 The [VisionWeaver Global Reference Catalog integration](docs/architecture/VISIONWEAVER-GLOBAL-REFERENCE-CATALOG.md) adds governance for worldwide place, people, environment and travel-reference sourcing. The dashboard tracks provider terms, rights classes, provenance completeness, stale-policy reviews, identifiable-person/minor flags, geographic coverage, Location Pack approval and blocked ingestion attempts.
 
 Canonical detail remains in Design Studio and VisionWeaver. Documentation does not certify runtime provider ingestion or permissions.
+
+
+## VisionWeaver Prime — October 10-11, 2026
+
+VisionWeaver Prime is a fresh, dedicated VisionWeaver front end (private repo `estibancreations-svg/VisionWeaver-Prime`, own Supabase project): 27 pages, workspace sign-in with Google, Apple and Microsoft buttons built, live project records, and a guided new-project walkthrough. It is deployed but not production-certified, its sign-in providers are not yet switched on, and it is not yet attached to this dashboard. See the [2026-10-11 workstate](docs/operations/CURRENT-WORKSTATE-2026-10-11.md) for what changed, open items and the one known gap (two database migrations not saved in GitHub).
