@@ -44,7 +44,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method_not_allowed' });
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !publishableKey) return json(res, 500, { ok: false, error: 'supabase_runtime_not_configured' });
 
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();

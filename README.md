@@ -37,6 +37,7 @@ Browser-safe configuration:
 ```dotenv
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+VITE_SUPABASE_ANON_KEY=sb_publishable_your_key # optional compatibility alias
 VITE_BUILDER_MODE=true
 ```
 
@@ -50,6 +51,18 @@ Set `VITE_BUILDER_MODE=false` only after organization membership, role, denied, 
 npm run lint
 npm run build
 ```
+
+## Vercel deployment settings
+
+- Framework preset: **Vite**
+- Install command: `npm ci`
+- Build command: `npm run build`
+- Output directory: `dist`
+- Environment variables (Production/Preview/Development):
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_PUBLISHABLE_KEY` (preferred)
+  - `VITE_SUPABASE_ANON_KEY` (optional compatibility alias, same public key value)
+- SPA fallback is configured in `vercel.json`, and `/api/visionweaver-assemble` remains routed to the serverless function.
 
 ## Operations
 
