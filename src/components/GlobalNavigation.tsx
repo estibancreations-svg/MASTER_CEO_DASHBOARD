@@ -27,7 +27,8 @@ const systems: SystemLink[] = [
   { key: 'telecom', systemKey: 'SYS-TELECOM-001', name: 'Telecommunications', description: 'Voice, SIP, SMS, routing, transcription and communications operations.', icon: PanelTop, tag: 'COMMS', state: 'NOT_IMPLEMENTED' },
   { key: 'assessment', systemKey: 'SYS-ASSESS-001', name: 'Assessment Suite', description: 'Assessments, scoring, longitudinal intelligence and capability mapping.', icon: PanelTop, tag: 'ASSESS', state: 'NOT_IMPLEMENTED' },
   { key: 'training', systemKey: 'SYS-TRAINING-001', name: 'AI Mastery / Training', description: 'Curriculum, tutoring, exercises, mastery evidence and certificates.', icon: PanelTop, tag: 'TRAINING', state: 'PARTIAL' },
-  { key: 'qc', systemKey: 'SYS-QC-001', name: 'Quality Control Agency', description: 'Independent verification, regression, release evidence and system certification.', icon: PanelTop, tag: 'QUALITY', state: 'PARTIAL' }
+  { key: 'qc', systemKey: 'SYS-QC-001', name: 'Quality Control Agency', description: 'Independent verification, regression, release evidence and system certification.', icon: PanelTop, tag: 'QUALITY', state: 'PARTIAL' },
+  { key: 'thelmacrm', systemKey: 'SYS-THELMACRM-001', name: 'T.H.E.L.M.A. CRM Complete', description: 'Agency CRM for up to 75 client sub-accounts, with business mail, marketing, industry kits and payments.', icon: PanelTop, tag: 'CRM', state: 'PARTIAL' }
 ];
 
 function currentSystemKey(path: string) {
@@ -131,7 +132,7 @@ export default function GlobalNavigation({ children }: PropsWithChildren) {
     {open && <div className="ec-system-overlay" onClick={() => setOpen(false)}>
       <section className="ec-system-switcher" onClick={event => event.stopPropagation()}>
         <div className="ec-switcher-head">
-          <div><small>ENTERPRISE REGISTRY · 17 SYSTEMS</small><h2>Where do you want to work?</h2><p>Executable systems open directly. Rebuilding systems remain visible with their truthful current state.</p></div>
+          <div><small>ENTERPRISE REGISTRY · 18 SYSTEMS</small><h2>Where do you want to work?</h2><p>Executable systems open directly. Rebuilding systems remain visible with their truthful current state.</p></div>
           <button onClick={() => setOpen(false)} aria-label="Close"><X /></button>
         </div>
         <div className="ec-system-grid">

@@ -30,16 +30,16 @@ test('Social-Commerce weekly, monthly, attribution and forecast ledgers exist', 
   assert.ok(sql.includes("attribution_method in ('direct','last_touch','first_touch','assisted','multi_touch','modeled','correlated','unknown')"));
 });
 
-test('All Systems exposes the approved 17-system enterprise registry without fake routes', () => {
+test('All Systems exposes the approved 18-system enterprise registry without fake routes', () => {
   const nav = read('src/components/GlobalNavigation.tsx');
   const expected = [
     'SYS-DASH-001','SYS-CEO-001','SYS-THELMA-001','SYS-FABRIC-001','SYS-VISION-001','SYS-LAND-001','SYS-GRANT-001',
     'SYS-CMGIO-001','SYS-ADS-001','SYS-AGENCYFLOW-001','SYS-CLIMATE-001','SYS-PUBLISH-001','SYS-IAM-001','SYS-TELECOM-001',
-    'SYS-ASSESS-001','SYS-TRAINING-001','SYS-QC-001'
+    'SYS-ASSESS-001','SYS-TRAINING-001','SYS-QC-001','SYS-THELMACRM-001'
   ];
   for (const systemKey of expected) assert.ok(nav.includes(systemKey), `Missing ${systemKey}`);
   const declarations = [...nav.matchAll(/systemKey:\s*'SYS-[A-Z-]+-001'/g)];
-  assert.equal(declarations.length, 17, `Expected 17 registry declarations, found ${declarations.length}`);
+  assert.equal(declarations.length, 18, `Expected 18 registry declarations, found ${declarations.length}`);
   assert.ok(nav.includes("state: 'NOT_IMPLEMENTED'"));
   assert.ok(nav.includes('disabled={!launchable}'), 'Non-executable systems must not pretend to launch');
 });
