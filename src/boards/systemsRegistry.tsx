@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import './systemsRegistry.css';
 
 /**
- * The 17 governed business systems, copied from the ACTIVE_CANON registry in
+ * The 18 governed business systems, copied from the ACTIVE_CANON registry in
  * estibancreations-svg/Master-System-Buildout (00-CENTRAL-HUB/Registries/SYSTEM-REGISTRY.md).
  * `state` is implementation truth. Nothing here is VERIFIED, and a route existing does not mean a system is healthy.
  */
@@ -11,7 +11,7 @@ export type RegistryState = 'PARTIAL' | 'RECOVERY_REQUIRED' | 'SPECIFICATION_ONL
 export type RegistrySystem = { n: number; id: string; name: string; purpose: string; state: RegistryState; where: string; open?: string };
 
 export const REGISTRY_SOURCE = 'Master-System-Buildout SYSTEM-REGISTRY.md';
-export const REGISTRY_RECONCILED = '2026-09-19';
+export const REGISTRY_RECONCILED = '2026-10-14';
 
 export const SYSTEM_REGISTRY: RegistrySystem[] = [
   { n: 1, id: 'SYS-DASH-001', name: 'Master Dashboard', purpose: 'Enterprise operational aggregation, navigation, system launcher and everyday overview.', state: 'PARTIAL', where: 'MASTER_CEO_DASHBOARD /dashboard; global navigation and module shell.', open: 'dashboard' },
@@ -30,7 +30,8 @@ export const SYSTEM_REGISTRY: RegistrySystem[] = [
   { n: 14, id: 'SYS-TELECOM-001', name: 'Telecommunications', purpose: 'Voice, SIP and SMS, call routing, communications history, transcription, QA and coaching, and escalation.', state: 'NOT_IMPLEMENTED', where: 'No certified dedicated current product.' },
   { n: 15, id: 'SYS-ASSESS-001', name: 'Assessment Suite', purpose: 'Assessments, instruments, scoring, longitudinal results and capability and skills intelligence.', state: 'NOT_IMPLEMENTED', where: 'No certified dedicated current product.' },
   { n: 16, id: 'SYS-TRAINING-001', name: 'AI Mastery / Training', purpose: 'Curriculum, tutoring, exercises, mastery, evaluations, certificates and training intelligence.', state: 'PARTIAL', where: 'Existing /modules/ai-mastery route and module material; no certified independent full workspace.', open: 'aimastery' },
-  { n: 17, id: 'SYS-QC-001', name: 'Quality Control Agency', purpose: 'Independent testing, regression, release evidence, model and provider evaluation and system certification.', state: 'PARTIAL', where: 'AUDITOR, VERITAS and WBC regression concepts; GitHub Quality Gate; Analyst evidence.' }
+  { n: 17, id: 'SYS-QC-001', name: 'Quality Control Agency', purpose: 'Independent testing, regression, release evidence, model and provider evaluation and system certification.', state: 'PARTIAL', where: 'AUDITOR, VERITAS and WBC regression concepts; GitHub Quality Gate; Analyst evidence.' },
+  { n: 18, id: 'SYS-THELMACRM-001', name: 'T.H.E.L.M.A. CRM Complete', purpose: 'Multi-tenant agency CRM (Trusted Hub for Engagement, Leads, Marketing & Automation): one agency, up to 75 sub-accounts, inbox and business mail, marketing with compliance checks, industry kits, websites, courses, payments and the Owner-approved T.H.E.L.M.A. gate.', state: 'PARTIAL', where: 'estibancreations-svg/standalone-crm Version 2.0 (database and isolation tests pass locally; not yet deployed). standalone-crm-nine.vercel.app still runs Version 1 until cutover.' }
 ];
 
 const STATES: RegistryState[] = ['PARTIAL', 'RECOVERY_REQUIRED', 'SPECIFICATION_ONLY', 'NOT_IMPLEMENTED'];
