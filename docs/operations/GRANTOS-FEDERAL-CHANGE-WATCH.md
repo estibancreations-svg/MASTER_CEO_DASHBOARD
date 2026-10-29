@@ -10,7 +10,7 @@ This ledger records official changes that could affect GrantOS. The app reads `p
 - An inactive federal notice can remain here for historical reconciliation. It is not a current outage.
 - Do not treat Contract Awards (procurement) as a grants opportunity or submission source.
 
-## Entries recorded October 23, 2026
+## Key changes recorded through October 28, 2026
 
 | Change | Effective date | GrantOS check | Official source |
 | --- | --- | --- | --- |
@@ -18,6 +18,7 @@ This ledger records official changes that could affect GrantOS. The app reads `p
 | Contract Awards report delay affecting dates from October 18, now marked inactive | October 18, 2026 | If imported, replay and reconcile the affected period | [SAM.gov alert](https://sam.gov/alerts/contract-awards-data-delayed-0) |
 | Entity Management extracts posted seven days a week | September 6, 2026 | If an extract scheduler exists, verify Sunday/Monday processing | [SAM.gov alert](https://sam.gov/alerts/entity-management-extract-publishing-schedule-change) |
 | Contract Awards API adds `publicDeltaDate` and optional commercial-product/service fields | August 25, 2026 | If a connector exists, test parser tolerance and reveal-date synchronization | [GSA API documentation](https://open.gsa.gov/api/contract-awards/) |
+| SAM.gov higher-education certification under EO 14400 | October 28, 2026 | If higher-education applicants are in scope, verify threshold screening and applicant attestation; no SAM/entity-registration connector found in reviewed dashboard source | [SAM.gov announcement](https://sam.gov/announcements/new-certification-higher-education-institutions-now-available); [GSA FSD guidance](https://www.fsd.gov/gsafsd_sp/en/entity-registration-what-is-required-to-comply-with-the-save-college-sports?id=kb_article_view&sysparm_article=KB0106985) |
 
 ## Update procedure
 
