@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "system_key": "SYS-GRANT-001",
-  "reviewed_on": "2026-10-23",
+  "reviewed_on": "2026-10-28",
   "scope": "Official federal changes potentially relevant to GrantOS. Source facts are distinct from conditional impact assessments. An entry does not assert that GrantOS has an active external connector or that implementation is complete.",
   "updates": [
     {
@@ -70,6 +70,42 @@
       "urgency": "low",
       "action": "conditional_verification",
       "next_step": "Check whether GrantOS has Contract Awards ingestion. If active, test against Alpha with unknown-field tolerance and compare publicDeltaDate versus lastModifiedDate replay behavior; map the added fields as optional.",
+      "implementation_state": "unverified"
+    },
+    {
+      "id": "sam-higher-ed-college-sports-certification-2026-10-28",
+      "title": "SAM.gov higher-education College Sports EO certification",
+      "source": "SAM.gov / GSA Federal Service Desk",
+      "published_on": "2026-10-28",
+      "effective_on": "2026-10-28",
+      "source_url": "https://sam.gov/announcements/new-certification-higher-education-institutions-now-available",
+      "supporting_sources": [
+        {
+          "title": "GSA Federal Service Desk: Entity Registration — Save College Sports Executive Order",
+          "url": "https://www.fsd.gov/gsafsd_sp/en/entity-registration-what-is-required-to-comply-with-the-save-college-sports?id=kb_article_view&sysparm_article=KB0106985",
+          "source_date": "2026-10-28",
+          "detail": "Explains the $20 million athletics-revenue threshold, annual SAM.gov registration question, and certification prompt."
+        },
+        {
+          "title": "Executive Order 14400: Urgent National Action To Save College Sports",
+          "url": "https://www.federalregister.gov/documents/2026/04/09/2026-06961/urgent-national-action-to-save-college-sports",
+          "source_date": "2026-04-09",
+          "detail": "Sections 3–6 effective August 1, 2026; directs agencies, as appropriate, to evaluate specified violations when determining present responsibility."
+        }
+      ],
+      "category": "policy_compliance",
+      "source_status": "active",
+      "confirmed_change": "SAM.gov announced on October 28, 2026 that a new certification is available for higher-education institutions under Executive Order 14400. GSA's Federal Service Desk says it applies to higher-education institutions applying for federal funding that earned $20 million or more in intercollegiate athletics revenue. During annual SAM.gov registration, entities selecting Educational Institution are asked the threshold question; a Yes answer triggers a certification concerning compliance with EO 14400. The EO directs agencies, as appropriate, to evaluate specified violations when determining present responsibility.",
+      "affected_grantos_component": "GrantOS applicant profile, pre-award compliance/readiness checklist, and any future SAM.gov entity-registration or eligibility integration; most relevant when the applicant is a higher-education institution meeting the stated revenue threshold.",
+      "likely_impact": "Conditional policy impact: if GrantOS supports affected higher-education applicants, it may need a source-backed preflight check and a record of the applicant's SAM.gov certification status. This is not a universal grant eligibility rule and GrantOS must not self-certify or infer compliance. Repository searches found no SAM.gov entity-registration or Grants.gov opportunity/submission connector in the reviewed dashboard source; a generic EC Fabric connector registry does not establish one.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/cd58a2b83ab3133300c20ab45bb5da2ca6c0d2bc/src/components/GrantOSWorkspace.tsx",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/cd58a2b83ab3133300c20ab45bb5da2ca6c0d2bc/docs/architecture/CONNECTION-REGISTRY.md"
+      ],
+      "urgency": "medium",
+      "action": "verify",
+      "next_step": "Confirm whether GrantOS's intended applicant population includes higher-education institutions. If it does, design a source-backed preflight field/checklist for the institution's own SAM.gov response and certification, preserve the responsible person's evidence and timestamp, and require manual attestation. Verify applicable agency guidance before treating the certification as a workflow blocker. Do not automate the certification or claim an external connector exists.",
       "implementation_state": "unverified"
     }
   ]
