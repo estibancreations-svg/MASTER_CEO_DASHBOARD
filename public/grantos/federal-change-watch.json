@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "system_key": "SYS-GRANT-001",
-  "reviewed_on": "2026-10-28",
+  "reviewed_on": "2026-11-03",
   "scope": "Official federal changes potentially relevant to GrantOS. Source facts are distinct from conditional impact assessments. An entry does not assert that GrantOS has an active external connector or that implementation is complete.",
   "updates": [
     {
@@ -106,6 +106,42 @@
       "urgency": "medium",
       "action": "verify",
       "next_step": "Confirm whether GrantOS's intended applicant population includes higher-education institutions. If it does, design a source-backed preflight field/checklist for the institution's own SAM.gov response and certification, preserve the responsible person's evidence and timestamp, and require manual attestation. Verify applicable agency guidance before treating the certification as a workflow blocker. Do not automate the certification or claim an external connector exists.",
+      "implementation_state": "unverified"
+    },
+    {
+      "id": "sam-site-certificates-auto-renewal-2026-11-10",
+      "title": "SAM.gov and api.sam.gov certificate renewal scheduled for November 10",
+      "source": "SAM.gov",
+      "published_on": "2026-11-03",
+      "effective_on": "2026-11-10",
+      "source_url": "https://sam.gov/",
+      "supporting_sources": [
+        {
+          "title": "SAM.gov homepage announcement: SAM Site Certificates Renewal on November 10, 2026",
+          "url": "https://sam.gov/",
+          "source_date": "2026-11-03",
+          "detail": "The official SAM.gov homepage announcement states that sam.gov and api.sam.gov certificates will renew automatically on November 10, 2026 and recommends that external partners and users implement necessary technical updates to maintain compliance and continued integration."
+        },
+        {
+          "title": "SAM.gov: SAM Site Certificates Validity and Renewal Updates",
+          "url": "https://sam.gov/announcements/sam-site-certificates-validity-and-renewal-updates",
+          "source_date": "2026-10-19",
+          "detail": "The standing notice says new SAM certificates renew automatically and that website certificates will have 100-day validity beginning March 15, 2027. It does not specify the technical details of the November 10 renewal."
+        }
+      ],
+      "category": "authentication_security",
+      "source_status": "scheduled",
+      "confirmed_change": "On November 3, 2026, SAM.gov announced that sam.gov and api.sam.gov certificates will renew automatically on November 10, 2026. The notice recommends that external partners and users implement necessary technical updates to maintain compliance and continued integration. The public notice does not specify a replacement certificate fingerprint, issuer/chain change, TLS protocol change, endpoint change, or required client configuration.",
+      "affected_grantos_component": "Any current or future outbound HTTPS client to sam.gov or api.sam.gov, including TLS trust configuration, certificate pinning, custom CA bundles, outbound proxies/TLS inspection, connection monitoring, and SAM.gov API integration health checks.",
+      "likely_impact": "Time-sensitive conditional risk: a client that pins a leaf certificate, relies on stale bundled certificate material, or traverses an intermediary with an outdated trust store could fail TLS validation after renewal. Clients using normal platform trust-store validation may require no change. No SAM.gov or Grants.gov connector or direct api.sam.gov endpoint reference was found in the reviewed MASTER_CEO_DASHBOARD source; therefore no active GrantOS dependency is established.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/cd58a2b83ab3133300c20ab45bb5da2ca6c0d2bc/src/components/GrantOSWorkspace.tsx",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/cd58a2b83ab3133300c20ab45bb5da2ca6c0d2bc/docs/architecture/CONNECTION-REGISTRY.md"
+      ],
+      "urgency": "high",
+      "action": "verify",
+      "next_step": "Before November 10, inventory deployed and planned outbound clients for sam.gov and api.sam.gov, including server-side fetches, scheduled jobs, EC Fabric handlers, CI secrets/configuration, custom CA bundles, certificate pinning, TLS inspection and egress proxies. If a dependency exists, verify hostname validation and the current certificate chain through the same production network path before and after renewal; update only stale trust material or pinning using a supported rotation strategy. Never disable TLS verification. If no dependency exists, record that result and retain normal platform trust-store validation.",
       "implementation_state": "unverified"
     }
   ]
