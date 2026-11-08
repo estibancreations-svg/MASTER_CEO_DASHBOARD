@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "system_key": "SYS-GRANT-001",
-  "reviewed_on": "2026-11-03",
+  "reviewed_on": "2026-11-07",
   "scope": "Official federal changes potentially relevant to GrantOS. Source facts are distinct from conditional impact assessments. An entry does not assert that GrantOS has an active external connector or that implementation is complete.",
   "updates": [
     {
@@ -142,6 +142,28 @@
       "urgency": "high",
       "action": "verify",
       "next_step": "Before November 10, inventory deployed and planned outbound clients for sam.gov and api.sam.gov, including server-side fetches, scheduled jobs, EC Fabric handlers, CI secrets/configuration, custom CA bundles, certificate pinning, TLS inspection and egress proxies. If a dependency exists, verify hostname validation and the current certificate chain through the same production network path before and after renewal; update only stale trust material or pinning using a supported rotation strategy. Never disable TLS verification. If no dependency exists, record that result and retain normal platform trust-store validation.",
+      "implementation_state": "unverified"
+    },
+    {
+      "id": "sam-role-requests-not-functioning-2026-11-06",
+      "title": "SAM.gov role requests not processing",
+      "source": "SAM.gov",
+      "published_on": "2026-11-06",
+      "effective_on": null,
+      "source_url": "https://sam.gov/alerts/sam-role-requests-not-functioning",
+      "category": "service_status",
+      "source_status": "active",
+      "confirmed_change": "SAM.gov published an active Error alert on November 6, 2026 stating that role requests are currently not processing and are resulting in an error; SAM.gov says it is working to resolve the issue. The alert gives no end date or restoration estimate.",
+      "affected_grantos_component": "Any GrantOS applicant-onboarding or pre-award guidance that directs an organization administrator to request or manage roles in SAM.gov. This is separate from GrantOS's own identity, membership, and authorization controls.",
+      "likely_impact": "Conditional workflow interruption: an applicant or entity administrator who needs a SAM.gov role request may be unable to complete that external step while the alert remains active. The reviewed GrantOS connection registry says live discovery and submission providers remain deferred, and the GrantOS workspace has no SAM.gov role-request client; no direct connector is established. This alert does not demonstrate a GrantOS authentication outage or change to SAM.gov API contracts.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/grantos/federal-updates-ledger-2026-10-23/docs/architecture/CONNECTION-REGISTRY.md",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/grantos/federal-updates-ledger-2026-10-23/src/components/GrantOSWorkspace.tsx"
+      ],
+      "urgency": "medium",
+      "action": "verify",
+      "next_step": "When an applicant reports a SAM.gov role-request failure, check the active official alert before advising a retry. Do not automate repeated requests or treat the external issue as a GrantOS role/auth failure. Continue non-dependent GrantOS preparation, recheck the official alert for resolution, and retry the SAM.gov step only after the service notice is inactive or the user confirms the service works.",
       "implementation_state": "unverified"
     }
   ]
