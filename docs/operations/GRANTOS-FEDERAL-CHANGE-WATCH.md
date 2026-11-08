@@ -10,10 +10,11 @@ This ledger records official changes that could affect GrantOS. The app reads `p
 - An inactive federal notice can remain here for historical reconciliation. It is not a current outage.
 - Do not treat Contract Awards (procurement) as a grants opportunity or submission source.
 
-## Key changes recorded through November 3, 2026
+## Key changes recorded through November 7, 2026
 
 | Change | Effective date | GrantOS check | Official source |
 | --- | --- | --- | --- |
+| SAM.gov role requests currently fail with an error; active incident, no restoration estimate | No effective date published; alert published November 6, 2026 | For affected applicants, check the active alert before retrying SAM.gov role requests. This is not a GrantOS identity/authentication outage; no SAM role connector was found in the reviewed dashboard source. | [SAM.gov active Error alert](https://sam.gov/alerts/sam-role-requests-not-functioning) |
 | SAM.gov and api.sam.gov certificates renew automatically on the announced November 10 rotation | November 10, 2026 | Before the date, inventory direct clients, certificate pinning, custom CA bundles, TLS inspection and proxies; verify the real network path. The notice does not specify a new issuer, chain, fingerprint or TLS setting. | [SAM.gov homepage announcement (Nov 3)](https://sam.gov/); [standing certificate notice](https://sam.gov/announcements/sam-site-certificates-validity-and-renewal-updates) |
 | SAM.gov site certificates renew automatically under 100-day validity | March 15, 2027 | Inventory certificate pinning, bundled trust material, and proxy behavior for any SAM client | [SAM.gov announcement](https://sam.gov/announcements/sam-site-certificates-validity-and-renewal-updates) |
 | Contract Awards report delay affecting dates from October 18, now marked inactive | October 18, 2026 | If imported, replay and reconcile the affected period | [SAM.gov alert](https://sam.gov/alerts/contract-awards-data-delayed-0) |
@@ -28,6 +29,7 @@ This ledger records official changes that could affect GrantOS. The app reads `p
 3. Set the source fact, conditional impact, affected component, urgency, action type, and next verification or implementation step separately. State whether the actual connector and implementation have been verified.
 4. Commit the JSON and any related code/config changes with a source-linked pull request. Validate JSON, the GrantOS view, and the project's release gates before merge. If verification fails, keep a reviewable PR and report the blocker.
 5. For certificate-renewal notices, do not infer a new CA, chain, fingerprint, or TLS protocol from a generic renewal announcement. Verify actual dependencies and the deployed network path; never disable TLS verification.
-6. Once implemented, revise the entry's implementation state with a commit or runtime evidence. Do not mark a source notice as deployed merely because it appears in this ledger.
+6. For active service-status incidents, record the official publication/last-updated date, active state, and any stated end date separately from an effective date. Describe applicant workflow impact as conditional when no connector exists; do not conflate an external SAM.gov role issue with GrantOS authentication. Recheck the official alert before advising a retry.
+7. Once implemented, revise the entry's implementation state with a commit or runtime evidence. Do not mark a source notice as deployed merely because it appears in this ledger.
 
 The repository is the change record. Runtime integration and production readiness require separate evidence.
