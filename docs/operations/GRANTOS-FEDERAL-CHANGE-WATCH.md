@@ -10,17 +10,22 @@ This ledger records official changes that could affect GrantOS. The app reads `p
 - An inactive federal notice can remain here for historical reconciliation. It is not a current outage.
 - Do not treat Contract Awards (procurement) as a grants opportunity or submission source.
 
-## Key changes recorded through November 7, 2026
+## Key changes recorded through November 8, 2026
 
 | Change | Effective date | GrantOS check | Official source |
 | --- | --- | --- | --- |
-| SAM.gov role requests currently fail with an error; active incident, no restoration estimate | No effective date published; alert published November 6, 2026 | For affected applicants, check the active alert before retrying SAM.gov role requests. This is not a GrantOS identity/authentication outage; no SAM role connector was found in the reviewed dashboard source. | [SAM.gov active Error alert](https://sam.gov/alerts/sam-role-requests-not-functioning) |
+| SAM.gov role requests largely restored; rare error-message wording remains under correction; active Warning last updated November 8, 2026 | No effective date published; alert published November 6 and last updated November 8, 2026 | Requests are processing again correctly. If a user still sees an unexpected message, verify the actual role/request state in SAM.gov before retrying to avoid duplicates. This is not a GrantOS identity/authentication outage; no SAM role connector was found in the reviewed dashboard source. The ledger retains the November 6 Error state in `status_history`. | [SAM.gov active Warning](https://sam.gov/alerts/sam-role-requests-not-functioning) |
 | SAM.gov and api.sam.gov certificates renew automatically on the announced November 10 rotation | November 10, 2026 | Before the date, inventory direct clients, certificate pinning, custom CA bundles, TLS inspection and proxies; verify the real network path. The notice does not specify a new issuer, chain, fingerprint or TLS setting. | [SAM.gov homepage announcement (Nov 3)](https://sam.gov/); [standing certificate notice](https://sam.gov/announcements/sam-site-certificates-validity-and-renewal-updates) |
 | SAM.gov site certificates renew automatically under 100-day validity | March 15, 2027 | Inventory certificate pinning, bundled trust material, and proxy behavior for any SAM client | [SAM.gov announcement](https://sam.gov/announcements/sam-site-certificates-validity-and-renewal-updates) |
 | Contract Awards report delay affecting dates from October 18, now marked inactive | October 18, 2026 | If imported, replay and reconcile the affected period | [SAM.gov alert](https://sam.gov/alerts/contract-awards-data-delayed-0) |
 | Entity Management extracts posted seven days a week | September 6, 2026 | If an extract scheduler exists, verify Sunday/Monday processing | [SAM.gov alert](https://sam.gov/alerts/entity-management-extract-publishing-schedule-change) |
 | Contract Awards API adds `publicDeltaDate` and optional commercial-product/service fields | August 25, 2026 | If a connector exists, test parser tolerance and reveal-date synchronization | [GSA API documentation](https://open.gsa.gov/api/contract-awards/) |
 | SAM.gov higher-education certification under EO 14400 | October 28, 2026 | If higher-education applicants are in scope, verify threshold screening and applicant attestation; no SAM/entity-registration connector found in reviewed dashboard source | [SAM.gov announcement](https://sam.gov/announcements/new-certification-higher-education-institutions-now-available); [GSA FSD guidance](https://www.fsd.gov/gsafsd_sp/en/entity-registration-what-is-required-to-comply-with-the-save-college-sports?id=kb_article_view&sysparm_article=KB0106985) |
+
+
+### November 8 status reconciliation
+
+SAM.gov last updated the role-request alert on November 8, 2026 and changed its title/type from an Error notice to an active Warning: role requests are processing again correctly, but rare unexpected error-message wording remains under correction. The ledger updates the existing stable ID rather than creating a duplicate and preserves the November 6 failure state in `status_history`. Applicants who still see a message should verify the actual role/request state in SAM.gov before retrying; the message wording alone is not proof that processing failed. This remains an external SAM.gov service-status issue, not a GrantOS authentication defect.
 
 ## Update procedure
 
