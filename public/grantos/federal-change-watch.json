@@ -181,7 +181,7 @@
           "observed_on": "2026-11-08",
           "source_last_updated_on": "2026-11-08",
           "title": "SAM Role Requests Issue Largely Resolved",
-          "source_status": "active_warning_largely_resolved",
+          "source_status": "active",
           "confirmed_change": "SAM.gov states that role requests are processing again correctly. In rare circumstances users may still see unexpected error-message wording; SAM.gov is working to correct that wording. The alert remains Active and is classified as a Warning.",
           "source_alert_type": "warning",
           "resolution_state": "largely_resolved_residual_error_wording"
