@@ -152,7 +152,7 @@
       "effective_on": null,
       "source_url": "https://sam.gov/alerts/sam-role-requests-not-functioning",
       "category": "service_status",
-      "source_status": "active_warning_largely_resolved",
+      "source_status": "active",
       "confirmed_change": "The SAM.gov alert, published November 6 and last updated November 8, 2026, now states that role requests are processing again correctly. In rare circumstances users may still see unexpected error-message wording; SAM.gov is working to correct that wording. The alert remains Active and is classified as a Warning. The updated source no longer supports describing role requests as generally not processing.",
       "affected_grantos_component": "Any GrantOS applicant-onboarding or pre-award guidance that directs an organization administrator to request or manage roles in SAM.gov. This is separate from GrantOS's own identity, membership, and authorization controls.",
       "likely_impact": "The broad role-request processing failure appears largely resolved. The residual issue is rare, potentially misleading error-message wording. If an applicant sees an error, the displayed wording may not reliably indicate whether the request was processed; verify the actual role/request state in SAM.gov before retrying to avoid duplicate requests. This is an external SAM.gov service-status warning, not a GrantOS authentication outage or API-contract change. The reviewed GrantOS connection registry says live discovery and submission providers remain deferred, and the workspace has no SAM.gov role-request client; no direct connector is established.",
@@ -173,16 +173,21 @@
           "source_last_updated_on": "2026-11-06",
           "title": "SAM.gov role requests not processing",
           "source_status": "active",
-          "confirmed_change": "SAM.gov published an active Error alert on November 6, 2026 stating that role requests are currently not processing and are resulting in an error; SAM.gov says it is working to resolve the issue. The alert gives no end date or restoration estimate."
+          "confirmed_change": "SAM.gov published an active Error alert on November 6, 2026 stating that role requests are currently not processing and are resulting in an error; SAM.gov says it is working to resolve the issue. The alert gives no end date or restoration estimate.",
+          "source_alert_type": "error",
+          "resolution_state": "role_requests_not_processing"
         },
         {
           "observed_on": "2026-11-08",
           "source_last_updated_on": "2026-11-08",
           "title": "SAM Role Requests Issue Largely Resolved",
           "source_status": "active_warning_largely_resolved",
-          "confirmed_change": "SAM.gov states that role requests are processing again correctly. In rare circumstances users may still see unexpected error-message wording; SAM.gov is working to correct that wording. The alert remains Active and is classified as a Warning."
+          "confirmed_change": "SAM.gov states that role requests are processing again correctly. In rare circumstances users may still see unexpected error-message wording; SAM.gov is working to correct that wording. The alert remains Active and is classified as a Warning.",
+          "source_alert_type": "warning",
+          "resolution_state": "largely_resolved_residual_error_wording"
         }
-      ]
+      ],
+      "resolution_state": "largely_resolved_residual_error_wording"
     }
   ]
 }
