@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "system_key": "SYS-GRANT-001",
-  "reviewed_on": "2026-11-08",
+  "reviewed_on": "2026-11-09",
   "scope": "Official federal changes potentially relevant to GrantOS. Source facts are distinct from conditional impact assessments. An entry does not assert that GrantOS has an active external connector or that implementation is complete.",
   "updates": [
     {
@@ -188,6 +188,42 @@
         }
       ],
       "resolution_state": "largely_resolved_residual_error_wording"
+    },
+    {
+      "id": "sam-contract-awards-delay-2026-11-06",
+      "title": "SAM.gov Contract Awards reports delayed for date ranges on or after November 6",
+      "source": "SAM.gov",
+      "published_on": "2026-11-09",
+      "effective_on": null,
+      "source_url": "https://sam.gov/alerts/contract-awards-data-delayed-1",
+      "category": "data_quality",
+      "source_status": "active",
+      "confirmed_change": "SAM.gov published an active Warning on November 9, 2026 stating that Contract Awards Management and Data Bank are experiencing a delay. Reports covering date ranges on or after November 6, 2026 may contain incomplete or outdated information. SAM.gov is working to resolve the issue and says it will remove the warning once the data refresh is completed. The source does not state a separate effective date; November 6 is the affected report-range start.",
+      "affected_grantos_component": "Any current or future SAM.gov Contract Awards report ingestion, procurement-data reconciliation, freshness controls, and analytics. Contract Awards data is procurement information, not Grants.gov assistance-opportunity or grant-submission data.",
+      "likely_impact": "If GrantOS or an adjacent enterprise workflow consumes Contract Awards reports, affected date ranges may be stale or incomplete and must not be presented as authoritative. The reviewed dashboard source contains no direct SAM.gov Contract Awards connector and no active ingestion is established, so impact to GrantOS is conditional.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/main/docs/architecture/CONNECTION-REGISTRY.md",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/main/src/components/GrantOSWorkspace.tsx"
+      ],
+      "urgency": "medium",
+      "action": "conditional_verification",
+      "next_step": "Verify whether any current code, deployed service, or report cache consumes SAM.gov Contract Awards data. If none, document that the connector is absent. If a consumer exists, mark reports covering ranges on or after November 6 as potentially incomplete, suppress definitive analytics, wait for SAM.gov to remove the warning, then re-fetch and reconcile row counts, timestamps, and delta/reveal-date coverage before restoring trusted status.",
+      "implementation_state": "unverified",
+      "source_last_updated_on": "2026-11-09",
+      "source_alert_type": "warning",
+      "status_history": [
+        {
+          "observed_on": "2026-11-09",
+          "source_last_updated_on": "2026-11-09",
+          "title": "Contract Awards Data Delayed",
+          "source_status": "active",
+          "confirmed_change": "SAM.gov says Contract Awards Management and Data Bank are experiencing a delay. Reports covering date ranges on or after November 6, 2026 may contain incomplete or outdated information; the agency is working to resolve the delay and will remove the warning once the data refresh is completed.",
+          "source_alert_type": "warning",
+          "resolution_state": "data_refresh_delay_active"
+        }
+      ],
+      "resolution_state": "data_refresh_delay_active"
     }
   ]
 }
