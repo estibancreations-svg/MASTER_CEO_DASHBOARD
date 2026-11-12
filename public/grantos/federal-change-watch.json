@@ -148,6 +148,15 @@
       "resolution_state": "renewal_date_passed_alert_inactive_runtime_verification_pending",
       "status_history": [
         {
+          "observed_on": "2026-11-03",
+          "source_last_updated_on": "2026-11-03",
+          "title": "SAM Site Certificates Renewal on November 10, 2026",
+          "source_status": "scheduled",
+          "confirmed_change": "SAM.gov announced that sam.gov and api.sam.gov certificates would renew automatically on November 10, 2026. The notice recommended external partners implement necessary technical updates but did not specify replacement certificate or TLS details.",
+          "source_alert_type": "informational",
+          "resolution_state": "automatic_renewal_scheduled"
+        },
+        {
           "observed_on": "2026-11-11",
           "source_last_updated_on": "2026-11-11",
           "title": "SAM Site Certificates Renewal on November 10, 2026",
