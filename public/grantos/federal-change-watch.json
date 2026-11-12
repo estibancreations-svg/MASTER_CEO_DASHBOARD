@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "system_key": "SYS-GRANT-001",
-  "reviewed_on": "2026-11-09",
+  "reviewed_on": "2026-11-11",
   "scope": "Official federal changes potentially relevant to GrantOS. Source facts are distinct from conditional impact assessments. An entry does not assert that GrantOS has an active external connector or that implementation is complete.",
   "updates": [
     {
@@ -114,7 +114,7 @@
       "source": "SAM.gov",
       "published_on": "2026-11-03",
       "effective_on": "2026-11-10",
-      "source_url": "https://sam.gov/",
+      "source_url": "https://sam.gov/alerts/sam-site-certificates-renewal-november-10-2026",
       "supporting_sources": [
         {
           "title": "SAM.gov homepage announcement: SAM Site Certificates Renewal on November 10, 2026",
@@ -130,19 +130,33 @@
         }
       ],
       "category": "authentication_security",
-      "source_status": "scheduled",
-      "confirmed_change": "On November 3, 2026, SAM.gov announced that sam.gov and api.sam.gov certificates will renew automatically on November 10, 2026. The notice recommends that external partners and users implement necessary technical updates to maintain compliance and continued integration. The public notice does not specify a replacement certificate fingerprint, issuer/chain change, TLS protocol change, endpoint change, or required client configuration.",
+      "source_status": "inactive",
+      "confirmed_change": "SAM.gov announced on November 3, 2026 that sam.gov and api.sam.gov certificates would renew automatically on November 10, 2026. On November 11, the official event alert is marked Inactive and was last updated November 11. The source confirms the scheduled date has passed and the alert is inactive; it does not report a replacement certificate fingerprint, issuer/chain change, TLS protocol change, or successful client handshake.",
       "affected_grantos_component": "Any current or future outbound HTTPS client to sam.gov or api.sam.gov, including TLS trust configuration, certificate pinning, custom CA bundles, outbound proxies/TLS inspection, connection monitoring, and SAM.gov API integration health checks.",
-      "likely_impact": "Time-sensitive conditional risk: a client that pins a leaf certificate, relies on stale bundled certificate material, or traverses an intermediary with an outdated trust store could fail TLS validation after renewal. Clients using normal platform trust-store validation may require no change. No SAM.gov or Grants.gov connector or direct api.sam.gov endpoint reference was found in the reviewed MASTER_CEO_DASHBOARD source; therefore no active GrantOS dependency is established.",
+      "likely_impact": "The scheduled renewal date has passed and the specific event alert is now inactive. A client with leaf-certificate pinning, stale bundled trust material, or an intermediary with outdated trust could still fail validation, but no direct SAM.gov client or active GrantOS dependency is established in the reviewed dashboard source. Inactive alert status is not proof of successful runtime TLS validation.",
       "connector_status": "not_found_in_reviewed_dashboard_source",
       "connector_evidence": [
         "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/cd58a2b83ab3133300c20ab45bb5da2ca6c0d2bc/src/components/GrantOSWorkspace.tsx",
         "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/cd58a2b83ab3133300c20ab45bb5da2ca6c0d2bc/docs/architecture/CONNECTION-REGISTRY.md"
       ],
-      "urgency": "high",
+      "urgency": "low",
       "action": "verify",
-      "next_step": "Before November 10, inventory deployed and planned outbound clients for sam.gov and api.sam.gov, including server-side fetches, scheduled jobs, EC Fabric handlers, CI secrets/configuration, custom CA bundles, certificate pinning, TLS inspection and egress proxies. If a dependency exists, verify hostname validation and the current certificate chain through the same production network path before and after renewal; update only stale trust material or pinning using a supported rotation strategy. Never disable TLS verification. If no dependency exists, record that result and retain normal platform trust-store validation.",
-      "implementation_state": "unverified"
+      "next_step": "Inventory deployed and planned outbound clients for sam.gov and api.sam.gov, including server-side fetches, scheduled jobs, EC Fabric handlers, CI configuration, custom CA bundles, certificate pinning, TLS inspection, and egress proxies. If a client exists, verify hostname validation and the certificate chain from its actual deployed network path after the November 10 renewal. If no client exists, record that result. The current audit environment could not resolve api.sam.gov, so no live certificate handshake was verified. Never disable TLS verification.",
+      "implementation_state": "unverified",
+      "source_last_updated_on": "2026-11-11",
+      "source_alert_type": "informational",
+      "resolution_state": "renewal_date_passed_alert_inactive_runtime_verification_pending",
+      "status_history": [
+        {
+          "observed_on": "2026-11-11",
+          "source_last_updated_on": "2026-11-11",
+          "title": "SAM Site Certificates Renewal on November 10, 2026",
+          "source_status": "inactive",
+          "confirmed_change": "The official SAM.gov event alert is now marked Inactive and was last updated November 11, 2026. The scheduled automatic renewal date was November 10, 2026. The alert does not publish a replacement fingerprint, issuer/chain change, TLS protocol change, or confirmation of a successful client handshake.",
+          "source_alert_type": "informational",
+          "resolution_state": "renewal_date_passed_alert_inactive_runtime_verification_pending"
+        }
+      ]
     },
     {
       "id": "sam-role-requests-not-functioning-2026-11-06",
