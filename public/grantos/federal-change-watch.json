@@ -1,0 +1,278 @@
+{
+  "schema_version": 1,
+  "system_key": "SYS-GRANT-001",
+  "reviewed_on": "2026-11-13",
+  "scope": "Official federal changes potentially relevant to GrantOS. Source facts are distinct from conditional impact assessments. An entry does not assert that GrantOS has an active external connector or that implementation is complete.",
+  "updates": [
+    {
+      "id": "sam-site-certificates-2026-10-19",
+      "title": "SAM.gov site certificate validity and renewal",
+      "source": "SAM.gov",
+      "published_on": null,
+      "effective_on": "2027-03-15",
+      "source_url": "https://sam.gov/announcements/sam-site-certificates-validity-and-renewal-updates",
+      "category": "authentication_security",
+      "source_status": "active",
+      "confirmed_change": "SAM.gov says website certificates will have 100-day validity beginning March 15, 2027, and new SAM certificates will renew automatically. External partners are instructed to prepare for the renewal process.",
+      "affected_grantos_component": "Any current or future SAM.gov HTTPS/API client, trust configuration, and integration operations.",
+      "likely_impact": "A client that pins a leaf certificate or ships a fixed certificate bundle may fail after rotation. This is conditional; no such GrantOS configuration has been verified.",
+      "urgency": "medium",
+      "action": "verify",
+      "next_step": "Inventory SAM.gov endpoint clients, certificate pinning, trust stores, proxies, and certificate-expiry alerts. If fixed leaf material exists, replace it with a supported trust and rotation approach before March 15, 2027.",
+      "implementation_state": "unverified"
+    },
+    {
+      "id": "sam-contract-awards-delay-2026-10-18",
+      "title": "SAM.gov Contract Awards data delay",
+      "source": "SAM.gov",
+      "published_on": null,
+      "effective_on": "2026-10-18",
+      "source_url": "https://sam.gov/alerts/contract-awards-data-delayed-0",
+      "category": "data_quality",
+      "source_status": "inactive_at_review",
+      "confirmed_change": "SAM.gov warned that Contract Awards Management and Data Bank reports covering date ranges on or after October 18, 2026, could be incomplete or outdated. The warning is now marked inactive.",
+      "affected_grantos_component": "Any current or future Contract Awards import, reconciliation, and analytics.",
+      "likely_impact": "If GrantOS imported affected reports, cached data may require replay and reconciliation. Active ingestion has not been established.",
+      "urgency": "low",
+      "action": "conditional_verification",
+      "next_step": "Determine whether Contract Awards reports were ingested for October 18 onward. If yes, replay the affected range and compare record counts and update timestamps against current SAM.gov data.",
+      "implementation_state": "unverified"
+    },
+    {
+      "id": "sam-entity-daily-extracts-2026-09-06",
+      "title": "SAM.gov Entity Management daily extract schedule",
+      "source": "SAM.gov",
+      "published_on": null,
+      "effective_on": "2026-09-06",
+      "source_url": "https://sam.gov/alerts/entity-management-extract-publishing-schedule-change",
+      "category": "data_cadence",
+      "source_status": "inactive_at_review",
+      "confirmed_change": "Entity Management daily extracts are posted every day of the week, replacing the former Tuesday-through-Saturday schedule.",
+      "affected_grantos_component": "Any current or future SAM entity/UEI synchronization and registration eligibility checks.",
+      "likely_impact": "A Tuesday-through-Saturday ingestion job would leave Sunday and Monday extracts pending. No GrantOS extract job has been verified.",
+      "urgency": "medium",
+      "action": "conditional_verification",
+      "next_step": "Inspect the actual extract scheduler. If it uses the old cadence, run it daily with idempotent processing and a last-successful checkpoint; validate the Sunday and Monday file format and naming.",
+      "implementation_state": "unverified"
+    },
+    {
+      "id": "sam-contract-awards-api-2026-08-25",
+      "title": "SAM.gov Contract Awards API optional filter and response fields",
+      "source": "GSA Open Technology",
+      "published_on": "2026-08-25",
+      "effective_on": "2026-08-25",
+      "source_url": "https://open.gsa.gov/api/contract-awards/",
+      "category": "api_schema",
+      "source_status": "documented",
+      "confirmed_change": "The v1 Contract Awards API documentation added the optional publicDeltaDate filter, which selects by last-modified or reveal date, and the optional coreData.productOrServiceInformation.commercialProductService response object with code and name.",
+      "affected_grantos_component": "Any current or future SAM Contract Awards parser and incremental sync.",
+      "likely_impact": "Strict response validation could reject the extra object; a lastModifiedDate-only cursor could miss newly revealed records. These are inferred risks and no Contract Awards connector has been verified.",
+      "urgency": "low",
+      "action": "conditional_verification",
+      "next_step": "Check whether GrantOS has Contract Awards ingestion. If active, test against Alpha with unknown-field tolerance and compare publicDeltaDate versus lastModifiedDate replay behavior; map the added fields as optional.",
+      "implementation_state": "unverified"
+    },
+    {
+      "id": "sam-higher-ed-college-sports-certification-2026-10-28",
+      "title": "SAM.gov higher-education College Sports EO certification",
+      "source": "SAM.gov / GSA Federal Service Desk",
+      "published_on": "2026-10-28",
+      "effective_on": "2026-10-28",
+      "source_url": "https://sam.gov/announcements/new-certification-higher-education-institutions-now-available",
+      "supporting_sources": [
+        {
+          "title": "GSA Federal Service Desk: Entity Registration — Save College Sports Executive Order",
+          "url": "https://www.fsd.gov/gsafsd_sp/en/entity-registration-what-is-required-to-comply-with-the-save-college-sports?id=kb_article_view&sysparm_article=KB0106985",
+          "source_date": "2026-10-28",
+          "detail": "Explains the $20 million athletics-revenue threshold, annual SAM.gov registration question, and certification prompt."
+        },
+        {
+          "title": "Executive Order 14400: Urgent National Action To Save College Sports",
+          "url": "https://www.federalregister.gov/documents/2026/04/09/2026-06961/urgent-national-action-to-save-college-sports",
+          "source_date": "2026-04-09",
+          "detail": "Sections 3–6 effective August 1, 2026; directs agencies, as appropriate, to evaluate specified violations when determining present responsibility."
+        }
+      ],
+      "category": "policy_compliance",
+      "source_status": "active",
+      "confirmed_change": "SAM.gov announced on October 28, 2026 that a new certification is available for higher-education institutions under Executive Order 14400. GSA's Federal Service Desk says it applies to higher-education institutions applying for federal funding that earned $20 million or more in intercollegiate athletics revenue. During annual SAM.gov registration, entities selecting Educational Institution are asked the threshold question; a Yes answer triggers a certification concerning compliance with EO 14400. The EO directs agencies, as appropriate, to evaluate specified violations when determining present responsibility.",
+      "affected_grantos_component": "GrantOS applicant profile, pre-award compliance/readiness checklist, and any future SAM.gov entity-registration or eligibility integration; most relevant when the applicant is a higher-education institution meeting the stated revenue threshold.",
+      "likely_impact": "Conditional policy impact: if GrantOS supports affected higher-education applicants, it may need a source-backed preflight check and a record of the applicant's SAM.gov certification status. This is not a universal grant eligibility rule and GrantOS must not self-certify or infer compliance. Repository searches found no SAM.gov entity-registration or Grants.gov opportunity/submission connector in the reviewed dashboard source; a generic EC Fabric connector registry does not establish one.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/cd58a2b83ab3133300c20ab45bb5da2ca6c0d2bc/src/components/GrantOSWorkspace.tsx",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/cd58a2b83ab3133300c20ab45bb5da2ca6c0d2bc/docs/architecture/CONNECTION-REGISTRY.md"
+      ],
+      "urgency": "medium",
+      "action": "verify",
+      "next_step": "Confirm whether GrantOS's intended applicant population includes higher-education institutions. If it does, design a source-backed preflight field/checklist for the institution's own SAM.gov response and certification, preserve the responsible person's evidence and timestamp, and require manual attestation. Verify applicable agency guidance before treating the certification as a workflow blocker. Do not automate the certification or claim an external connector exists.",
+      "implementation_state": "unverified"
+    },
+    {
+      "id": "sam-site-certificates-auto-renewal-2026-11-10",
+      "title": "SAM.gov and api.sam.gov certificate renewal scheduled for November 10",
+      "source": "SAM.gov",
+      "published_on": "2026-11-03",
+      "effective_on": "2026-11-10",
+      "source_url": "https://sam.gov/alerts/sam-site-certificates-renewal-november-10-2026",
+      "supporting_sources": [
+        {
+          "title": "SAM.gov homepage announcement: SAM Site Certificates Renewal on November 10, 2026",
+          "url": "https://sam.gov/",
+          "source_date": "2026-11-03",
+          "detail": "The official SAM.gov homepage announcement states that sam.gov and api.sam.gov certificates will renew automatically on November 10, 2026 and recommends that external partners and users implement necessary technical updates to maintain compliance and continued integration."
+        },
+        {
+          "title": "SAM.gov: SAM Site Certificates Validity and Renewal Updates",
+          "url": "https://sam.gov/announcements/sam-site-certificates-validity-and-renewal-updates",
+          "source_date": "2026-10-19",
+          "detail": "The standing notice says new SAM certificates renew automatically and that website certificates will have 100-day validity beginning March 15, 2027. It does not specify the technical details of the November 10 renewal."
+        }
+      ],
+      "category": "authentication_security",
+      "source_status": "inactive",
+      "confirmed_change": "SAM.gov announced on November 3, 2026 that sam.gov and api.sam.gov certificates would renew automatically on November 10, 2026. On November 11, the official event alert is marked Inactive and was last updated November 11. The source confirms the scheduled date has passed and the alert is inactive; it does not report a replacement certificate fingerprint, issuer/chain change, TLS protocol change, or successful client handshake.",
+      "affected_grantos_component": "Any current or future outbound HTTPS client to sam.gov or api.sam.gov, including TLS trust configuration, certificate pinning, custom CA bundles, outbound proxies/TLS inspection, connection monitoring, and SAM.gov API integration health checks.",
+      "likely_impact": "The scheduled renewal date has passed and the specific event alert is now inactive. A client with leaf-certificate pinning, stale bundled trust material, or an intermediary with outdated trust could still fail validation, but no direct SAM.gov client or active GrantOS dependency is established in the reviewed dashboard source. Inactive alert status is not proof of successful runtime TLS validation.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/cd58a2b83ab3133300c20ab45bb5da2ca6c0d2bc/src/components/GrantOSWorkspace.tsx",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/cd58a2b83ab3133300c20ab45bb5da2ca6c0d2bc/docs/architecture/CONNECTION-REGISTRY.md"
+      ],
+      "urgency": "low",
+      "action": "verify",
+      "next_step": "Inventory deployed and planned outbound clients for sam.gov and api.sam.gov, including server-side fetches, scheduled jobs, EC Fabric handlers, CI configuration, custom CA bundles, certificate pinning, TLS inspection, and egress proxies. If a client exists, verify hostname validation and the certificate chain from its actual deployed network path after the November 10 renewal. If no client exists, record that result. The current audit environment could not resolve api.sam.gov, so no live certificate handshake was verified. Never disable TLS verification.",
+      "implementation_state": "unverified",
+      "source_last_updated_on": "2026-11-11",
+      "source_alert_type": "informational",
+      "resolution_state": "renewal_date_passed_alert_inactive_runtime_verification_pending",
+      "status_history": [
+        {
+          "observed_on": "2026-11-03",
+          "source_last_updated_on": "2026-11-03",
+          "title": "SAM Site Certificates Renewal on November 10, 2026",
+          "source_status": "scheduled",
+          "confirmed_change": "SAM.gov announced that sam.gov and api.sam.gov certificates would renew automatically on November 10, 2026. The notice recommended external partners implement necessary technical updates but did not specify replacement certificate or TLS details.",
+          "source_alert_type": "informational",
+          "resolution_state": "automatic_renewal_scheduled"
+        },
+        {
+          "observed_on": "2026-11-11",
+          "source_last_updated_on": "2026-11-11",
+          "title": "SAM Site Certificates Renewal on November 10, 2026",
+          "source_status": "inactive",
+          "confirmed_change": "The official SAM.gov event alert is now marked Inactive and was last updated November 11, 2026. The scheduled automatic renewal date was November 10, 2026. The alert does not publish a replacement fingerprint, issuer/chain change, TLS protocol change, or confirmation of a successful client handshake.",
+          "source_alert_type": "informational",
+          "resolution_state": "renewal_date_passed_alert_inactive_runtime_verification_pending"
+        }
+      ]
+    },
+    {
+      "id": "sam-role-requests-not-functioning-2026-11-06",
+      "title": "SAM.gov role requests largely restored; rare error-message wording remains",
+      "source": "SAM.gov",
+      "published_on": "2026-11-06",
+      "effective_on": null,
+      "source_url": "https://sam.gov/alerts/sam-role-requests-not-functioning",
+      "category": "service_status",
+      "source_status": "active",
+      "confirmed_change": "The SAM.gov alert, published November 6 and last updated November 8, 2026, now states that role requests are processing again correctly. In rare circumstances users may still see unexpected error-message wording; SAM.gov is working to correct that wording. The alert remains Active and is classified as a Warning. The updated source no longer supports describing role requests as generally not processing.",
+      "affected_grantos_component": "Any GrantOS applicant-onboarding or pre-award guidance that directs an organization administrator to request or manage roles in SAM.gov. This is separate from GrantOS's own identity, membership, and authorization controls.",
+      "likely_impact": "The broad role-request processing failure appears largely resolved. The residual issue is rare, potentially misleading error-message wording. If an applicant sees an error, the displayed wording may not reliably indicate whether the request was processed; verify the actual role/request state in SAM.gov before retrying to avoid duplicate requests. This is an external SAM.gov service-status warning, not a GrantOS authentication outage or API-contract change. The reviewed GrantOS connection registry says live discovery and submission providers remain deferred, and the workspace has no SAM.gov role-request client; no direct connector is established.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/grantos/federal-updates-ledger-2026-10-23/docs/architecture/CONNECTION-REGISTRY.md",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/grantos/federal-updates-ledger-2026-10-23/src/components/GrantOSWorkspace.tsx"
+      ],
+      "urgency": "low",
+      "action": "verify",
+      "next_step": "For any applicant who still sees an unexpected message, inspect the actual SAM.gov role/request state before retrying; do not treat message wording alone as proof of failure or submit duplicate requests. Continue monitoring the official alert until SAM.gov removes the warning or confirms the wording correction. Do not change GrantOS identity or authorization code for this external incident.",
+      "implementation_state": "unverified",
+      "source_last_updated_on": "2026-11-08",
+      "source_alert_type": "warning",
+      "status_history": [
+        {
+          "observed_on": "2026-11-07",
+          "source_last_updated_on": "2026-11-06",
+          "title": "SAM.gov role requests not processing",
+          "source_status": "active",
+          "confirmed_change": "SAM.gov published an active Error alert on November 6, 2026 stating that role requests are currently not processing and are resulting in an error; SAM.gov says it is working to resolve the issue. The alert gives no end date or restoration estimate.",
+          "source_alert_type": "error",
+          "resolution_state": "role_requests_not_processing"
+        },
+        {
+          "observed_on": "2026-11-08",
+          "source_last_updated_on": "2026-11-08",
+          "title": "SAM Role Requests Issue Largely Resolved",
+          "source_status": "active",
+          "confirmed_change": "SAM.gov states that role requests are processing again correctly. In rare circumstances users may still see unexpected error-message wording; SAM.gov is working to correct that wording. The alert remains Active and is classified as a Warning.",
+          "source_alert_type": "warning",
+          "resolution_state": "largely_resolved_residual_error_wording"
+        }
+      ],
+      "resolution_state": "largely_resolved_residual_error_wording"
+    },
+    {
+      "id": "sam-contract-awards-delay-2026-11-06",
+      "title": "SAM.gov Contract Awards reports delayed for date ranges on or after November 6",
+      "source": "SAM.gov",
+      "published_on": "2026-11-09",
+      "effective_on": null,
+      "source_url": "https://sam.gov/alerts/contract-awards-data-delayed-1",
+      "category": "data_quality",
+      "source_status": "active",
+      "confirmed_change": "SAM.gov published an active Warning on November 9, 2026 stating that Contract Awards Management and Data Bank are experiencing a delay. Reports covering date ranges on or after November 6, 2026 may contain incomplete or outdated information. SAM.gov is working to resolve the issue and says it will remove the warning once the data refresh is completed. The source does not state a separate effective date; November 6 is the affected report-range start.",
+      "affected_grantos_component": "Any current or future SAM.gov Contract Awards report ingestion, procurement-data reconciliation, freshness controls, and analytics. Contract Awards data is procurement information, not Grants.gov assistance-opportunity or grant-submission data.",
+      "likely_impact": "If GrantOS or an adjacent enterprise workflow consumes Contract Awards reports, affected date ranges may be stale or incomplete and must not be presented as authoritative. The reviewed dashboard source contains no direct SAM.gov Contract Awards connector and no active ingestion is established, so impact to GrantOS is conditional.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/main/docs/architecture/CONNECTION-REGISTRY.md",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/main/src/components/GrantOSWorkspace.tsx"
+      ],
+      "urgency": "medium",
+      "action": "conditional_verification",
+      "next_step": "Verify whether any current code, deployed service, or report cache consumes SAM.gov Contract Awards data. If none, document that the connector is absent. If a consumer exists, mark reports covering ranges on or after November 6 as potentially incomplete, suppress definitive analytics, wait for SAM.gov to remove the warning, then re-fetch and reconcile row counts, timestamps, and delta/reveal-date coverage before restoring trusted status.",
+      "implementation_state": "unverified",
+      "source_last_updated_on": "2026-11-09",
+      "source_alert_type": "warning",
+      "status_history": [
+        {
+          "observed_on": "2026-11-09",
+          "source_last_updated_on": "2026-11-09",
+          "title": "Contract Awards Data Delayed",
+          "source_status": "active",
+          "confirmed_change": "SAM.gov says Contract Awards Management and Data Bank are experiencing a delay. Reports covering date ranges on or after November 6, 2026 may contain incomplete or outdated information; the agency is working to resolve the delay and will remove the warning once the data refresh is completed.",
+          "source_alert_type": "warning",
+          "resolution_state": "data_refresh_delay_active"
+        }
+      ],
+      "resolution_state": "data_refresh_delay_active"
+    },
+    {
+      "id": "sam-contract-awards-csv-header-alignment-2026-11-12",
+      "title": "GSA announces upcoming SAM.gov Contract Awards CSV header alignment",
+      "source": "GSA Open Technology",
+      "published_on": "2026-11-12",
+      "effective_on": null,
+      "source_url": "https://open.gsa.gov/api/contract-awards/",
+      "supporting_sources": [
+        "https://open.gsa.gov/api/contract-awards/v1/ContractAwardAPI_JSONvsCSV.pdf"
+      ],
+      "category": "api_schema",
+      "source_status": "announced",
+      "confirmed_change": "On November 12, 2026, GSA's official Contract Awards API page announced an upcoming change: current Contract Award API CSV headers will be updated to align with the Data Services Contract Award Extract. The effective date is explicitly TBD. The page links to a JSON-to-CSV mapping PDF marked last updated November 4, 2026. The announcement concerns CSV headers; it does not announce a JSON response-schema, endpoint, or authentication change.",
+      "affected_grantos_component": "Any current or future SAM.gov Contract Awards CSV extract consumer, CSV header mapping, ingestion parser, schema validation, ETL, and procurement reporting.",
+      "likely_impact": "If a consumer parses the current CSV header names strictly, the future alignment may require a versioned column mapping and parser/test updates when GSA publishes the effective date and final header contract. The reviewed dashboard source and organization-wide code search found no direct Contract Awards endpoint client or CSV consumer, so GrantOS impact is conditional. Contract Awards is procurement data, not Grants.gov assistance-opportunity or grant-submission data.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/main/docs/architecture/CONNECTION-REGISTRY.md",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/main/src/components/GrantOSWorkspace.tsx"
+      ],
+      "urgency": "low",
+      "action": "conditional_verification",
+      "next_step": "Continue monitoring the GSA API page for an effective date and final header mapping. If a Contract Awards CSV consumer is discovered, compare its fixtures and parser against the final GSA mapping, add explicit versioned header aliases and regression tests, and validate a representative extract before rollout. Do not change JSON parsing or deploy a speculative mapping based on the announcement alone.",
+      "implementation_state": "unverified",
+      "source_last_updated_on": "2026-11-12"
+    }
+  ]
+}
