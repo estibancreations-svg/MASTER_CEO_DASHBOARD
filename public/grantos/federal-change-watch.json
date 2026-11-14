@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "system_key": "SYS-GRANT-001",
-  "reviewed_on": "2026-11-11",
+  "reviewed_on": "2026-11-13",
   "scope": "Official federal changes potentially relevant to GrantOS. Source facts are distinct from conditional impact assessments. An entry does not assert that GrantOS has an active external connector or that implementation is complete.",
   "updates": [
     {
@@ -247,6 +247,32 @@
         }
       ],
       "resolution_state": "data_refresh_delay_active"
+    },
+    {
+      "id": "sam-contract-awards-csv-header-alignment-2026-11-12",
+      "title": "GSA announces upcoming SAM.gov Contract Awards CSV header alignment",
+      "source": "GSA Open Technology",
+      "published_on": "2026-11-12",
+      "effective_on": null,
+      "source_url": "https://open.gsa.gov/api/contract-awards/",
+      "supporting_sources": [
+        "https://open.gsa.gov/api/contract-awards/v1/ContractAwardAPI_JSONvsCSV.pdf"
+      ],
+      "category": "api_schema",
+      "source_status": "announced",
+      "confirmed_change": "On November 12, 2026, GSA's official Contract Awards API page announced an upcoming change: current Contract Award API CSV headers will be updated to align with the Data Services Contract Award Extract. The effective date is explicitly TBD. The page links to a JSON-to-CSV mapping PDF marked last updated November 4, 2026. The announcement concerns CSV headers; it does not announce a JSON response-schema, endpoint, or authentication change.",
+      "affected_grantos_component": "Any current or future SAM.gov Contract Awards CSV extract consumer, CSV header mapping, ingestion parser, schema validation, ETL, and procurement reporting.",
+      "likely_impact": "If a consumer parses the current CSV header names strictly, the future alignment may require a versioned column mapping and parser/test updates when GSA publishes the effective date and final header contract. The reviewed dashboard source and organization-wide code search found no direct Contract Awards endpoint client or CSV consumer, so GrantOS impact is conditional. Contract Awards is procurement data, not Grants.gov assistance-opportunity or grant-submission data.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/main/docs/architecture/CONNECTION-REGISTRY.md",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/main/src/components/GrantOSWorkspace.tsx"
+      ],
+      "urgency": "low",
+      "action": "conditional_verification",
+      "next_step": "Continue monitoring the GSA API page for an effective date and final header mapping. If a Contract Awards CSV consumer is discovered, compare its fixtures and parser against the final GSA mapping, add explicit versioned header aliases and regression tests, and validate a representative extract before rollout. Do not change JSON parsing or deploy a speculative mapping based on the announcement alone.",
+      "implementation_state": "unverified",
+      "source_last_updated_on": "2026-11-12"
     }
   ]
 }
