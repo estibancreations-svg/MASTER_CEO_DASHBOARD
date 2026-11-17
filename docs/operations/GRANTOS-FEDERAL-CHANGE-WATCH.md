@@ -64,3 +64,12 @@ GSA's Contract Awards API page added a dated November 12, 2026 notice that curre
 The source statement is limited to CSV headers. It does not announce a change to the JSON response schema, API endpoint, authentication, or rate limits. Repository and organization-wide code searches found no direct `api.sam.gov/contract-awards` client or Contract Awards CSV consumer in the reviewed GrantOS source. The connection registry continues to defer live federal discovery/submission providers. Record the impact as conditional and do not implement speculative parser changes.
 
 If a consumer is later found, compare its current CSV fixtures with GSA's final Data Services mapping, implement versioned header aliases only after the effective date and final mapping are confirmed, and add representative extract regression tests. Keep procurement Contract Awards separate from Grants.gov assistance-opportunity and grant-submission data.
+
+
+### November 16 Contract Awards data-delay warning status transition
+
+SAM.gov's official [Contract Awards Data Delayed alert](https://sam.gov/alerts/contract-awards-data-delayed-1) now displays **Inactive** and was last updated November 16, 2026. The notice body still identifies report ranges on or after November 6 as potentially incomplete or outdated and says the warning would be removed once the data refresh completed. The source confirms the inactive alert status; it does not separately publish a data-refresh completion report or row-level completeness evidence.
+
+The existing stable ID `sam-contract-awards-delay-2026-11-06` is retained. Its November 9 active-warning observation remains in `status_history`; the November 16 inactive observation is appended. Current status is `inactive`, alert type `warning`, urgency `low`, and resolution state `warning_inactive_data_refresh_completion_not_independently_verified`. The affected report-range start remains November 6; no separate effective date is stated.
+
+The reviewed dashboard source and connection registry still do not establish a direct SAM.gov Contract Awards client or active ingestion. This is procurement data, not Grants.gov assistance-opportunity or grant-submission data. No code/config change is warranted. If a consumer is discovered or introduced, re-fetch affected ranges and reconcile row counts, last-modified timestamps, deletion/delta coverage, and source completeness before restoring trusted analytics. Do not claim data reconciliation complete without runtime evidence.
