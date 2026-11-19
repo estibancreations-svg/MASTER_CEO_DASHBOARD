@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "system_key": "SYS-GRANT-001",
-  "reviewed_on": "2026-11-16",
+  "reviewed_on": "2026-11-18",
   "scope": "Official federal changes potentially relevant to GrantOS. Source facts are distinct from conditional impact assessments. An entry does not assert that GrantOS has an active external connector or that implementation is complete.",
   "updates": [
     {
@@ -294,6 +294,40 @@
           "resolution_state": "nov12_announcement_not_located_mapping_document_only"
         }
       ]
+    },
+    {
+      "id": "sam-integrity-records-transition-2026-11-18",
+      "title": "Integrity Records creation, management and review moved from CPARS.gov to SAM.gov",
+      "source": "SAM.gov",
+      "published_on": "2026-11-18",
+      "effective_on": null,
+      "source_url": "https://sam.gov/announcements/integrity-records-now-samgov",
+      "supporting_sources": [
+        {
+          "title": "SAM.gov homepage announcement dated November 18",
+          "url": "https://sam.gov/",
+          "source_date": "2026-11-18"
+        },
+        {
+          "title": "Integrity and Performance Records Transition guidance",
+          "url": "https://sam.gov/cpars",
+          "detail": "Linked by official announcement; full guidance could not be retrieved during this review."
+        }
+      ],
+      "category": "workflow",
+      "source_status": "active",
+      "source_last_updated_on": "2026-11-18",
+      "confirmed_change": "SAM.gov announced November 18 that Integrity Records are now managed, created and reviewed on SAM.gov and those functions are no longer available on CPARS.gov. The announcement does not state a separate cutover effective date or an API/schema/authentication contract change.",
+      "affected_grantos_component": "Any applicant integrity/present-responsibility due-diligence checklist, source links, training or future Integrity Records integration.",
+      "likely_impact": "Conditional workflow impact: any checklist directing reviewers to CPARS.gov for Integrity Records needs the SAM.gov destination and current access guidance. No CPARS client or dedicated Integrity Records consumer was found in reviewed indexed source; the GrantOS connection registry defers live federal discovery/submission. Do not infer that all CPARS performance functions moved or that GrantOS can create federal records.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/5a5d039fb84107db2ecda56489d8193f13cde785/docs/architecture/CONNECTION-REGISTRY.md"
+      ],
+      "urgency": "low",
+      "action": "conditional_verification",
+      "next_step": "Inventory integrity/present-responsibility checklists and CPARS bookmarks. If used, point Integrity Records review to sam.gov/cpars, confirm current roles and record coverage from official guidance, and retain dated reviewer evidence. Verify separately whether grants applicant due diligence is in scope. Do not implement an assumed API migration.",
+      "implementation_state": "unverified"
     }
   ]
 }
