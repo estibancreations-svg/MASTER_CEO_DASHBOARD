@@ -20,3 +20,9 @@ The [enterprise decision and forensic evidence](https://github.com/estibancreati
 ## Cutover criteria
 
 For a confirmed hosted application, record the Render service, source SHA, build and health checks, data binding, access tests, verified target domain and rollback procedure. Promote after applicable GitHub Quality Gates and runtime checks pass on the exact candidate. Documentation-only repositories carry the mapping in GitHub.
+
+## Migration verification · 2026-11-22T21:35:36-06:00
+
+**Staging smoke checks passed.** The [Render staging deploy](https://dashboard.render.com/web/srv-dc1qj3mc6qcc73bives0/deploys/dep-dc1qj46c6qcc73bivg30) is live on `a70a292a98e67d64ed576a96617c45394fd2adec`. [Staging](https://master-ceo-dashboard-staging.onrender.com) returned 200 for health, dashboard, GrantOS and VisionWeaver routes. Both FFmpeg APIs returned 200 and reported binary readiness. Unauthenticated POSTs returned 401. A local synthetic FFmpeg concat and frame extraction succeeded. The exact-commit [GitHub Quality Gate](https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/actions/runs/45102714566) failed on three existing VisionWeaver invariants (44/47). Supabase project `Master Dashboard` matched the architecture record and all five checked GrantOS/Video tables. Auth redirect, signed-in workflow, live media jobs and production promotion are pending. [Implementation PR #68](https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/pull/68).
+
+[Enterprise verification record](https://github.com/estibancreations-svg/Master-System-Buildout/blob/docs/render-migration-2026-11-22/docs/forensics/2026-11-22-render-migration.md)
