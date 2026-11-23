@@ -22,7 +22,7 @@ Every candidate must pass:
 ## Release-bound evidence
 Every production certification must record:
 - Git commit SHA
-- Vercel deployment ID
+- hosting provider, deploy ID, source ref, and live URL verified for the exact candidate
 - Supabase migration set / schema state
 - Edge Function name + version for changed functions
 - provider configuration version/verification date
@@ -33,7 +33,7 @@ Evidence from an earlier release does not automatically certify a later release.
 
 ## Promotion rule
 A release may not be called production-certified because:
-- Vercel says READY;
+- the hosting provider reports a successful build or live deploy;
 - a route returns HTTP 200;
 - a queue emptied;
 - a database row reached `completed`;
@@ -44,11 +44,15 @@ Promotion requires evidence from browser/user action through application/API/wor
 
 ## Rollback
 For every production release:
-1. retain the prior Vercel deployment as rollback candidate;
+1. retain the previous serving deployment and verify the rollback hostname or deploy ID before promotion;
 2. document database migration reversibility or forward-fix plan;
 3. avoid destructive migrations without verified backup/restore evidence;
 4. record Edge Function rollback version;
 5. stop promotion if rollback cannot be performed safely.
+
+## Render migration · 2026-11-22T21:35:36-06:00
+
+Render is the selected application host. Stage candidates with a versioned GitHub source, capture the exact Render deploy ID and SHA, and use the actual staging hostname for authenticated and negative-path checks. Existing Vercel links are historical release evidence until replacement URLs are verified. Keep required GitHub checks in force while validating the Render preview, and record the verified replacement check before updating branch protection. The dashboard staging pilot passed HTTP checks, and its exact-commit Quality Gate failed. Production promotion remains pending.
 
 ## Environment truth labels
 All user-visible and operational data must distinguish:

@@ -11,7 +11,7 @@ The application is deployed, but deployment availability is not accepted as proo
 Every QC claim must be bound to the exact release it tested. A certification record must identify:
 
 - Git commit SHA;
-- Vercel deployment ID;
+- hosting provider, deployment ID, source ref and live URL;
 - Supabase migration/schema state;
 - changed Edge Function names and versions;
 - provider/configuration verification date;
@@ -22,7 +22,7 @@ Every QC claim must be bound to the exact release it tested. A certification rec
 
 If relevant code, schema, policy, Edge Function, provider configuration, or workflow logic changes, earlier evidence becomes **STALE-UNVERIFIED** for the affected capability until re-tested.
 
-## Current verified infrastructure facts
+## Historical infrastructure baseline — 2026-08-24
 
 - The production application has an active Vercel deployment path.
 - Supabase is the production database/auth/runtime foundation.
@@ -33,6 +33,10 @@ If relevant code, schema, policy, Edge Function, provider configuration, or work
 - `npm run quality` now performs type checks, machine-checkable invariant tests, release-evidence verification and the production build.
 
 These facts certify infrastructure only. They do **not** certify that every named business workflow performs its intended domain work.
+
+## Render staging status · 2026-11-22T21:35:36-06:00
+
+The Render staging candidate passed HTTP and FFmpeg availability checks. GitHub's exact-commit Quality Gate failed on three existing VisionWeaver invariant assertions. Full authentication, primary workflows and production cutover are pending. See the [migration verification record](RENDER-MIGRATION-MAP.md) for the exact deploy and SHA.
 
 ## Known reconstruction blockers
 
@@ -52,7 +56,7 @@ These facts certify infrastructure only. They do **not** certify that every name
 
 ## Promotion rule
 
-A deployed interface is not a production-certified operating system. A route returning HTTP 200, a Vercel `READY` state, a queue becoming empty, a database row reaching `completed`, or a synthetic state-machine test is insufficient.
+A deployed interface is not a production-certified operating system. A route returning HTTP 200, a hosting status of `READY` or `live`, a queue becoming empty, a database row reaching `completed`, or a synthetic state-machine test is insufficient.
 
 Primary workflow promotion requires:
 
