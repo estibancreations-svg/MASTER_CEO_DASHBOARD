@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "system_key": "SYS-GRANT-001",
-  "reviewed_on": "2026-11-18",
+  "reviewed_on": "2026-11-22",
   "scope": "Official federal changes potentially relevant to GrantOS. Source facts are distinct from conditional impact assessments. An entry does not assert that GrantOS has an active external connector or that implementation is complete.",
   "updates": [
     {
@@ -259,30 +259,30 @@
     },
     {
       "id": "sam-contract-awards-csv-header-alignment-2026-11-12",
-      "title": "Unverified prior claim — GSA Contract Awards CSV header alignment",
+      "title": "Upcoming GSA Contract Awards CSV header alignment",
       "source": "GSA Open Technology",
-      "published_on": null,
+      "published_on": "2026-11-12",
       "effective_on": null,
       "source_url": "https://open.gsa.gov/api/contract-awards/",
       "supporting_sources": [
         "https://open.gsa.gov/api/contract-awards/v1/ContractAwardAPI_JSONvsCSV.pdf"
       ],
-      "category": "unverified_documentation",
-      "source_status": "unverified",
-      "confirmed_change": "The prior November 12, 2026 announcement claim is not independently substantiated by the current official sources reviewed. The GSA Contract Awards API page's Change Log lists the December 5, 2025 base version and the August 25, 2026 addition of Commercial Product/Service and publicDeltaDate. The linked official JSON-to-CSV mapping PDF is marked Last Updated November 04, 2026. No official GSA/SAM source was located that announces a November 12 header-alignment change or an effective date of TBD. The mapping document is a reference, not proof of an upcoming header-contract change.",
+      "category": "api_schema",
+      "source_status": "documented_upcoming",
+      "confirmed_change": "GSA's Contract Awards API page includes a dated November 12, 2026 notice that the current Contract Award API CSV headers will be updated to align with the Data Services Contract Award Extract. GSA states that the effective date is TBD and links an official JSON-to-CSV mapping document. The notice does not announce a JSON response, endpoint, authentication, or API-version change.",
       "affected_grantos_component": "Any current or future SAM.gov Contract Awards CSV extract consumer, CSV header mapping, ingestion parser, schema validation, ETL, and procurement reporting.",
-      "likely_impact": "No parser, schema, ETL, or workflow change is justified by the current evidence. If a Contract Awards CSV consumer exists, the November 4 mapping PDF may be used as a current reference, but do not implement a header migration without a dated official announcement, a documented before/after mapping, and a confirmed effective date. The reviewed GrantOS source still has no direct Contract Awards client or CSV consumer.",
+      "likely_impact": "A CSV consumer that binds columns by exact header name could fail or mis-map data when GSA activates the new headers. The risk is conditional: repository searches found no direct Contract Awards client or CSV consumer in the reviewed GrantOS dashboard source, and GSA has not published an effective date.",
       "connector_status": "not_found_in_reviewed_dashboard_source",
       "connector_evidence": [
-        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/main/docs/architecture/CONNECTION-REGISTRY.md",
-        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/main/src/components/GrantOSWorkspace.tsx"
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/5a5d039fb84107db2ecda56489d8193f13cde785/docs/architecture/CONNECTION-REGISTRY.md",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/5a5d039fb84107db2ecda56489d8193f13cde785/src/components/GrantOSWorkspace.tsx"
       ],
       "urgency": "low",
-      "action": "monitor_only",
-      "next_step": "Monitor the official GSA Contract Awards API Change Log and the JSON-to-CSV mapping PDF. Create a new confirmed-change entry only if GSA publishes a dated header-contract change with an authoritative before/after mapping or effective date. If a consumer is found, inventory its current CSV fixtures before making any parser change.",
+      "action": "conditional_verification",
+      "next_step": "Continue monitoring the official GSA page for an effective date. If a Contract Awards CSV consumer is discovered or introduced, capture current headers and fixtures, compare them with GSA's linked mapping, add versioned header aliases and regression tests, and test against Alpha before the effective date. Do not change JSON parsing or authentication for this notice.",
       "implementation_state": "unverified",
-      "source_last_updated_on": "2026-11-04",
-      "resolution_state": "nov12_announcement_not_located_mapping_document_only",
+      "source_last_updated_on": "2026-11-12",
+      "resolution_state": "official_nov12_notice_confirmed_effective_date_tbd",
       "status_history": [
         {
           "observed_on": "2026-11-16",
@@ -292,6 +292,15 @@
           "confirmed_change": "The official GSA API page's Change Log currently lists only the December 5, 2025 base version and August 25, 2026 addition of Commercial Product/Service and publicDeltaDate. The linked JSON-to-CSV mapping PDF says Last Updated November 04, 2026. Official-source searches did not locate a November 12 announcement or an effective-date-TBD statement. The prior November 12 claim is not independently substantiated; this stable historical entry is retained but must not be treated as a confirmed federal change.",
           "correction_type": "source_reverification",
           "resolution_state": "nov12_announcement_not_located_mapping_document_only"
+        },
+        {
+          "observed_on": "2026-11-22",
+          "source_last_updated_on": "2026-11-12",
+          "title": "Upcoming Contract Award API CSV header alignment",
+          "source_status": "documented_upcoming",
+          "confirmed_change": "The official GSA Contract Awards API page now displays the dated November 12 notice: current CSV headers will be aligned with the Data Services Contract Award Extract, with the effective date still TBD. This resolves the November 16 source-verification gap; it does not establish that the change is active.",
+          "correction_type": "source_reverification",
+          "resolution_state": "official_nov12_notice_confirmed_effective_date_tbd"
         }
       ]
     },
