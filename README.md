@@ -1,5 +1,12 @@
 # MASTER_CEO_DASHBOARD
 
+## Hosting decision and deployment mapping
+
+Estiban Creations selected **Render** for application hosting. Existing Supabase projects continue to provide PostgreSQL, authentication and storage where applicable. This repository's placement is **Wave 1 · first cutover**. Render Node web service for React/Vite and same-origin VisionWeaver continuity/assembly routes. Keep the existing Supabase database, Auth and Storage. Match the deployed project binding before changing redirects. Pilot GrantOS research and app workflows independently.
+
+The GrantOS review verified 27 failed Vercel preview checks across nine commit SHAs, a temporary successful preview checkpoint and a separate production availability block. See the [repository mapping and evidence](docs/RENDER-MIGRATION-MAP.md) for context and release requirements.
+
+
 Governed Estiban Creations executive command shell and attached-system workspace.
 
 ## Architecture authority
@@ -102,3 +109,7 @@ Canonical detail remains in Design Studio and VisionWeaver. Documentation does n
 ## VisionWeaver Prime — October 10-11, 2026
 
 VisionWeaver Prime is a fresh, dedicated VisionWeaver front end (private repo `estibancreations-svg/VisionWeaver-Prime`, own Supabase project): 27 pages, workspace sign-in with Google, Apple and Microsoft buttons built, live project records, and a guided new-project walkthrough. It is deployed but not production-certified, its sign-in providers are not yet switched on, and it is not yet attached to this dashboard. See the [2026-10-11 workstate](docs/operations/CURRENT-WORKSTATE-2026-10-11.md) for what changed, open items and the one known gap (two database migrations not saved in GitHub).
+
+### Migration verification · 2026-11-22T21:35:36-06:00
+
+**Staging smoke checks passed.** See the [timestamped deployment mapping](docs/RENDER-MIGRATION-MAP.md) for evidence and remaining checks.
