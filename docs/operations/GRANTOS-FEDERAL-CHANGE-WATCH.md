@@ -10,7 +10,7 @@ This ledger records official changes that could affect GrantOS. The app reads `p
 - An inactive federal notice can remain here for historical reconciliation. It is not a current outage.
 - Do not treat Contract Awards (procurement) as a grants opportunity or submission source.
 
-## Key changes recorded through November 13, 2026
+## Key changes recorded through November 22, 2026
 
 | Change | Effective date | GrantOS check | Official source |
 | --- | --- | --- | --- |
@@ -75,6 +75,8 @@ The existing stable ID `sam-contract-awards-delay-2026-11-06` is retained. Its N
 The reviewed dashboard source and connection registry still do not establish a direct SAM.gov Contract Awards client or active ingestion. This is procurement data, not Grants.gov assistance-opportunity or grant-submission data. No code/config change is warranted. If a consumer is discovered or introduced, re-fetch affected ranges and reconcile row counts, last-modified timestamps, deletion/delta coverage, and source completeness before restoring trusted analytics. Do not claim data reconciliation complete without runtime evidence.
 
 
-### November 16 source re-verification — GSA CSV header claim
+### November 22 source re-verification — GSA CSV header notice confirmed
 
-The existing stable entry `sam-contract-awards-csv-header-alignment-2026-11-12` is retained for historical traceability but is now marked `unverified`. The current official [GSA Contract Awards API Change Log](https://open.gsa.gov/api/contract-awards/) lists the December 5, 2025 base version and the August 25, 2026 addition of Commercial Product/Service and `publicDeltaDate`. The linked official [JSON-to-CSV mapping PDF](https://open.gsa.gov/api/contract-awards/v1/ContractAwardAPI_JSONvsCSV.pdf) is marked Last Updated November 04, 2026. Official GSA/SAM searches did not locate a November 12 announcement or an effective-date-TBD statement. The mapping document is a reference, not proof of an upcoming header-contract change. No parser or schema change is warranted. Reopen only when an authoritative dated announcement or a documented before/after mapping is published.
+The stable entry `sam-contract-awards-csv-header-alignment-2026-11-12` retains its November 16 verification-gap observation in `status_history`. On November 22, the official [GSA Contract Awards API page](https://open.gsa.gov/api/contract-awards/) displayed the dated November 12 notice that current CSV headers will be aligned with the Data Services Contract Award Extract and that the effective date remains TBD. The linked [JSON-to-CSV mapping PDF](https://open.gsa.gov/api/contract-awards/v1/ContractAwardAPI_JSONvsCSV.pdf) is supporting mapping evidence; its November 4 document date is not the activation date.
+
+The source requirement is now confirmed, but activation and implementation remain unverified. Repository searches found no Contract Awards client or CSV consumer in the reviewed GrantOS dashboard source. Do not make a parser change solely from this notice. Continue monitoring for GSA's effective date; if a consumer is discovered or introduced, preserve current fixtures, add versioned header aliases and regression tests from the official mapping, and test against Alpha before activation. The notice does not announce a JSON response, endpoint, authentication, or API-version change.
