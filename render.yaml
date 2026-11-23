@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: master-ceo-dashboard-staging
+    runtime: node
+    plan: starter
+    region: ohio
+    autoDeployTrigger: 'off'
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
