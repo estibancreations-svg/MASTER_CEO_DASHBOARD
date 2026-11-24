@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "system_key": "SYS-GRANT-001",
-  "reviewed_on": "2026-11-22",
+  "reviewed_on": "2026-11-23",
   "scope": "Official federal changes potentially relevant to GrantOS. Source facts are distinct from conditional impact assessments. An entry does not assert that GrantOS has an active external connector or that implementation is complete.",
   "updates": [
     {
@@ -337,6 +337,30 @@
       "action": "conditional_verification",
       "next_step": "Inventory integrity/present-responsibility checklists and CPARS bookmarks. If used, point Integrity Records review to sam.gov/cpars, confirm current roles and record coverage from official guidance, and retain dated reviewer evidence. Verify separately whether grants applicant due diligence is in scope. Do not implement an assumed API migration.",
       "implementation_state": "unverified"
+    },
+    {
+      "id": "sam-assistance-listings-api-fal-v3-2026-11-17",
+      "title": "SAM.gov Assistance Listings API adds FAL v3.0 data changes",
+      "source": "GSA Open Technology",
+      "published_on": "2026-11-17",
+      "effective_on": "2026-11-17",
+      "source_url": "https://open.gsa.gov/api/assistance-listings-api/",
+      "category": "api_schema",
+      "source_status": "documented",
+      "confirmed_change": "The official Assistance Listings Public API change log records a November 17, 2026 v2.0 documentation/API update described as adding FAL v3.0 changes. The same v1 search endpoint remains documented, while the response data dictionary now identifies fields by FAL data-specification version and official examples return records with version 3.0.",
+      "affected_grantos_component": "Any current or future federal assistance-listing discovery client, response parser, eligibility/program mapping, schema validation, and synchronization logic.",
+      "likely_impact": "A strict parser or mapping built only for earlier assistance-listing data specifications could reject or ignore v3.0 records and fields. This is conditional: repository searches found no api.sam.gov Assistance Listings client or active federal discovery connector in the reviewed GrantOS dashboard source.",
+      "connector_status": "not_found_in_reviewed_dashboard_source",
+      "connector_evidence": [
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/5a5d039fb84107db2ecda56489d8193f13cde785/docs/architecture/CONNECTION-REGISTRY.md",
+        "https://github.com/estibancreations-svg/MASTER_CEO_DASHBOARD/blob/5a5d039fb84107db2ecda56489d8193f13cde785/src/components/GrantOSWorkspace.tsx"
+      ],
+      "urgency": "medium",
+      "action": "conditional_verification",
+      "next_step": "Keep live discovery disabled until a connector is explicitly approved. If an Assistance Listings client is introduced or discovered, capture Alpha fixtures for version 1.0, 2.0 and 3.0 records, map versioned fields as optional, tolerate additive fields, verify applicant/beneficiary code mappings, and regression-test pagination, nullability and program-version handling before production use.",
+      "implementation_state": "unverified",
+      "source_last_updated_on": "2026-11-17",
+      "resolution_state": "documented_connector_not_found"
     }
   ]
 }
